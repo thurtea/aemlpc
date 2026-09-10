@@ -58,7 +58,7 @@ Expected: the suite reports `all tests passed`, 922 checks, 0 failures.
 ## 3. Run the driver
 
 ```
-./build/amlp etc/driver.cfg
+./build/aemlpc etc/driver.cfg
 ```
 
 Run it from the repo root. `etc/driver.cfg` uses paths relative to the
@@ -77,7 +77,7 @@ On boot you should see:
 
 The two skip lines are correct until you generate dev certs (step 5).
 
-`amlp <config-path> [max-iterations]`: the config path is required.
+`aemlpc <config-path> [max-iterations]`: the config path is required.
 `max-iterations` (or `AMLP_MAX_ITERATIONS`) bounds scheduler poll
 iterations before the process exits on its own, for scripted runs; the
 default, 0, means run until `SIGINT` / `SIGTERM`.

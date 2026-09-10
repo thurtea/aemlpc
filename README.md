@@ -1,6 +1,6 @@
-# crysis
+# aemlpc
 
-crysis is a from-scratch LPC game driver written in C++20, plus a small
+aemlpc is a from-scratch LPC game driver written in C++20, plus a small
 bundled mudlib ("Library"). It has its own lexer, parser, bytecode
 compiler, VM, object system, and call_out/heart_beat scheduler. Players
 connect over plain telnet, telnet over TLS, or WebSocket.
@@ -9,14 +9,12 @@ It targets the FluffOS dialect of LPC. The `dialect` config switch also
 selects LDMud or DGD. DGD is there for comparison only.
 
 The project was formerly named AMLP and was split out of the AetherMUD
-project. The move to the `crysis` name is a direction shift, not just a
-rename. The direction on record (`docs/dev/ROADMAP.md`, the 2026-09-05
+project. The direction on record (`docs/dev/ROADMAP.md`, the 2026-09-05
 "Direction" note and "Sequenced tracks" section, and `docs/dev/STATUS.md`):
 a modern LPC driver plus a small in-game library, centered on the wand
 of creation, that can build any world, with a Rifts-era recreation
 (Nightmare / AetherMUD lineage, 1996-2001 riftsmud.com) as the first
-real target. A fuller statement of the project's identity under the new
-name has not been written yet.
+real target.
 
 ## Status
 
@@ -64,7 +62,7 @@ to run and connect to the driver. In short, from the repo root:
 cmake -B build -S .
 cmake --build build -j"$(nproc)"
 ctest --test-dir build --output-on-failure
-./build/amlp etc/driver.cfg
+./build/aemlpc etc/driver.cfg
 ```
 
 `make build`, `make test`, and `make run` wrap the same commands.
@@ -78,7 +76,7 @@ ctest --test-dir build --output-on-failure
 - `docs/COMPARISON.md`: feature and efun-count comparison against FluffOS,
   LDMud, and DGD.
 - `CREDITS.md`: prior-art drivers whose documented behavior shaped this
-  one. crysis (as AMLP) was split out of the AetherMUD project.
+  one. aemlpc was split out of the AetherMUD project.
 - `src/<module>/instruct.md`: per-subsystem notes and backlog. These
   frame tasks as open regardless of completion, so they are not a live
   status signal.

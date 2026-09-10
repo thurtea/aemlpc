@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(amlp LANGUAGES CXX)
+project(aemlpc LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-option(AMLP_BUILD_TESTS "Build unit tests" ON)
+option(AEMLPC_BUILD_TESTS "Build unit tests" ON)
 
 # Warnings on by default for every target in the tree (set before the
 # add_subdirectory calls below so it propagates to all of them). A clean
@@ -35,14 +35,14 @@ add_subdirectory(src/efun)
 add_subdirectory(src/apply)
 add_subdirectory(src/dialect)
 
-add_executable(amlp src/main.cpp)
-target_include_directories(amlp PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(amlp
+add_executable(aemlpc src/main.cpp)
+target_include_directories(aemlpc PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(aemlpc
     PRIVATE
         core config compiler vm object efun apply dialect net proto scheduler persist
 )
 
-if(AMLP_BUILD_TESTS)
+if(AEMLPC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()

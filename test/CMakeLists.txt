@@ -1,8 +1,8 @@
-add_executable(amlp_tests
+add_executable(aemlpc_tests
     test_lexer.cpp
     test_net.cpp
 )
-target_include_directories(amlp_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(aemlpc_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # Absolute repo root, baked in at configure time, so tests that read real
 # on-disk files (e.g. mudlib/clone/wand_of_creation.c, see test_lexer.cpp's
 # own readMudlibFile()) resolve correctly no matter what the process's own
@@ -13,9 +13,9 @@ target_include_directories(amlp_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 # none of which resolve from build/test/, ctest's own working directory
 # for this target. So "all tests pass" meant different things depending
 # on which of the two ways the suite got invoked.
-target_compile_definitions(amlp_tests PRIVATE AMLP_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(amlp_tests
+target_compile_definitions(aemlpc_tests PRIVATE AEMLPC_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(aemlpc_tests
     PRIVATE
         core config compiler vm object efun apply dialect net proto scheduler persist
 )
-add_test(NAME amlp_tests COMMAND amlp_tests)
+add_test(NAME aemlpc_tests COMMAND aemlpc_tests)

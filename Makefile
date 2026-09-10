@@ -34,4 +34,4 @@ test: build
 # README.md's own fourth command: build, then boot the driver against
 # the bundled mudlib's own canonical config.
 run: build
-	./$(BUILD_DIR)/amlp etc/driver.cfg
+	./$(BUILD_DIR)/aemlpc etc/driver.cfg
