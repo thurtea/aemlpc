@@ -24631,7 +24631,7 @@ static void testFluffosMappingLiteralRejectsWidthTwoSemicolonSyntaxWhileLdmudAcc
 // EfunTable the live driver uses, driven through VM::dispatchCommand()
 // exactly like Server.cpp's own real call site.
 namespace {
-// AMLP_SOURCE_DIR (test/CMakeLists.txt) is the absolute repo root, baked
+// AEMLPC_SOURCE_DIR (test/CMakeLists.txt) is the absolute repo root, baked
 // in at configure time. Correct regardless of the process's own working
 // directory at run time. Previously tried a fixed list of CWD-relative
 // bases ("../mudlib", "mudlib", "./mudlib"), which happened to work for a
@@ -24640,7 +24640,7 @@ namespace {
 // ctest-vs-direct-run discrepancy in what "all tests pass" meant,
 // confirmed and fixed rather than left filed away.
 std::string readMudlibFile(const std::string& relPath) {
-    std::ifstream f(std::string(AMLP_SOURCE_DIR) + "/mudlib" + relPath);
+    std::ifstream f(std::string(AEMLPC_SOURCE_DIR) + "/mudlib" + relPath);
     if (f) {
         std::ostringstream buf;
         buf << f.rdbuf();
