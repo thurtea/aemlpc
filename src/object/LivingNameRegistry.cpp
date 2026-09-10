@@ -1,9 +1,9 @@
-#include "amlp/object/LivingNameRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
+#include "aemlpc/object/LivingNameRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
 #include <algorithm>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 struct Entry {
@@ -53,4 +53,4 @@ std::vector<std::shared_ptr<LpcObject>> LivingNameRegistry::allWithCommandsEnabl
     return result;
 }
 
-} // namespace amlp
+} // namespace aemlpc

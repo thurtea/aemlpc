@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 struct AstNode {
     virtual ~AstNode() = default;
@@ -838,4 +838,4 @@ struct Program : AstNode {
     std::vector<std::unique_ptr<ClassDeclStmt>> classes;
 };
 
-} // namespace amlp
+} // namespace aemlpc

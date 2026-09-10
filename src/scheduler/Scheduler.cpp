@@ -1,16 +1,16 @@
-#include "amlp/scheduler/Scheduler.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/dialect/LpcDialect.hpp"
-#include "amlp/net/Server.hpp"
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/scheduler/Scheduler.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
+#include "aemlpc/net/Server.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/vm/VM.hpp"
 #include <algorithm>
 #include <atomic>
 #include <iostream>
 #include <thread>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 std::atomic<bool> g_shutdownRequested{false};
@@ -342,4 +342,4 @@ void Scheduler::tickCallOuts() {
     }
 }
 
-} // namespace amlp
+} // namespace aemlpc

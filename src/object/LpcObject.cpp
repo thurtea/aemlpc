@@ -1,7 +1,7 @@
-#include "amlp/object/LpcObject.hpp"
+#include "aemlpc/object/LpcObject.hpp"
 #include <random>
 
-namespace amlp {
+namespace aemlpc {
 
 LpcObject::LpcObject(std::string filename, std::shared_ptr<CompiledProgram> program,
                       bool fluffosDialect)
@@ -67,4 +67,4 @@ void LpcObject::armReset(std::chrono::seconds timeToReset) {
     resetState_ = true;
 }
 
-} // namespace amlp
+} // namespace aemlpc

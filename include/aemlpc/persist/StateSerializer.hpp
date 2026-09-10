@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 class ObjectManager;
 
@@ -76,4 +76,4 @@ private:
     ObjectManager& objects_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

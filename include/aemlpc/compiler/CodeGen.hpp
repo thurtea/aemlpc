@@ -2,10 +2,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "amlp/compiler/Ast.hpp"
-#include "amlp/vm/Bytecode.hpp"
+#include "aemlpc/compiler/Ast.hpp"
+#include "aemlpc/vm/Bytecode.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class CodeGen {
 public:
@@ -269,4 +269,4 @@ private:
     void emitPendingAnonFuncs();
 };
 
-} // namespace amlp
+} // namespace aemlpc

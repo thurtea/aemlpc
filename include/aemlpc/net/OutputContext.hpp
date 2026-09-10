@@ -1,6 +1,6 @@
 #pragma once
 
-namespace amlp {
+namespace aemlpc {
 
 class Connection;
 
@@ -10,4 +10,4 @@ public:
     static Connection* current();
 };
 
-} // namespace amlp
+} // namespace aemlpc

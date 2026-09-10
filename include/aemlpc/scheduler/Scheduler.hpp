@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class VM;
 class Server;
@@ -169,4 +169,4 @@ private:
     int64_t nextHandle_ = 1;
 };
 
-} // namespace amlp
+} // namespace aemlpc

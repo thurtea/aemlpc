@@ -1,10 +1,10 @@
-#include "amlp/proto/GmcpHandler.hpp"
-#include "amlp/net/Connection.hpp"
+#include "aemlpc/proto/GmcpHandler.hpp"
+#include "aemlpc/net/Connection.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 void GmcpHandler::send(Connection& conn, const std::string& package) {
     conn.sendGmcp(package);
 }
 
-} // namespace amlp
+} // namespace aemlpc

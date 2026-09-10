@@ -1,19 +1,19 @@
 #include <iostream>
 #include <cstdlib>
 #include <csignal>
-#include "amlp/config/Config.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/net/Server.hpp"
-#include "amlp/scheduler/Scheduler.hpp"
-#include "amlp/efun/EfunTable.hpp"
-#include "amlp/dialect/DialectSelect.hpp"
-#include "amlp/dialect/MasterUidBoot.hpp"
-#include "amlp/dialect/InaugurateMasterBoot.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/net/Server.hpp"
+#include "aemlpc/scheduler/Scheduler.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
+#include "aemlpc/dialect/DialectSelect.hpp"
+#include "aemlpc/dialect/MasterUidBoot.hpp"
+#include "aemlpc/dialect/InaugurateMasterBoot.hpp"
 
 namespace {
 void handleSignal(int) {
-    amlp::Scheduler::requestShutdown();
+    aemlpc::Scheduler::requestShutdown();
 }
 }
 
@@ -39,25 +39,25 @@ int main(int argc, char** argv) {
     std::signal(SIGTERM, handleSignal);
     std::signal(SIGPIPE, SIG_IGN);
 
-    amlp::Config config;
+    aemlpc::Config config;
     if (!config.loadFromFile(configPath)) {
         std::cerr << "Failed to load config: " << configPath << "\n";
         return 1;
     }
 
-    amlp::registerCoreEfuns();
+    aemlpc::registerCoreEfuns();
 
-    amlp::ObjectManager objectManager(config);
-    amlp::VM vm(objectManager, config);
+    aemlpc::ObjectManager objectManager(config);
+    aemlpc::VM vm(objectManager, config);
     objectManager.setVM(&vm);
     // ObjectManager cannot link EfunTable directly; this lambda can.
     objectManager.setEfunExistsChecker([](const std::string& name) {
-        return amlp::EfunTable::instance().exists(name);
+        return aemlpc::EfunTable::instance().exists(name);
     });
 
-    amlp::Scheduler scheduler(vm);
+    aemlpc::Scheduler scheduler(vm);
     vm.setScheduler(&scheduler);
-    amlp::Server server(config, vm, objectManager, scheduler);
+    aemlpc::Server server(config, vm, objectManager, scheduler);
 
     std::cout << "amlp booting...\n";
     std::cout << "  mudlib_root = " << config.mudlibRoot() << "\n";
@@ -84,8 +84,8 @@ int main(int argc, char** argv) {
     std::cout << "Driver booted. Master object loaded: " << config.masterFile() << "\n";
 
     // Per-dialect boot-time master UID query (MasterUidBoot.hpp).
-    auto bootApi = amlp::makeBootApiForConfig(config);
-    if (auto uid = amlp::queryMasterUid(vm, *bootApi)) {
+    auto bootApi = aemlpc::makeBootApiForConfig(config);
+    if (auto uid = aemlpc::queryMasterUid(vm, *bootApi)) {
         std::cout << "  master " << bootApi->masterUidApply() << "() = \"" << *uid << "\"\n";
     } else {
         std::cout << "  master does not define " << bootApi->masterUidApply() << "()\n";
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     if (auto inaugurateApply = bootApi->inaugurateMasterApply()) {
         std::cout << "  master " << *inaugurateApply << "(0) ...\n";
     }
-    amlp::applyInaugurateMaster(vm, *bootApi);
+    aemlpc::applyInaugurateMaster(vm, *bootApi);
 
     if (!server.listen()) {
         std::cerr << "Failed to start network listener on port " << config.port() << "\n";

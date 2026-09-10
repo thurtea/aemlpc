@@ -4,12 +4,12 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 
@@ -306,4 +306,4 @@ private:
     bool terminalTypeUpdated_ = false;
 };
 
-} // namespace amlp
+} // namespace aemlpc

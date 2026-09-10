@@ -1,6 +1,6 @@
-#include "amlp/net/Connection.hpp"
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
 #include <unistd.h>
 #include <errno.h>
 #include <cstring>
@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <cctype>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 // Real telnet.h constants (fluffos-2.9-ds2.08), confirmed directly, not
@@ -611,4 +611,4 @@ std::optional<PendingInputTo> Connection::takePendingInputTo() {
     return result;
 }
 
-} // namespace amlp
+} // namespace aemlpc

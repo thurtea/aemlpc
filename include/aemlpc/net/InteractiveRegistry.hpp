@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 class Connection;
@@ -41,4 +41,4 @@ public:
     static Connection* find(const std::shared_ptr<LpcObject>& obj);
 };
 
-} // namespace amlp
+} // namespace aemlpc

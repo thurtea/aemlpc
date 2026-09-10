@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 class VM;
 class Connection;
@@ -36,4 +36,4 @@ class Connection;
 // whichever efun called deliverToConnection() rather than swallowing it.
 void deliverToConnection(VM& vm, Connection* conn, const std::string& text);
 
-} // namespace amlp
+} // namespace aemlpc

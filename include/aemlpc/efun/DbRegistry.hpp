@@ -1,12 +1,12 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
 struct sqlite3;
 struct sqlite3_stmt;
 
-namespace amlp {
+namespace aemlpc {
 
 // Real db_* efun family, ported from LDMud's own pkg-mysql.c and
 // doc/efun/db_*. Confirmed the real evidence source for ROADMAP.md row
@@ -182,4 +182,4 @@ public:
     static void resetForTests();
 };
 
-}  // namespace amlp
+}  // namespace aemlpc

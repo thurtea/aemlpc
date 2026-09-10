@@ -1,8 +1,8 @@
-#include "amlp/dialect/LpcDialect.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
 
 #include <stdexcept>
 
-namespace amlp {
+namespace aemlpc {
 
 const char* dialectName(LpcDialect d) {
     switch (d) {
@@ -20,4 +20,4 @@ LpcDialect dialectFromString(const std::string& s) {
     throw std::invalid_argument("dialectFromString(): unknown dialect name '" + s + "'");
 }
 
-} // namespace amlp
+} // namespace aemlpc

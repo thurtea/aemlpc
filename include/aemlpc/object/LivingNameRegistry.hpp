@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 
@@ -72,4 +72,4 @@ public:
     static std::vector<std::shared_ptr<LpcObject>> allWithCommandsEnabled();
 };
 
-} // namespace amlp
+} // namespace aemlpc

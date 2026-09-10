@@ -2,7 +2,7 @@
 #include <optional>
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 // Per-dialect master/simul_efun/driver-object apply names. See
 // src/dialect/instruct.md and src/apply/instruct.md Phase 1.4/1.15/1.16
@@ -68,4 +68,4 @@ public:
     virtual std::optional<std::string> inaugurateMasterApply() const = 0;
 };
 
-} // namespace amlp
+} // namespace aemlpc

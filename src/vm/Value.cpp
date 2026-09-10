@@ -1,6 +1,6 @@
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 bool isTruthy(const Value& v) {
     if (std::holds_alternative<std::monostate>(v.data)) return false;
@@ -65,4 +65,4 @@ bool valuesEqual(const Value& a, const Value& b) {
     return false;
 }
 
-} // namespace amlp
+} // namespace aemlpc

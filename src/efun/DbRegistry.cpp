@@ -1,11 +1,11 @@
-#include "amlp/efun/DbRegistry.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/efun/DbRegistry.hpp"
+#include "aemlpc/core/Errors.hpp"
 #include <sqlite3.h>
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 
@@ -220,4 +220,4 @@ void DbRegistry::resetForTests() {
     nextHandleCounter() = 1;
 }
 
-}  // namespace amlp
+}  // namespace aemlpc

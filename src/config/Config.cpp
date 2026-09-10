@@ -1,8 +1,8 @@
-#include "amlp/config/Config.hpp"
+#include "aemlpc/config/Config.hpp"
 #include <fstream>
 #include <sstream>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 void trim(std::string& s) {
@@ -85,4 +85,4 @@ bool Config::loadFromFile(const std::string& path) {
     return true;
 }
 
-} // namespace amlp
+} // namespace aemlpc

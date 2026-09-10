@@ -1,12 +1,12 @@
-#include "amlp/dialect/MasterUidBoot.hpp"
+#include "aemlpc/dialect/MasterUidBoot.hpp"
 
 #include <iostream>
 #include <variant>
 
-#include "amlp/dialect/BootApi.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/dialect/BootApi.hpp"
+#include "aemlpc/vm/VM.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 std::optional<std::string> queryMasterUid(VM& vm, const BootApi& bootApi) {
     const std::string applyName = bootApi.masterUidApply();
@@ -23,4 +23,4 @@ std::optional<std::string> queryMasterUid(VM& vm, const BootApi& bootApi) {
     return std::nullopt;
 }
 
-} // namespace amlp
+} // namespace aemlpc

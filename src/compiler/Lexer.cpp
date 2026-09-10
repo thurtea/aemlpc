@@ -1,9 +1,9 @@
-#include "amlp/compiler/Lexer.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/compiler/Lexer.hpp"
+#include "aemlpc/core/Errors.hpp"
 #include <cctype>
 #include <unordered_set>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 // "array" is not reserved (lex.c does: L_ARRAY). This mudlib uses it as
@@ -393,4 +393,4 @@ std::vector<Token> Lexer::tokenize() {
     return tokens;
 }
 
-} // namespace amlp
+} // namespace aemlpc

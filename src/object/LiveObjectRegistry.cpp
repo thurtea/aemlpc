@@ -1,9 +1,9 @@
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/vm/Value.hpp"
 #include <algorithm>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 std::vector<std::weak_ptr<LpcObject>> g_registry;
@@ -55,4 +55,4 @@ void LiveObjectRegistry::releaseAll() {
     g_registry.shrink_to_fit();
 }
 
-} // namespace amlp
+} // namespace aemlpc

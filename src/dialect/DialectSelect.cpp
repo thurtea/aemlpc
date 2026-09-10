@@ -1,12 +1,12 @@
-#include "amlp/dialect/DialectSelect.hpp"
+#include "aemlpc/dialect/DialectSelect.hpp"
 
-#include "amlp/config/Config.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/dialect/FluffOsBootApi.hpp"
-#include "amlp/dialect/LdmudBootApi.hpp"
-#include "amlp/dialect/LpcDialect.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/dialect/FluffOsBootApi.hpp"
+#include "aemlpc/dialect/LdmudBootApi.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 std::unique_ptr<BootApi> makeBootApiForConfig(const Config& config) {
     switch (dialectFromString(config.dialect())) {
@@ -20,4 +20,4 @@ std::unique_ptr<BootApi> makeBootApiForConfig(const Config& config) {
     throw NotImplementedError("makeBootApiForConfig(): unknown LpcDialect value");
 }
 
-} // namespace amlp
+} // namespace aemlpc

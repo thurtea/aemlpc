@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 
@@ -44,4 +44,4 @@ public:
     static void releaseAll();
 };
 
-} // namespace amlp
+} // namespace aemlpc

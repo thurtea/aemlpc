@@ -6,11 +6,11 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "amlp/vm/Value.hpp"
-#include "amlp/vm/Bytecode.hpp"
-#include "amlp/scheduler/Task.hpp"
+#include "aemlpc/vm/Value.hpp"
+#include "aemlpc/vm/Bytecode.hpp"
+#include "aemlpc/scheduler/Task.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class ObjectManager;
 class LpcObject;
@@ -623,4 +623,4 @@ private:
     }
 };
 
-} // namespace amlp
+} // namespace aemlpc

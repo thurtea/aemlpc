@@ -4,10 +4,10 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include "amlp/vm/Bytecode.hpp"
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Bytecode.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject : public std::enable_shared_from_this<LpcObject> {
 public:
@@ -461,4 +461,4 @@ private:
     std::chrono::steady_clock::time_point timeOfRef_{};
 };
 
-} // namespace amlp
+} // namespace aemlpc

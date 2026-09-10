@@ -2,10 +2,10 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "amlp/vm/Value.hpp"
-#include "amlp/net/LpcSocket.hpp"
+#include "aemlpc/vm/Value.hpp"
+#include "aemlpc/net/LpcSocket.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 
@@ -197,4 +197,4 @@ public:
                         Value closeCallback, const std::shared_ptr<LpcObject>& caller);
 };
 
-}  // namespace amlp
+}  // namespace aemlpc

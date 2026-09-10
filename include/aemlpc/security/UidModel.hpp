@@ -2,7 +2,7 @@
 #include <optional>
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 // The FluffOS uid / euid object trust model. ROADMAP row 3.1.
 //
@@ -79,4 +79,4 @@ ResolvedObjectUids resolveObjectUids(const UidModel& model,
                                      const std::optional<std::string>& loaderUid,
                                      const std::optional<std::string>& loaderEuid);
 
-} // namespace amlp
+} // namespace aemlpc

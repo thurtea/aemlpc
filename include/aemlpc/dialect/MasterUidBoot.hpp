@@ -2,7 +2,7 @@
 #include <optional>
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 class VM;
 class BootApi;
@@ -28,4 +28,4 @@ class BootApi;
 // applyMaster() call site in this driver.
 std::optional<std::string> queryMasterUid(VM& vm, const BootApi& bootApi);
 
-} // namespace amlp
+} // namespace aemlpc

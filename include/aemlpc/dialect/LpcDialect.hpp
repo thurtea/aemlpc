@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 enum class LpcDialect {
     FluffOS,   // MudOS/FluffOS (: :) LPC - current default
@@ -12,4 +12,4 @@ enum class LpcDialect {
 const char* dialectName(LpcDialect d);              // "fluffos" / "ldmud" / "dgd"
 LpcDialect dialectFromString(const std::string& s);  // throws std::invalid_argument on unknown
 
-} // namespace amlp
+} // namespace aemlpc

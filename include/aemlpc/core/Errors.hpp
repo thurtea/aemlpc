@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcRuntimeError : public std::runtime_error {
 public:
@@ -28,4 +28,4 @@ public:
     explicit EvalCostError(const std::string& msg) : std::runtime_error(msg) {}
 };
 
-} // namespace amlp
+} // namespace aemlpc

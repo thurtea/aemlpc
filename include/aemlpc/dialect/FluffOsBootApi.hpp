@@ -1,7 +1,7 @@
 #pragma once
-#include "amlp/dialect/BootApi.hpp"
+#include "aemlpc/dialect/BootApi.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class Config;
 
@@ -29,4 +29,4 @@ private:
     const Config& config_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

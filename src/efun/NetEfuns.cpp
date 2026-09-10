@@ -1,15 +1,15 @@
-#include "amlp/efun/EfunTable.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/vm/Value.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/net/Connection.hpp"
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/proto/GmcpHandler.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/vm/Value.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/proto/GmcpHandler.hpp"
+#include "aemlpc/core/Errors.hpp"
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 namespace {
 
 Connection* connectionFor(VM& vm, std::vector<Value>& args) {
@@ -91,4 +91,4 @@ void registerNetEfuns() {
     });
 }
 
-} // namespace amlp
+} // namespace aemlpc

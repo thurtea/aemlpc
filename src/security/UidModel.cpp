@@ -1,6 +1,6 @@
-#include "amlp/security/UidModel.hpp"
+#include "aemlpc/security/UidModel.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 ResolvedObjectUids resolveObjectUids(const UidModel& model,
                                      const std::string& creatorName,
@@ -34,4 +34,4 @@ ResolvedObjectUids resolveObjectUids(const UidModel& model,
     return {creatorName, std::nullopt};
 }
 
-} // namespace amlp
+} // namespace aemlpc

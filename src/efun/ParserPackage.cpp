@@ -1,12 +1,12 @@
-#include "amlp/efun/ParserPackage.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/efun/ParserPackage.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/vm/VM.hpp"
 #include <algorithm>
 #include <cctype>
 #include <optional>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 
@@ -3178,4 +3178,4 @@ Value ParserPackage::parseMyRules(VM& vm, const std::shared_ptr<LpcObject>& user
     return getTheError(vm, session);
 }
 
-} // namespace amlp
+} // namespace aemlpc

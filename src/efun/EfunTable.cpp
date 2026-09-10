@@ -1,20 +1,20 @@
-#include "amlp/efun/EfunTable.hpp"
-#include "amlp/efun/DbRegistry.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/object/LivingNameRegistry.hpp"
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/net/OutputContext.hpp"
-#include "amlp/net/Connection.hpp"
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/net/SocketRegistry.hpp"
-#include "amlp/net/SnoopRelay.hpp"
-#include "amlp/scheduler/Scheduler.hpp"
-#include "amlp/efun/ParserPackage.hpp"
-#include "amlp/persist/StateSerializer.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
+#include "aemlpc/efun/DbRegistry.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/object/LivingNameRegistry.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/net/OutputContext.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/net/SocketRegistry.hpp"
+#include "aemlpc/net/SnoopRelay.hpp"
+#include "aemlpc/scheduler/Scheduler.hpp"
+#include "aemlpc/efun/ParserPackage.hpp"
+#include "aemlpc/persist/StateSerializer.hpp"
 #include <algorithm>
 #include <chrono>
 #include <arpa/inet.h>
@@ -41,7 +41,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
-namespace amlp {
+namespace aemlpc {
 
 EfunTable& EfunTable::instance() {
     static EfunTable table;
@@ -12474,4 +12474,4 @@ void registerCoreEfuns() {
     registerNetEfuns();
 }
 
-} // namespace amlp
+} // namespace aemlpc

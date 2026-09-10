@@ -1,9 +1,9 @@
 #pragma once
-#include "amlp/dialect/LpcDialect.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
 #include <string>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 // QuotedSymbol: LDMud's own "'name" symbol literal (see Value.hpp's
 // Symbol comment, ROADMAP.md row 1.7/1.8). Kept distinct from Symbol
@@ -51,4 +51,4 @@ private:
     LpcDialect dialect_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

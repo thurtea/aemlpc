@@ -1,11 +1,11 @@
-#include "amlp/config/Config.hpp"
-#include "amlp/efun/EfunTable.hpp"
-#include "amlp/net/Connection.hpp"
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/net/OutputContext.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/net/OutputContext.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/vm/Value.hpp"
 
 #include <cassert>
 #include <cstdlib>
@@ -43,9 +43,9 @@ std::string readAvailable(int fd) {
 
 struct NetHarness {
     std::string tempDir;
-    amlp::Config config;
-    amlp::ObjectManager objects;
-    amlp::VM vm;
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects;
+    aemlpc::VM vm;
 
     explicit NetHarness(const std::string& extraConfigLines = "")
         : objects(config), vm(objects, config) {
@@ -75,7 +75,7 @@ void testListenConfigSynthesizesTelnetFromPort() {
     NetHarness harness;
     const auto& ports = harness.config.listenPorts();
     assert(ports.size() == 1);
-    assert(ports[0].kind == amlp::ListenKind::Telnet);
+    assert(ports[0].kind == aemlpc::ListenKind::Telnet);
     assert(ports[0].port == 0);
     assert(!ports[0].tls);
     assert(ports[0].slot == 1);
@@ -86,9 +86,9 @@ void testListenConfigParsesMultipleKindsAndTls() {
     NetHarness harness("listen: telnet 2222\nlisten: websocket 8080\nlisten: telnet 8443 tls\n");
     const auto& ports = harness.config.listenPorts();
     assert(ports.size() == 3);
-    assert(ports[0].kind == amlp::ListenKind::Telnet && ports[0].port == 2222 && !ports[0].tls);
-    assert(ports[1].kind == amlp::ListenKind::WebSocket && ports[1].port == 8080 && !ports[1].tls);
-    assert(ports[2].kind == amlp::ListenKind::Telnet && ports[2].port == 8443 && ports[2].tls);
+    assert(ports[0].kind == aemlpc::ListenKind::Telnet && ports[0].port == 2222 && !ports[0].tls);
+    assert(ports[1].kind == aemlpc::ListenKind::WebSocket && ports[1].port == 8080 && !ports[1].tls);
+    assert(ports[2].kind == aemlpc::ListenKind::Telnet && ports[2].port == 8443 && ports[2].tls);
     std::cout << "testListenConfigParsesMultipleKindsAndTls OK\n";
 }
 
@@ -97,11 +97,11 @@ void testSysNetworkPortsReadsTheListenTable() {
     harness.writeFile("/ports.c", "mixed *probe() { return sys_network_ports(); }\n");
     auto ob = harness.objects.cloneObject("/ports");
     assert(ob);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto outer = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto outer = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(outer && outer->items.size() == 2);
-    auto a = std::get<std::shared_ptr<amlp::Array>>(outer->items[0].data);
-    auto b = std::get<std::shared_ptr<amlp::Array>>(outer->items[1].data);
+    auto a = std::get<std::shared_ptr<aemlpc::Array>>(outer->items[0].data);
+    auto b = std::get<std::shared_ptr<aemlpc::Array>>(outer->items[1].data);
     assert(std::get<std::string>(a->items[1].data) == "telnet");
     assert(std::get<int64_t>(a->items[2].data) == 2222);
     assert(std::get<int64_t>(a->items[3].data) == 0);
@@ -123,7 +123,7 @@ void testSaveObjectWritesFluffosTextAndSecondProcessRestores() {
         "string query_s() { return s; }\n");
     auto obj = writer.objects.cloneObject("/save_probe");
     assert(obj);
-    amlp::Value saved = writer.vm.callFunction(obj, "save", {});
+    aemlpc::Value saved = writer.vm.callFunction(obj, "save", {});
     assert(std::get<int64_t>(saved.data) == 1);
 
     std::string diskPath = writer.tempDir + "/probe.o";
@@ -176,7 +176,7 @@ void testWebSocketHandshakeAndTextFrame() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
     setNonBlocking(fds[0]);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.enableWebSocket();
     conn.send("BANNER\n");
     assert(readAvailable(fds[1]).empty());
@@ -271,7 +271,7 @@ void testTlsSocketpairRoundTrip() {
     }
 
     ::close(fds[1]);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     assert(conn.acceptTls(serverCtx));
     assert(conn.isTls());
     setNonBlocking(fds[0]);
@@ -307,13 +307,13 @@ void testEncodingAndGmcpEfunsOnASocketpair() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(obj);
     harness.vm.pushCommandGiver(obj);
 
-    amlp::Value enc = harness.vm.callFunction(obj, "get_it", {});
+    aemlpc::Value enc = harness.vm.callFunction(obj, "get_it", {});
     assert(std::get<std::string>(enc.data) == "utf-8");
-    assert(std::get<int64_t>(harness.vm.callFunction(obj, "set_it", {amlp::Value(std::string("iso-8859-1"))}).data) == 1);
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "set_it", {aemlpc::Value(std::string("iso-8859-1"))}).data) == 1);
     enc = harness.vm.callFunction(obj, "get_it", {});
     assert(std::get<std::string>(enc.data) == "iso-8859-1");
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "tls", {}).data) == 0);
@@ -336,7 +336,7 @@ void testGmcpSubnegotiationIsQueued() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
     setNonBlocking(fds[0]);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     unsigned char sb[] = {255, 250, 201, 'C', 'o', 'r', 'e', '.', 'H', 'e', 'l', 'l', 'o', 255, 240, '\n'};
     assert(::write(fds[1], sb, sizeof(sb)) == static_cast<ssize_t>(sizeof(sb)));
     auto lines = conn.pollLines();

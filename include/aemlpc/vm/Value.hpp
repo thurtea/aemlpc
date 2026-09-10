@@ -4,9 +4,9 @@
 #include <string>
 #include <variant>
 #include <vector>
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/core/Errors.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 struct Array;
@@ -330,4 +330,4 @@ struct Closure {
     Value lambdaBody;
 };
 
-} // namespace amlp
+} // namespace aemlpc

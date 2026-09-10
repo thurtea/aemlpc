@@ -1,8 +1,8 @@
-#include "amlp/dialect/LdmudBootApi.hpp"
+#include "aemlpc/dialect/LdmudBootApi.hpp"
 
-#include "amlp/config/Config.hpp"
+#include "aemlpc/config/Config.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 std::string LdmudBootApi::masterFile() const {
     return config_.masterFile();
@@ -14,4 +14,4 @@ std::optional<std::string> LdmudBootApi::simulEfunFile() const {
     return file;
 }
 
-} // namespace amlp
+} // namespace aemlpc

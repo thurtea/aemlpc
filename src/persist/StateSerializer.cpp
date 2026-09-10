@@ -1,16 +1,16 @@
-#include "amlp/persist/StateSerializer.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/persist/StateSerializer.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/vm/Value.hpp"
 
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 
@@ -444,4 +444,4 @@ bool StateSerializer::restoreState(const std::string& path) const {
     return true;
 }
 
-} // namespace amlp
+} // namespace aemlpc

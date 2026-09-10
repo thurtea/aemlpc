@@ -3,9 +3,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class VM;
 
@@ -26,4 +26,4 @@ private:
 void registerCoreEfuns();
 void registerNetEfuns();
 
-} // namespace amlp
+} // namespace aemlpc

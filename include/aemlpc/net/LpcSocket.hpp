@@ -1,9 +1,9 @@
 #pragma once
 #include <memory>
 #include <string>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 
@@ -172,4 +172,4 @@ public:
     int localPort = 0;
 };
 
-}  // namespace amlp
+}  // namespace aemlpc

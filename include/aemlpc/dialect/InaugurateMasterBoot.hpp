@@ -1,6 +1,6 @@
 #pragma once
 
-namespace amlp {
+namespace aemlpc {
 
 class VM;
 class BootApi;
@@ -31,4 +31,4 @@ class BootApi;
 // tests).
 void applyInaugurateMaster(VM& vm, const BootApi& bootApi);
 
-} // namespace amlp
+} // namespace aemlpc

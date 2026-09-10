@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 enum class OpCode : uint8_t {
     PushConst,
@@ -410,4 +410,4 @@ struct CompiledProgram {
     mutable std::unordered_map<std::string, FunctionChainCacheEntry> functionChainCache_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

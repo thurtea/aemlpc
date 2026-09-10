@@ -1,9 +1,9 @@
-#include "amlp/vm/VM.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/efun/EfunTable.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -13,7 +13,7 @@
 #include <optional>
 #include <utility>
 
-namespace amlp {
+namespace aemlpc {
 
 // Real efuns_main.c's own origin_name(): "static const char *origins[] =
 // { "driver", "local", "call_other", "simul", "internal", "efun",
@@ -45,13 +45,13 @@ namespace {
 // already establish.
 class OriginGuard {
 public:
-    OriginGuard(amlp::VM& vm, amlp::Origin origin) : vm_(vm) { vm_.pushOrigin(origin); }
+    OriginGuard(aemlpc::VM& vm, aemlpc::Origin origin) : vm_(vm) { vm_.pushOrigin(origin); }
     ~OriginGuard() { vm_.popOrigin(); }
     OriginGuard(const OriginGuard&) = delete;
     OriginGuard& operator=(const OriginGuard&) = delete;
 
 private:
-    amlp::VM& vm_;
+    aemlpc::VM& vm_;
 };
 
 // Real function.c's own naming convention for a synthesized inline
@@ -127,9 +127,9 @@ void coerceIfDestructed(Value& v) {
 // immediately enclosing frame, not on every same-object call.
 class ObjectFrameGuard {
 public:
-    ObjectFrameGuard(std::vector<std::shared_ptr<amlp::LpcObject>>& callStack,
-                      std::vector<std::shared_ptr<amlp::LpcObject>>& objectChangeStack,
-                      const std::shared_ptr<amlp::LpcObject>& obj)
+    ObjectFrameGuard(std::vector<std::shared_ptr<aemlpc::LpcObject>>& callStack,
+                      std::vector<std::shared_ptr<aemlpc::LpcObject>>& objectChangeStack,
+                      const std::shared_ptr<aemlpc::LpcObject>& obj)
         : callStack_(callStack), objectChangeStack_(objectChangeStack) {
         objectChanged_ = callStack_.empty() || callStack_.back() != obj;
         if (objectChanged_) {
@@ -145,8 +145,8 @@ public:
     ObjectFrameGuard& operator=(const ObjectFrameGuard&) = delete;
 
 private:
-    std::vector<std::shared_ptr<amlp::LpcObject>>& callStack_;
-    std::vector<std::shared_ptr<amlp::LpcObject>>& objectChangeStack_;
+    std::vector<std::shared_ptr<aemlpc::LpcObject>>& callStack_;
+    std::vector<std::shared_ptr<aemlpc::LpcObject>>& objectChangeStack_;
     bool objectChanged_ = false;
 };
 
@@ -157,7 +157,7 @@ private:
 // leaving a stale command_giver behind for whatever runs next.
 class CommandGiverGuard {
 public:
-    CommandGiverGuard(amlp::VM& vm, const std::shared_ptr<amlp::LpcObject>& ob) : vm_(vm) {
+    CommandGiverGuard(aemlpc::VM& vm, const std::shared_ptr<aemlpc::LpcObject>& ob) : vm_(vm) {
         vm_.pushCommandGiver(ob);
     }
     ~CommandGiverGuard() { vm_.popCommandGiver(); }
@@ -165,7 +165,7 @@ public:
     CommandGiverGuard& operator=(const CommandGiverGuard&) = delete;
 
 private:
-    amlp::VM& vm_;
+    aemlpc::VM& vm_;
 };
 
 // Real FluffOS's T_UNDEFINED is a *subtype* of T_NUMBER (a number whose
@@ -182,7 +182,7 @@ private:
 // live: std/living.c's own query_stats() doing "stats[stat] + x" where
 // stats[stat] is a missing-key monostate for a fresh character whose
 // stats mapping has not been rolled yet.
-bool asArithmeticOperand(const amlp::Value& v, double& out) {
+bool asArithmeticOperand(const aemlpc::Value& v, double& out) {
     if (auto* i = std::get_if<int64_t>(&v.data)) {
         out = static_cast<double>(*i);
         return true;
@@ -207,7 +207,7 @@ bool asArithmeticOperand(const amlp::Value& v, double& out) {
 // plain "0", the same real-0 treatment asArithmeticOperand already
 // gives it for numeric +/-/*. Caller guarantees v actually holds one of
 // these three kinds.
-std::string formatNumberForConcat(const amlp::Value& v) {
+std::string formatNumberForConcat(const aemlpc::Value& v) {
     if (auto* i = std::get_if<int64_t>(&v.data)) {
         return std::to_string(*i);
     }
@@ -3190,4 +3190,4 @@ void VM::resumeReadyAsyncTasks(std::chrono::steady_clock::time_point now) {
     }
 }
 
-} // namespace amlp
+} // namespace aemlpc

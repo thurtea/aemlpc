@@ -1,8 +1,8 @@
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
 #include <algorithm>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 struct Entry {
@@ -46,4 +46,4 @@ Connection* InteractiveRegistry::find(const std::shared_ptr<LpcObject>& obj) {
     return nullptr;
 }
 
-} // namespace amlp
+} // namespace aemlpc

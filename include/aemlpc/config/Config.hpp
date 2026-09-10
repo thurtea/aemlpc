@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace amlp {
+namespace aemlpc {
 
 enum class ListenKind { Telnet, WebSocket };
 
@@ -122,4 +122,4 @@ private:
     void ensureDefaultListenPort();
 };
 
-} // namespace amlp
+} // namespace aemlpc

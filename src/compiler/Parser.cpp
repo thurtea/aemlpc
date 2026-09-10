@@ -1,7 +1,7 @@
-#include "amlp/compiler/Parser.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/compiler/Parser.hpp"
+#include "aemlpc/core/Errors.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 Parser::Parser(std::vector<Token> tokens, LpcDialect dialect)
     : tokens_(std::move(tokens)), dialect_(dialect) {}
@@ -2458,4 +2458,4 @@ std::unique_ptr<Program> Parser::parseProgram() {
     return program;
 }
 
-} // namespace amlp
+} // namespace aemlpc

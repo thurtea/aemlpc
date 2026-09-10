@@ -1,8 +1,8 @@
-#include "amlp/dialect/FluffOsBootApi.hpp"
+#include "aemlpc/dialect/FluffOsBootApi.hpp"
 
-#include "amlp/config/Config.hpp"
+#include "aemlpc/config/Config.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 std::string FluffOsBootApi::masterFile() const {
     return config_.masterFile();
@@ -14,4 +14,4 @@ std::optional<std::string> FluffOsBootApi::simulEfunFile() const {
     return file;
 }
 
-} // namespace amlp
+} // namespace aemlpc

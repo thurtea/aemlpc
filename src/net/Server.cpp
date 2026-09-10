@@ -1,12 +1,12 @@
-#include "amlp/net/Server.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/net/OutputContext.hpp"
-#include "amlp/net/SocketRegistry.hpp"
-#include "amlp/net/SnoopRelay.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/net/Server.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/net/OutputContext.hpp"
+#include "aemlpc/net/SocketRegistry.hpp"
+#include "aemlpc/net/SnoopRelay.hpp"
+#include "aemlpc/core/Errors.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -22,7 +22,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 bool setNonBlocking(int fd) {
@@ -536,4 +536,4 @@ void Server::pollOnce() {
         connections_.end());
 }
 
-} // namespace amlp
+} // namespace aemlpc

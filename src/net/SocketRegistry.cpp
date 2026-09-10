@@ -1,6 +1,6 @@
-#include "amlp/net/SocketRegistry.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/net/SocketRegistry.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/vm/Value.hpp"
 
 #include <unordered_map>
 #include <cstring>
@@ -12,7 +12,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-namespace amlp {
+namespace aemlpc {
 
 LpcSocket::~LpcSocket() {
     if (fd >= 0) ::close(fd);
@@ -463,4 +463,4 @@ int SocketRegistry::acquire(int handle, Value readCallback, Value writeCallback,
     return SocketErr::Success;
 }
 
-}  // namespace amlp
+}  // namespace aemlpc

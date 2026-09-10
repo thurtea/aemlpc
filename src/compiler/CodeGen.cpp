@@ -1,7 +1,7 @@
-#include "amlp/compiler/CodeGen.hpp"
-#include "amlp/core/Errors.hpp"
+#include "aemlpc/compiler/CodeGen.hpp"
+#include "aemlpc/core/Errors.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 int CodeGen::internString(const std::string& s) {
     for (size_t i = 0; i < out_->stringPool.size(); ++i) {
@@ -1838,4 +1838,4 @@ void CodeGen::emitPendingAnonFuncs() {
     pendingAnonFuncs_.clear();
 }
 
-} // namespace amlp
+} // namespace aemlpc

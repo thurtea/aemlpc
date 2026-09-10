@@ -1,9 +1,9 @@
 #pragma once
 #include <memory>
 
-#include "amlp/dialect/BootApi.hpp"
+#include "aemlpc/dialect/BootApi.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class Config;
 
@@ -27,4 +27,4 @@ class Config;
 // dialectFromString() itself.
 std::unique_ptr<BootApi> makeBootApiForConfig(const Config& config);
 
-} // namespace amlp
+} // namespace aemlpc

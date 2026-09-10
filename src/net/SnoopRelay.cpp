@@ -1,9 +1,9 @@
-#include "amlp/net/SnoopRelay.hpp"
-#include "amlp/net/Connection.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/net/SnoopRelay.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/vm/VM.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 void deliverToConnection(VM& vm, Connection* conn, const std::string& text) {
     if (!conn) return;
@@ -17,4 +17,4 @@ void deliverToConnection(VM& vm, Connection* conn, const std::string& text) {
     vm.callFunction(snooper, "receive_snoop", {Value(text)});
 }
 
-} // namespace amlp
+} // namespace aemlpc

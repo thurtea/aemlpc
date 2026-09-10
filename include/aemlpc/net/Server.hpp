@@ -2,12 +2,12 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "amlp/config/Config.hpp"
-#include "amlp/net/Connection.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/net/Connection.hpp"
 
 typedef struct ssl_ctx_st SSL_CTX;
 
-namespace amlp {
+namespace aemlpc {
 
 class Config;
 class VM;
@@ -92,4 +92,4 @@ private:
     std::vector<std::shared_ptr<Connection>> connections_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

@@ -1,6 +1,6 @@
-#include "amlp/apply/ApplyTable.hpp"
+#include "aemlpc/apply/ApplyTable.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 const std::unordered_set<std::string>& ApplyTable::known() {
     static const std::unordered_set<std::string> names = {
@@ -24,4 +24,4 @@ bool ApplyTable::isKnownApply(const std::string& name) {
     return known().count(name) > 0;
 }
 
-} // namespace amlp
+} // namespace aemlpc

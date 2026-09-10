@@ -1,11 +1,11 @@
-#include "amlp/dialect/InaugurateMasterBoot.hpp"
+#include "aemlpc/dialect/InaugurateMasterBoot.hpp"
 
 #include <iostream>
 
-#include "amlp/dialect/BootApi.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/dialect/BootApi.hpp"
+#include "aemlpc/vm/VM.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 void applyInaugurateMaster(VM& vm, const BootApi& bootApi) {
     auto applyName = bootApi.inaugurateMasterApply();
@@ -21,4 +21,4 @@ void applyInaugurateMaster(VM& vm, const BootApi& bootApi) {
     }
 }
 
-} // namespace amlp
+} // namespace aemlpc

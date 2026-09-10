@@ -4,9 +4,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class LpcObject;
 class VM;
@@ -525,4 +525,4 @@ private:
     static std::unordered_map<std::string, std::vector<VerbEntry>>& verbs();
 };
 
-} // namespace amlp
+} // namespace aemlpc

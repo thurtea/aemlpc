@@ -2,9 +2,9 @@
 #include <coroutine>
 #include <exception>
 #include <utility>
-#include "amlp/vm/Value.hpp"
+#include "aemlpc/vm/Value.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 // ROADMAP.md row 2.5's own first slice: a minimal, hand-rolled C++20
 // coroutine task type, deliberately not a general-purpose executor.
@@ -154,4 +154,4 @@ private:
     handle_type handle_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

@@ -1,13 +1,13 @@
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/object/LivingNameRegistry.hpp"
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/compiler/Lexer.hpp"
-#include "amlp/compiler/Parser.hpp"
-#include "amlp/compiler/CodeGen.hpp"
-#include "amlp/dialect/LpcDialect.hpp"
-#include "amlp/vm/VM.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/object/LivingNameRegistry.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/compiler/Lexer.hpp"
+#include "aemlpc/compiler/Parser.hpp"
+#include "aemlpc/compiler/CodeGen.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
+#include "aemlpc/vm/VM.hpp"
 #include <cctype>
 #include <fstream>
 #include <sstream>
@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 
@@ -1105,4 +1105,4 @@ void ObjectManager::armResetAndCleanup(const std::shared_ptr<LpcObject>& obj) {
     obj->setWillCleanUp(true);
 }
 
-} // namespace amlp
+} // namespace aemlpc

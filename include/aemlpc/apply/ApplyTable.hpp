@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_set>
 
-namespace amlp {
+namespace aemlpc {
 
 class ApplyTable {
 public:
@@ -12,4 +12,4 @@ private:
     static const std::unordered_set<std::string>& known();
 };
 
-} // namespace amlp
+} // namespace aemlpc

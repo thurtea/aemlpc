@@ -1,6 +1,6 @@
-#include "amlp/net/OutputContext.hpp"
+#include "aemlpc/net/OutputContext.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 namespace {
 thread_local Connection* g_current = nullptr;
@@ -9,4 +9,4 @@ thread_local Connection* g_current = nullptr;
 void OutputContext::set(Connection* conn) { g_current = conn; }
 Connection* OutputContext::current() { return g_current; }
 
-} // namespace amlp
+} // namespace aemlpc

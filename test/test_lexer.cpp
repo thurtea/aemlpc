@@ -1,33 +1,33 @@
-#include "amlp/compiler/Lexer.hpp"
-#include "amlp/compiler/Parser.hpp"
-#include "amlp/compiler/CodeGen.hpp"
-#include "amlp/compiler/Ast.hpp"
-#include "amlp/vm/Bytecode.hpp"
-#include "amlp/vm/Value.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/object/LiveObjectRegistry.hpp"
-#include "amlp/config/Config.hpp"
-#include "amlp/security/UidModel.hpp"
-#include "amlp/efun/EfunTable.hpp"
-#include "amlp/efun/ParserPackage.hpp"
-#include "amlp/efun/DbRegistry.hpp"
-#include "amlp/core/Errors.hpp"
-#include "amlp/net/Connection.hpp"
-#include "amlp/net/OutputContext.hpp"
-#include "amlp/net/Server.hpp"
-#include "amlp/net/SnoopRelay.hpp"
-#include "amlp/net/InteractiveRegistry.hpp"
-#include "amlp/net/SocketRegistry.hpp"
-#include "amlp/scheduler/Scheduler.hpp"
-#include "amlp/persist/StateSerializer.hpp"
-#include "amlp/dialect/LpcDialect.hpp"
-#include "amlp/dialect/FluffOsBootApi.hpp"
-#include "amlp/dialect/LdmudBootApi.hpp"
-#include "amlp/dialect/MasterUidBoot.hpp"
-#include "amlp/dialect/InaugurateMasterBoot.hpp"
-#include "amlp/dialect/DialectSelect.hpp"
+#include "aemlpc/compiler/Lexer.hpp"
+#include "aemlpc/compiler/Parser.hpp"
+#include "aemlpc/compiler/CodeGen.hpp"
+#include "aemlpc/compiler/Ast.hpp"
+#include "aemlpc/vm/Bytecode.hpp"
+#include "aemlpc/vm/Value.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/object/LiveObjectRegistry.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/security/UidModel.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
+#include "aemlpc/efun/ParserPackage.hpp"
+#include "aemlpc/efun/DbRegistry.hpp"
+#include "aemlpc/core/Errors.hpp"
+#include "aemlpc/net/Connection.hpp"
+#include "aemlpc/net/OutputContext.hpp"
+#include "aemlpc/net/Server.hpp"
+#include "aemlpc/net/SnoopRelay.hpp"
+#include "aemlpc/net/InteractiveRegistry.hpp"
+#include "aemlpc/net/SocketRegistry.hpp"
+#include "aemlpc/scheduler/Scheduler.hpp"
+#include "aemlpc/persist/StateSerializer.hpp"
+#include "aemlpc/dialect/LpcDialect.hpp"
+#include "aemlpc/dialect/FluffOsBootApi.hpp"
+#include "aemlpc/dialect/LdmudBootApi.hpp"
+#include "aemlpc/dialect/MasterUidBoot.hpp"
+#include "aemlpc/dialect/InaugurateMasterBoot.hpp"
+#include "aemlpc/dialect/DialectSelect.hpp"
 #include <algorithm>
 #include <cassert>
 #include <csignal>
@@ -54,7 +54,7 @@
 // Connection.hpp's own comment) rather than a plain std::string, so a
 // test checking which handler got registered by name needs an explicit
 // string-alternative check rather than a bare "== \"name\"".
-static bool functionNameIs(const amlp::Value& fn, const std::string& expected) {
+static bool functionNameIs(const aemlpc::Value& fn, const std::string& expected) {
     auto* name = std::get_if<std::string>(&fn.data);
     return name && *name == expected;
 }
@@ -65,33 +65,33 @@ static void testBasicTokenize() {
         "    write(\"Hello from simple_login.c create()!\");\n"
         "}\n";
 
-    amlp::Lexer lexer(src);
+    aemlpc::Lexer lexer(src);
     auto tokens = lexer.tokenize();
 
     assert(tokens.size() == 12);
-    assert(tokens[0].type == amlp::TokenType::Keyword && tokens[0].text == "void");
-    assert(tokens[1].type == amlp::TokenType::Ident && tokens[1].text == "create");
-    assert(tokens[7].type == amlp::TokenType::String);
+    assert(tokens[0].type == aemlpc::TokenType::Keyword && tokens[0].text == "void");
+    assert(tokens[1].type == aemlpc::TokenType::Ident && tokens[1].text == "create");
+    assert(tokens[7].type == aemlpc::TokenType::String);
     assert(tokens[7].text == "Hello from simple_login.c create()!");
 
     std::cout << "testBasicTokenize OK\n";
 }
 
 static void testArrowTokenizes() {
-    amlp::Lexer lexer("ob->greet();");
+    aemlpc::Lexer lexer("ob->greet();");
     auto tokens = lexer.tokenize();
     assert(tokens.size() == 7);
-    assert(tokens[1].type == amlp::TokenType::Symbol && tokens[1].text == "->");
+    assert(tokens[1].type == aemlpc::TokenType::Symbol && tokens[1].text == "->");
     std::cout << "testArrowTokenizes OK\n";
 }
 
 static void testComparisonOperatorsTokenize() {
-    amlp::Lexer lexer("a == b != c <= d >= e < f > g");
+    aemlpc::Lexer lexer("a == b != c <= d >= e < f > g");
     auto tokens = lexer.tokenize();
     std::vector<std::string> expectedOps = {"==", "!=", "<=", ">=", "<", ">"};
     size_t opIdx = 0;
     for (const auto& t : tokens) {
-        if (t.type == amlp::TokenType::Symbol) {
+        if (t.type == aemlpc::TokenType::Symbol) {
             assert(t.text == expectedOps[opIdx]);
             ++opIdx;
         }
@@ -105,19 +105,19 @@ static void testCallOtherParsesToCallOtherExpr() {
         "void create() {\n"
         "    call_other(clone_object(\"/obj/x\"), \"greet\");\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* callOther = dynamic_cast<amlp::CallOtherExpr*>(exprStmt->expr.get());
+    auto* callOther = dynamic_cast<aemlpc::CallOtherExpr*>(exprStmt->expr.get());
     assert(callOther != nullptr);
     // Literal call_other(target, "name", ...) still parses its function
     // name down to a StringLiteral, same as before this became a general
     // expression (see Ast.hpp's CallOtherExpr comment).
-    auto* funcLit = dynamic_cast<amlp::StringLiteral*>(callOther->function.get());
+    auto* funcLit = dynamic_cast<aemlpc::StringLiteral*>(callOther->function.get());
     assert(funcLit != nullptr);
     assert(funcLit->value == "greet");
 
@@ -129,15 +129,15 @@ static void testArrowOperatorParsesToCallOtherExpr() {
         "void create() {\n"
         "    clone_object(\"/obj/x\")->greet_again();\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
-    auto* callOther = dynamic_cast<amlp::CallOtherExpr*>(exprStmt->expr.get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
+    auto* callOther = dynamic_cast<aemlpc::CallOtherExpr*>(exprStmt->expr.get());
     assert(callOther != nullptr);
-    auto* funcLit = dynamic_cast<amlp::StringLiteral*>(callOther->function.get());
+    auto* funcLit = dynamic_cast<aemlpc::StringLiteral*>(callOther->function.get());
     assert(funcLit != nullptr);
     assert(funcLit->value == "greet_again");
 
@@ -149,10 +149,10 @@ static void testCodegenEmitsCallEfunForCallOther() {
         "void create() {\n"
         "    call_other(clone_object(\"/obj/x\"), \"greet\");\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     // clone_object(...) is a plain bare call, so it compiles to OpCode::Call
@@ -163,11 +163,11 @@ static void testCodegenEmitsCallEfunForCallOther() {
     bool sawCloneObject = false;
     bool sawCallOther = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Call) {
+        if (instr.op == aemlpc::OpCode::Call) {
             const std::string& name = compiled.stringPool[instr.operand];
             if (name == "clone_object") sawCloneObject = true;
         }
-        if (instr.op == amlp::OpCode::CallEfun) {
+        if (instr.op == aemlpc::OpCode::CallEfun) {
             const std::string& name = compiled.stringPool[instr.operand];
             if (name == "call_other") sawCallOther = true;
         }
@@ -186,8 +186,8 @@ static void testMultiFunctionProgramParses() {
         "void receive_message() {\n"
         "    write(\"ack\");\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
     assert(program->functions.size() == 2);
     assert(program->functions[0]->name == "create");
@@ -200,8 +200,8 @@ static void testFunctionWithParameterParses() {
         "void receive_message(string msg) {\n"
         "    write(msg);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
     assert(program->functions.size() == 1);
     assert(program->functions[0]->params.size() == 1);
@@ -209,11 +209,11 @@ static void testFunctionWithParameterParses() {
     assert(program->functions[0]->params[0].name == "msg");
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* call = dynamic_cast<amlp::CallExpr*>(exprStmt->expr.get());
+    auto* call = dynamic_cast<aemlpc::CallExpr*>(exprStmt->expr.get());
     assert(call != nullptr);
-    auto* ref = dynamic_cast<amlp::VarRefExpr*>(call->args[0].get());
+    auto* ref = dynamic_cast<aemlpc::VarRefExpr*>(call->args[0].get());
     assert(ref != nullptr);
     assert(ref->name == "msg");
 
@@ -227,23 +227,23 @@ static void testVarDeclAndAssignParse() {
         "    s = msg;\n"
         "    write(s);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 3);
 
-    auto* decl = dynamic_cast<amlp::VarDeclStmt*>(body[0].get());
+    auto* decl = dynamic_cast<aemlpc::VarDeclStmt*>(body[0].get());
     assert(decl != nullptr);
     assert(decl->type == "string");
     assert(decl->name == "s");
     assert(decl->initializer == nullptr);
 
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[1].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[1].get());
     assert(assign != nullptr);
     assert(assign->name == "s");
-    auto* rhsRef = dynamic_cast<amlp::VarRefExpr*>(assign->value.get());
+    auto* rhsRef = dynamic_cast<aemlpc::VarRefExpr*>(assign->value.get());
     assert(rhsRef != nullptr);
     assert(rhsRef->name == "msg");
 
@@ -257,10 +257,10 @@ static void testCodegenBindsParamAndEchoesRuntimeValue() {
         "    s = msg;\n"
         "    write(s);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     assert(compiled.functions.size() == 1);
@@ -270,8 +270,8 @@ static void testCodegenBindsParamAndEchoesRuntimeValue() {
     bool sawPushLocal = false;
     bool sawStoreLocal = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::PushLocal) sawPushLocal = true;
-        if (instr.op == amlp::OpCode::StoreLocal) sawStoreLocal = true;
+        if (instr.op == aemlpc::OpCode::PushLocal) sawPushLocal = true;
+        if (instr.op == aemlpc::OpCode::StoreLocal) sawStoreLocal = true;
     }
     assert(sawPushLocal);
     assert(sawStoreLocal);
@@ -288,20 +288,20 @@ static void testIfElseParsesToIfStmt() {
         "        write(msg);\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 1);
-    auto* ifStmt = dynamic_cast<amlp::IfStmt*>(body[0].get());
+    auto* ifStmt = dynamic_cast<aemlpc::IfStmt*>(body[0].get());
     assert(ifStmt != nullptr);
     assert(ifStmt->thenBranch != nullptr);
     assert(ifStmt->elseBranch != nullptr);
 
-    auto* cond = dynamic_cast<amlp::BinaryExpr*>(ifStmt->condition.get());
+    auto* cond = dynamic_cast<aemlpc::BinaryExpr*>(ifStmt->condition.get());
     assert(cond != nullptr);
-    assert(cond->op == amlp::BinOp::Eq);
+    assert(cond->op == aemlpc::BinOp::Eq);
 
     std::cout << "testIfElseParsesToIfStmt OK\n";
 }
@@ -315,18 +315,18 @@ static void testWhileParsesToWhileStmt() {
         "        i = i;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 3);
-    auto* whileStmt = dynamic_cast<amlp::WhileStmt*>(body[2].get());
+    auto* whileStmt = dynamic_cast<aemlpc::WhileStmt*>(body[2].get());
     assert(whileStmt != nullptr);
 
-    auto* cond = dynamic_cast<amlp::BinaryExpr*>(whileStmt->condition.get());
+    auto* cond = dynamic_cast<aemlpc::BinaryExpr*>(whileStmt->condition.get());
     assert(cond != nullptr);
-    assert(cond->op == amlp::BinOp::Lt);
+    assert(cond->op == aemlpc::BinOp::Lt);
 
     std::cout << "testWhileParsesToWhileStmt OK\n";
 }
@@ -347,18 +347,18 @@ static void testDoWhileParsesToDoWhileStmt() {
         "        i = i;\n"
         "    } while (i < 3);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 3);
-    auto* doWhileStmt = dynamic_cast<amlp::DoWhileStmt*>(body[2].get());
+    auto* doWhileStmt = dynamic_cast<aemlpc::DoWhileStmt*>(body[2].get());
     assert(doWhileStmt != nullptr);
 
-    auto* cond = dynamic_cast<amlp::BinaryExpr*>(doWhileStmt->condition.get());
+    auto* cond = dynamic_cast<aemlpc::BinaryExpr*>(doWhileStmt->condition.get());
     assert(cond != nullptr);
-    assert(cond->op == amlp::BinOp::Lt);
+    assert(cond->op == aemlpc::BinOp::Lt);
 
     std::cout << "testDoWhileParsesToDoWhileStmt OK\n";
 }
@@ -372,17 +372,17 @@ static void testCodegenEmitsJumpOpcodesForIf() {
         "        write(msg);\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawEq = false, sawJumpIfFalse = false, sawJump = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Eq) sawEq = true;
-        if (instr.op == amlp::OpCode::JumpIfFalse) sawJumpIfFalse = true;
-        if (instr.op == amlp::OpCode::Jump) sawJump = true;
+        if (instr.op == aemlpc::OpCode::Eq) sawEq = true;
+        if (instr.op == aemlpc::OpCode::JumpIfFalse) sawJumpIfFalse = true;
+        if (instr.op == aemlpc::OpCode::Jump) sawJump = true;
     }
     assert(sawEq);
     assert(sawJumpIfFalse);
@@ -390,7 +390,7 @@ static void testCodegenEmitsJumpOpcodesForIf() {
 
     // Every jump target must be a valid in-range instruction index.
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Jump || instr.op == amlp::OpCode::JumpIfFalse) {
+        if (instr.op == aemlpc::OpCode::Jump || instr.op == aemlpc::OpCode::JumpIfFalse) {
             assert(instr.operand >= 0);
             assert(static_cast<size_t>(instr.operand) <= compiled.code.size());
         }
@@ -405,8 +405,8 @@ static void testPrototypeThenDefinitionParsesAndCodegenEmitsOnlyOne() {
         "void create() {\n"
         "    write(\"hi\");\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 2);
@@ -415,7 +415,7 @@ static void testPrototypeThenDefinitionParsesAndCodegenEmitsOnlyOne() {
     assert(program->functions[1]->name == "create");
     assert(program->functions[1]->body != nullptr);
 
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     assert(compiled.functions.size() == 1);
@@ -426,7 +426,7 @@ static void testPrototypeThenDefinitionParsesAndCodegenEmitsOnlyOne() {
     // calls slice).
     bool sawWrite = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Call) {
+        if (instr.op == aemlpc::OpCode::Call) {
             const std::string& name = compiled.stringPool[instr.operand];
             if (name == "write") sawWrite = true;
         }
@@ -438,8 +438,8 @@ static void testPrototypeThenDefinitionParsesAndCodegenEmitsOnlyOne() {
 
 static void testTwoModifiersBeforeReturnTypeParseAsPrototype() {
     std::string src = "static private void load_access(string cfg, mapping ref);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -457,8 +457,8 @@ static void testTwoModifiersBeforeReturnTypeParseAsPrototype() {
 
 static void testSingleModifierBeforeReturnTypeParsesAsPrototype() {
     std::string src = "private void flag(string str);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -477,11 +477,11 @@ static void testUnrecognizedCharacterThrows() {
     // real syntax (heredoc string literals, see the heredoc slice).
     // "`" is still nowhere in the recognized-symbol list.
     std::string src = "void create() { int x; x = 1 ` 2; }\n";
-    amlp::Lexer lexer(src);
+    aemlpc::Lexer lexer(src);
     bool threw = false;
     try {
         lexer.tokenize();
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("unrecognized character") != std::string::npos);
@@ -492,8 +492,8 @@ static void testUnrecognizedCharacterThrows() {
 
 static void testFunctionTypeParameterParsesAsPrototype() {
     std::string src = "mixed apply_unguarded(function f);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -510,8 +510,8 @@ static void testFunctionTypeParameterParsesAsPrototype() {
 
 static void testAsteriskParameterTypeParsesWithIsArrayTrue() {
     std::string src = "int valid_socket(mixed *info);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -526,8 +526,8 @@ static void testAsteriskParameterTypeParsesWithIsArrayTrue() {
 
 static void testPlainParameterTypeDefaultsIsArrayFalse() {
     std::string src = "int valid_socket(mixed info);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -567,43 +567,43 @@ static void testArrayCheckObjectParsesAndCodegens() {
         "        write(\"sword score: wrong\\n\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 10);
 
-    auto* itemsDecl = dynamic_cast<amlp::VarDeclStmt*>(body[0].get());
+    auto* itemsDecl = dynamic_cast<aemlpc::VarDeclStmt*>(body[0].get());
     assert(itemsDecl != nullptr);
     assert(itemsDecl->isArray == true);
     assert(itemsDecl->type == "mixed");
     assert(itemsDecl->name == "items");
 
-    auto* itemsAssign = dynamic_cast<amlp::AssignStmt*>(body[3].get());
+    auto* itemsAssign = dynamic_cast<aemlpc::AssignStmt*>(body[3].get());
     assert(itemsAssign != nullptr);
-    auto* arrLit = dynamic_cast<amlp::ArrayLiteralExpr*>(itemsAssign->value.get());
+    auto* arrLit = dynamic_cast<aemlpc::ArrayLiteralExpr*>(itemsAssign->value.get());
     assert(arrLit != nullptr);
     assert(arrLit->elements.size() == 3);
 
-    auto* scoresAssign = dynamic_cast<amlp::AssignStmt*>(body[4].get());
+    auto* scoresAssign = dynamic_cast<aemlpc::AssignStmt*>(body[4].get());
     assert(scoresAssign != nullptr);
-    auto* mapLit = dynamic_cast<amlp::MappingLiteralExpr*>(scoresAssign->value.get());
+    auto* mapLit = dynamic_cast<aemlpc::MappingLiteralExpr*>(scoresAssign->value.get());
     assert(mapLit != nullptr);
     assert(mapLit->entries.empty());
 
-    auto* indexAssign = dynamic_cast<amlp::IndexAssignStmt*>(body[5].get());
+    auto* indexAssign = dynamic_cast<aemlpc::IndexAssignStmt*>(body[5].get());
     assert(indexAssign != nullptr);
 
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawMakeArray = false, sawMakeMapping = false, sawIndex = false, sawIndexAssign = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::MakeArray) sawMakeArray = true;
-        if (instr.op == amlp::OpCode::MakeMapping) sawMakeMapping = true;
-        if (instr.op == amlp::OpCode::Index) sawIndex = true;
-        if (instr.op == amlp::OpCode::IndexAssign) sawIndexAssign = true;
+        if (instr.op == aemlpc::OpCode::MakeArray) sawMakeArray = true;
+        if (instr.op == aemlpc::OpCode::MakeMapping) sawMakeMapping = true;
+        if (instr.op == aemlpc::OpCode::Index) sawIndex = true;
+        if (instr.op == aemlpc::OpCode::IndexAssign) sawIndexAssign = true;
     }
     assert(sawMakeArray);
     assert(sawMakeMapping);
@@ -614,12 +614,12 @@ static void testArrayCheckObjectParsesAndCodegens() {
 }
 
 static void testLogicalOperatorsTokenize() {
-    amlp::Lexer lexer("a || b && c");
+    aemlpc::Lexer lexer("a || b && c");
     auto tokens = lexer.tokenize();
     std::vector<std::string> expectedOps = {"||", "&&"};
     size_t opIdx = 0;
     for (const auto& t : tokens) {
-        if (t.type == amlp::TokenType::Symbol) {
+        if (t.type == aemlpc::TokenType::Symbol) {
             assert(t.text == expectedOps[opIdx]);
             ++opIdx;
         }
@@ -628,12 +628,12 @@ static void testLogicalOperatorsTokenize() {
 
     // A lone '|' or '&' (not doubled) still lexes fine as its own
     // one-character Symbol token, same as a lone '-' already does today.
-    amlp::Lexer loneLexer("a | b & c");
+    aemlpc::Lexer loneLexer("a | b & c");
     auto loneTokens = loneLexer.tokenize();
     std::vector<std::string> expectedLoneOps = {"|", "&"};
     size_t loneOpIdx = 0;
     for (const auto& t : loneTokens) {
-        if (t.type == amlp::TokenType::Symbol) {
+        if (t.type == aemlpc::TokenType::Symbol) {
             assert(t.text == expectedLoneOps[loneOpIdx]);
             ++loneOpIdx;
         }
@@ -654,40 +654,40 @@ static void testGuardConditionShapeParsesWithCorrectPrecedence() {
         "        write(\"skip\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* ifStmt = dynamic_cast<amlp::IfStmt*>(body[2].get());
+    auto* ifStmt = dynamic_cast<aemlpc::IfStmt*>(body[2].get());
     assert(ifStmt != nullptr);
 
     // Outermost operator must be Or: "(!lines[i] || lines[i] == "") || (lines[i] == "#")".
-    auto* outer = dynamic_cast<amlp::BinaryExpr*>(ifStmt->condition.get());
+    auto* outer = dynamic_cast<aemlpc::BinaryExpr*>(ifStmt->condition.get());
     assert(outer != nullptr);
-    assert(outer->op == amlp::BinOp::Or);
+    assert(outer->op == aemlpc::BinOp::Or);
 
     // Its left side is itself an Or, whose left side is a UnaryExpr(Not)
     // over an IndexExpr, and whose right side is an Eq comparison. This
     // confirms == binds tighter than ||, and ! binds only to its
     // immediate operand.
-    auto* innerOr = dynamic_cast<amlp::BinaryExpr*>(outer->left.get());
+    auto* innerOr = dynamic_cast<aemlpc::BinaryExpr*>(outer->left.get());
     assert(innerOr != nullptr);
-    assert(innerOr->op == amlp::BinOp::Or);
+    assert(innerOr->op == aemlpc::BinOp::Or);
 
-    auto* notExpr = dynamic_cast<amlp::UnaryExpr*>(innerOr->left.get());
+    auto* notExpr = dynamic_cast<aemlpc::UnaryExpr*>(innerOr->left.get());
     assert(notExpr != nullptr);
-    assert(notExpr->op == amlp::UnaryOp::Not);
-    auto* notOperand = dynamic_cast<amlp::IndexExpr*>(notExpr->operand.get());
+    assert(notExpr->op == aemlpc::UnaryOp::Not);
+    auto* notOperand = dynamic_cast<aemlpc::IndexExpr*>(notExpr->operand.get());
     assert(notOperand != nullptr);
 
-    auto* firstEq = dynamic_cast<amlp::BinaryExpr*>(innerOr->right.get());
+    auto* firstEq = dynamic_cast<aemlpc::BinaryExpr*>(innerOr->right.get());
     assert(firstEq != nullptr);
-    assert(firstEq->op == amlp::BinOp::Eq);
+    assert(firstEq->op == aemlpc::BinOp::Eq);
 
-    auto* secondEq = dynamic_cast<amlp::BinaryExpr*>(outer->right.get());
+    auto* secondEq = dynamic_cast<aemlpc::BinaryExpr*>(outer->right.get());
     assert(secondEq != nullptr);
-    assert(secondEq->op == amlp::BinOp::Eq);
+    assert(secondEq->op == aemlpc::BinOp::Eq);
 
     std::cout << "testGuardConditionShapeParsesWithCorrectPrecedence OK\n";
 }
@@ -701,17 +701,17 @@ static void testCodegenEmitsDupAndNotForLogicalAndUnary() {
         "        x = 1;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawDup = false, sawNot = false, sawJumpIfFalse = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Dup) sawDup = true;
-        if (instr.op == amlp::OpCode::Not) sawNot = true;
-        if (instr.op == amlp::OpCode::JumpIfFalse) sawJumpIfFalse = true;
+        if (instr.op == aemlpc::OpCode::Dup) sawDup = true;
+        if (instr.op == aemlpc::OpCode::Not) sawNot = true;
+        if (instr.op == aemlpc::OpCode::JumpIfFalse) sawJumpIfFalse = true;
     }
     assert(sawDup);
     assert(sawNot);
@@ -724,10 +724,10 @@ static void testCodegenEmitsDupAndNotForLogicalAndUnary() {
     bool sawForwardSkip = false;
     for (size_t idx = 0; idx < compiled.code.size(); ++idx) {
         const auto& instr = compiled.code[idx];
-        if (instr.op == amlp::OpCode::Jump || instr.op == amlp::OpCode::JumpIfFalse) {
+        if (instr.op == aemlpc::OpCode::Jump || instr.op == aemlpc::OpCode::JumpIfFalse) {
             assert(instr.operand >= 0);
             assert(static_cast<size_t>(instr.operand) <= compiled.code.size());
-            if (instr.op == amlp::OpCode::JumpIfFalse &&
+            if (instr.op == aemlpc::OpCode::JumpIfFalse &&
                 static_cast<size_t>(instr.operand) > idx + 1) {
                 sawForwardSkip = true;
             }
@@ -745,18 +745,18 @@ static void testCodegenEmitsDupAndNotForLogicalAndUnary() {
 // functions below only touch locals, literals, and (for the intentional
 // crash cases) an efun name that is never registered in this test
 // binary.
-static amlp::Value runProbe(const std::string& probeBody) {
+static aemlpc::Value runProbe(const std::string& probeBody) {
     std::string src = "int probe() {\n" + probeBody + "\n}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
-    auto compiled = std::make_shared<amlp::CompiledProgram>(codegen.generate(*program));
+    aemlpc::CodeGen codegen;
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(codegen.generate(*program));
 
-    auto obj = std::make_shared<amlp::LpcObject>("probe_object", compiled);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    auto obj = std::make_shared<aemlpc::LpcObject>("probe_object", compiled);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     return vm.callFunction(obj, "probe", {});
 }
@@ -765,7 +765,7 @@ static void testLogicalOrShortCircuitsWhenLeftTruthy() {
     // If || evaluated its right operand unconditionally, calling this
     // nonexistent efun would throw "undefined efun" and fail the test.
     // It must never run because "x" (1) already decides the result.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 1;\n"
         "return x || nonexistent_marker_efun();\n");
@@ -776,7 +776,7 @@ static void testLogicalOrShortCircuitsWhenLeftTruthy() {
 }
 
 static void testLogicalOrEvaluatesRightWhenLeftFalsy() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 0;\n"
         "return x || 5;\n");
@@ -790,7 +790,7 @@ static void testLogicalAndShortCircuitsWhenLeftFalsy() {
     // Same reasoning as the Or case above, mirrored: the right operand
     // must never be evaluated because "x" (0) already decides the
     // result.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 0;\n"
         "return x && nonexistent_marker_efun();\n");
@@ -801,7 +801,7 @@ static void testLogicalAndShortCircuitsWhenLeftFalsy() {
 }
 
 static void testLogicalAndEvaluatesRightWhenLeftTruthy() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 1;\n"
         "return x && 5;\n");
@@ -812,14 +812,14 @@ static void testLogicalAndEvaluatesRightWhenLeftTruthy() {
 }
 
 static void testUnaryNotNegatesTruthiness() {
-    amlp::Value resultOfFalsy = runProbe(
+    aemlpc::Value resultOfFalsy = runProbe(
         "int x;\n"
         "x = 0;\n"
         "return !x;\n");
     assert(std::holds_alternative<int64_t>(resultOfFalsy.data));
     assert(std::get<int64_t>(resultOfFalsy.data) == 1);
 
-    amlp::Value resultOfTruthy = runProbe(
+    aemlpc::Value resultOfTruthy = runProbe(
         "int x;\n"
         "x = 1;\n"
         "return !x;\n");
@@ -840,7 +840,7 @@ static void testGuardConditionDoesNotCrashOnEmptyArray() {
     // opcode already throws for that. If short-circuiting did not stop
     // evaluation once "sizeof(items) == 0" already decided the result,
     // this would throw instead of returning 1.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *items;\n"
         "items = ({});\n"
         "if (sizeof(items) == 0 || items[0] == 1) {\n"
@@ -862,10 +862,10 @@ static void testCharLiteralsTokenizeToCorrectAsciiValue() {
         {"'z'", "122"},
     };
     for (const auto& c : cases) {
-        amlp::Lexer lexer(c.src);
+        aemlpc::Lexer lexer(c.src);
         auto tokens = lexer.tokenize();
         assert(tokens.size() == 2); // the literal, then End
-        assert(tokens[0].type == amlp::TokenType::Number);
+        assert(tokens[0].type == aemlpc::TokenType::Number);
         assert(tokens[0].text == c.expected);
     }
 
@@ -876,10 +876,10 @@ static void testCharLiteralEscapeSequenceTokenizes() {
     // Not present anywhere in master.c today, but the lexChar() design
     // mirrors lexString()'s escape table, so this confirms it actually
     // works, not just that the plain-character case does.
-    amlp::Lexer lexer("'\\n'");
+    aemlpc::Lexer lexer("'\\n'");
     auto tokens = lexer.tokenize();
     assert(tokens.size() == 2);
-    assert(tokens[0].type == amlp::TokenType::Number);
+    assert(tokens[0].type == aemlpc::TokenType::Number);
     assert(tokens[0].text == "10");
 
     std::cout << "testCharLiteralEscapeSequenceTokenizes OK\n";
@@ -888,18 +888,18 @@ static void testCharLiteralEscapeSequenceTokenizes() {
 static void testMalformedCharLiteralThrows() {
     bool threwForEmpty = false;
     try {
-        amlp::Lexer lexer("''");
+        aemlpc::Lexer lexer("''");
         lexer.tokenize();
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwForEmpty = true;
     }
     assert(threwForEmpty);
 
     bool threwForTwoChars = false;
     try {
-        amlp::Lexer lexer("'ab'");
+        aemlpc::Lexer lexer("'ab'");
         lexer.tokenize();
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwForTwoChars = true;
     }
     assert(threwForTwoChars);
@@ -915,23 +915,23 @@ static void testCharLiteralParsesAsIntLiteral() {
         "        x = 1;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* ifStmt = dynamic_cast<amlp::IfStmt*>(body[1].get());
+    auto* ifStmt = dynamic_cast<aemlpc::IfStmt*>(body[1].get());
     assert(ifStmt != nullptr);
 
-    auto* cond = dynamic_cast<amlp::BinaryExpr*>(ifStmt->condition.get());
+    auto* cond = dynamic_cast<aemlpc::BinaryExpr*>(ifStmt->condition.get());
     assert(cond != nullptr);
-    assert(cond->op == amlp::BinOp::Eq);
+    assert(cond->op == aemlpc::BinOp::Eq);
 
     // No new AST node for character literals: the right-hand side must
     // be a plain IntLiteral, same as any other integer literal, per the
     // plan's decision to reuse the existing pipeline instead of adding
     // a dedicated CharLiteral node.
-    auto* rightLit = dynamic_cast<amlp::IntLiteral*>(cond->right.get());
+    auto* rightLit = dynamic_cast<aemlpc::IntLiteral*>(cond->right.get());
     assert(rightLit != nullptr);
     assert(rightLit->value == 35);
 
@@ -939,14 +939,14 @@ static void testCharLiteralParsesAsIntLiteral() {
 }
 
 static void testStringIndexingReturnsByteValue() {
-    amlp::Value matchResult = runProbe(
+    aemlpc::Value matchResult = runProbe(
         "string s;\n"
         "s = \"#comment\";\n"
         "return s[0] == '#';\n");
     assert(std::holds_alternative<int64_t>(matchResult.data));
     assert(std::get<int64_t>(matchResult.data) == 1);
 
-    amlp::Value noMatchResult = runProbe(
+    aemlpc::Value noMatchResult = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[0] == '#';\n");
@@ -968,14 +968,14 @@ static void testStringIndexingReturnsByteValue() {
 // continue;" (adm/obj/master/groups.c/access.c both) relies on
 // lines[i][0] reading back 0 for an empty exploded line, not throwing.
 static void testStringIndexingAtLengthReadsZeroPastLengthThrows() {
-    amlp::Value atLength = runProbe(
+    aemlpc::Value atLength = runProbe(
         "string s;\n"
         "s = \"\";\n"
         "return s[0];\n");
     assert(std::holds_alternative<int64_t>(atLength.data));
     assert(std::get<int64_t>(atLength.data) == 0);
 
-    amlp::Value nonEmptyAtLength = runProbe(
+    aemlpc::Value nonEmptyAtLength = runProbe(
         "string s;\n"
         "s = \"hi\";\n"
         "return s[2];\n");
@@ -988,7 +988,7 @@ static void testStringIndexingAtLengthReadsZeroPastLengthThrows() {
             "string s;\n"
             "s = \"\";\n"
             "return s[1];\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -1002,7 +1002,7 @@ static void testGuardConditionShapeWithRealStringIndexing() {
     // Now using an actual string and real character-literal comparison,
     // no array-of-fields stand-in needed (that stand-in existed only
     // because this slice's constructs did not exist yet).
-    amlp::Value skipOnComment = runProbe(
+    aemlpc::Value skipOnComment = runProbe(
         "string s;\n"
         "s = \"#comment\";\n"
         "if (!s || s == \"\" || s[0] == '#') {\n"
@@ -1012,7 +1012,7 @@ static void testGuardConditionShapeWithRealStringIndexing() {
     assert(std::holds_alternative<int64_t>(skipOnComment.data));
     assert(std::get<int64_t>(skipOnComment.data) == 1);
 
-    amlp::Value skipOnEmpty = runProbe(
+    aemlpc::Value skipOnEmpty = runProbe(
         "string s;\n"
         "s = \"\";\n"
         "if (!s || s == \"\" || s[0] == '#') {\n"
@@ -1022,7 +1022,7 @@ static void testGuardConditionShapeWithRealStringIndexing() {
     assert(std::holds_alternative<int64_t>(skipOnEmpty.data));
     assert(std::get<int64_t>(skipOnEmpty.data) == 1);
 
-    amlp::Value keepNormalLine = runProbe(
+    aemlpc::Value keepNormalLine = runProbe(
         "string s;\n"
         "s = \"sword\";\n"
         "if (!s || s == \"\" || s[0] == '#') {\n"
@@ -1036,12 +1036,12 @@ static void testGuardConditionShapeWithRealStringIndexing() {
 }
 
 static void testDivisionAndModuloTokenizeAsSymbols() {
-    amlp::Lexer lexer("t/60 t%60");
+    aemlpc::Lexer lexer("t/60 t%60");
     auto tokens = lexer.tokenize();
     std::vector<std::string> expectedOps = {"/", "%"};
     size_t opIdx = 0;
     for (const auto& t : tokens) {
-        if (t.type == amlp::TokenType::Symbol) {
+        if (t.type == aemlpc::TokenType::Symbol) {
             assert(t.text == expectedOps[opIdx]);
             ++opIdx;
         }
@@ -1064,8 +1064,8 @@ static void testCommentsStillWorkAfterSlashWhitelisting() {
         "       with a / and a % in it */\n"
         "    x = 1;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
@@ -1083,22 +1083,22 @@ static void testDivisionAndModuloParseToCorrectBinOp() {
         "    a = t / 60;\n"
         "    b = t % 60;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* divAssign = dynamic_cast<amlp::AssignStmt*>(body[3].get());
+    auto* divAssign = dynamic_cast<aemlpc::AssignStmt*>(body[3].get());
     assert(divAssign != nullptr);
-    auto* divExpr = dynamic_cast<amlp::BinaryExpr*>(divAssign->value.get());
+    auto* divExpr = dynamic_cast<aemlpc::BinaryExpr*>(divAssign->value.get());
     assert(divExpr != nullptr);
-    assert(divExpr->op == amlp::BinOp::Div);
+    assert(divExpr->op == aemlpc::BinOp::Div);
 
-    auto* modAssign = dynamic_cast<amlp::AssignStmt*>(body[4].get());
+    auto* modAssign = dynamic_cast<aemlpc::AssignStmt*>(body[4].get());
     assert(modAssign != nullptr);
-    auto* modExpr = dynamic_cast<amlp::BinaryExpr*>(modAssign->value.get());
+    auto* modExpr = dynamic_cast<aemlpc::BinaryExpr*>(modAssign->value.get());
     assert(modExpr != nullptr);
-    assert(modExpr->op == amlp::BinOp::Mod);
+    assert(modExpr->op == aemlpc::BinOp::Mod);
 
     std::cout << "testDivisionAndModuloParseToCorrectBinOp OK\n";
 }
@@ -1109,22 +1109,22 @@ static void testUnaryMinusParsesAsNegExpr() {
         "    int x;\n"
         "    x = -1;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[1].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[1].get());
     assert(assign != nullptr);
 
     // No literal-only special case: -1 must parse through the general
     // unary path as a UnaryExpr(Neg) wrapping a plain IntLiteral(1),
     // not as some dedicated negative-literal token.
-    auto* negExpr = dynamic_cast<amlp::UnaryExpr*>(assign->value.get());
+    auto* negExpr = dynamic_cast<aemlpc::UnaryExpr*>(assign->value.get());
     assert(negExpr != nullptr);
-    assert(negExpr->op == amlp::UnaryOp::Neg);
+    assert(negExpr->op == aemlpc::UnaryOp::Neg);
 
-    auto* innerLit = dynamic_cast<amlp::IntLiteral*>(negExpr->operand.get());
+    auto* innerLit = dynamic_cast<aemlpc::IntLiteral*>(negExpr->operand.get());
     assert(innerLit != nullptr);
     assert(innerLit->value == 1);
 
@@ -1141,22 +1141,22 @@ static void testUnaryMinusParsesAsNegExpr() {
 // driver: ~5 == -6, ~-3 == 2, ~~7 == 7 (double negation restores the
 // original value).
 static void testBitNotVmExecution() {
-    amlp::Value positive = runProbe("return ~5;\n");
+    aemlpc::Value positive = runProbe("return ~5;\n");
     assert(std::holds_alternative<int64_t>(positive.data));
     assert(std::get<int64_t>(positive.data) == -6);
 
-    amlp::Value negative = runProbe("return ~(-3);\n");
+    aemlpc::Value negative = runProbe("return ~(-3);\n");
     assert(std::holds_alternative<int64_t>(negative.data));
     assert(std::get<int64_t>(negative.data) == 2);
 
-    amlp::Value doubled = runProbe("return ~~7;\n");
+    aemlpc::Value doubled = runProbe("return ~~7;\n");
     assert(std::holds_alternative<int64_t>(doubled.data));
     assert(std::get<int64_t>(doubled.data) == 7);
 
     bool threw = false;
     try {
         runProbe("return ~\"str\";\n");
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("Bad argument to ~") != std::string::npos);
@@ -1175,21 +1175,21 @@ static void testMultiplicativeBindsTighterThanAdditive() {
         "    int r;\n"
         "    r = a - b * c;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[4].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[4].get());
     assert(assign != nullptr);
 
-    auto* outer = dynamic_cast<amlp::BinaryExpr*>(assign->value.get());
+    auto* outer = dynamic_cast<aemlpc::BinaryExpr*>(assign->value.get());
     assert(outer != nullptr);
-    assert(outer->op == amlp::BinOp::Sub);
+    assert(outer->op == aemlpc::BinOp::Sub);
 
-    auto* right = dynamic_cast<amlp::BinaryExpr*>(outer->right.get());
+    auto* right = dynamic_cast<aemlpc::BinaryExpr*>(outer->right.get());
     assert(right != nullptr);
-    assert(right->op == amlp::BinOp::Mul);
+    assert(right->op == aemlpc::BinOp::Mul);
 
     std::cout << "testMultiplicativeBindsTighterThanAdditive OK\n";
 }
@@ -1203,16 +1203,16 @@ static void testCodegenEmitsDivAndModOpcodes() {
         "    a = t / 60;\n"
         "    b = t % 60;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawDiv = false, sawMod = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::Div) sawDiv = true;
-        if (instr.op == amlp::OpCode::Mod) sawMod = true;
+        if (instr.op == aemlpc::OpCode::Div) sawDiv = true;
+        if (instr.op == aemlpc::OpCode::Mod) sawMod = true;
     }
     assert(sawDiv);
     assert(sawMod);
@@ -1221,23 +1221,23 @@ static void testCodegenEmitsDivAndModOpcodes() {
 }
 
 static void testArithmeticVmExecution() {
-    amlp::Value subResult = runProbe("return 10 - 3;\n");
+    aemlpc::Value subResult = runProbe("return 10 - 3;\n");
     assert(std::holds_alternative<int64_t>(subResult.data));
     assert(std::get<int64_t>(subResult.data) == 7);
 
-    amlp::Value mulResult = runProbe("return 4 * 5;\n");
+    aemlpc::Value mulResult = runProbe("return 4 * 5;\n");
     assert(std::holds_alternative<int64_t>(mulResult.data));
     assert(std::get<int64_t>(mulResult.data) == 20);
 
-    amlp::Value divResult = runProbe("return 17 / 5;\n");
+    aemlpc::Value divResult = runProbe("return 17 / 5;\n");
     assert(std::holds_alternative<int64_t>(divResult.data));
     assert(std::get<int64_t>(divResult.data) == 3);
 
-    amlp::Value modResult = runProbe("return 17 % 5;\n");
+    aemlpc::Value modResult = runProbe("return 17 % 5;\n");
     assert(std::holds_alternative<int64_t>(modResult.data));
     assert(std::get<int64_t>(modResult.data) == 2);
 
-    amlp::Value negResult = runProbe("return -1;\n");
+    aemlpc::Value negResult = runProbe("return -1;\n");
     assert(std::holds_alternative<int64_t>(negResult.data));
     assert(std::get<int64_t>(negResult.data) == -1);
 
@@ -1249,22 +1249,22 @@ static void testArithmeticVmExecution() {
 // literals were not lexed at all. lexNumber() only ever consumed the
 // integer part, leaving a bare '.' for the caller to trip over.
 static void testFloatLiteralsTokenizeAndVmExecute() {
-    amlp::Value trailing = runProbe("return 1.5;\n");
+    aemlpc::Value trailing = runProbe("return 1.5;\n");
     assert(std::holds_alternative<double>(trailing.data));
     assert(std::get<double>(trailing.data) == 1.5);
 
-    amlp::Value leading = runProbe("return .5;\n");
+    aemlpc::Value leading = runProbe("return .5;\n");
     assert(std::holds_alternative<double>(leading.data));
     assert(std::get<double>(leading.data) == 0.5);
 
-    amlp::Value zero = runProbe("return 0.0;\n");
+    aemlpc::Value zero = runProbe("return 0.0;\n");
     assert(std::holds_alternative<double>(zero.data));
     assert(std::get<double>(zero.data) == 0.0);
 
     // Mixed int/float arithmetic promotes to float, and a float local
     // variable round-trips through PushObjectVar/StoreObjectVar-style
     // local storage the same as any other Value.
-    amlp::Value mixed = runProbe(
+    aemlpc::Value mixed = runProbe(
         "float f;\n"
         "f = 1.5 + 2;\n"
         "return f;\n");
@@ -1274,7 +1274,7 @@ static void testFloatLiteralsTokenizeAndVmExecute() {
     // The real code's own range-terminated shape ("arr[a..b]") must still
     // tokenize as the ".." range operator, not misfire as a float, now
     // that '.' can also start a number.
-    amlp::Value rangeStillWorks = runProbe(
+    aemlpc::Value rangeStillWorks = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[1..3];\n");
@@ -1290,14 +1290,14 @@ static void testFloatLiteralsTokenizeAndVmExecute() {
 // the comma-loop here always tried to parse one more element after any
 // comma, and choked on the "}"/"]" itself with "expected expression".
 static void testTrailingCommaInArrayAndMappingLiteralsParses() {
-    amlp::Value arr = runProbe(
+    aemlpc::Value arr = runProbe(
         "mixed *items;\n"
         "items = ({ 1, 2, 3, });\n"
         "return sizeof(items);\n");
     assert(std::holds_alternative<int64_t>(arr.data));
     assert(std::get<int64_t>(arr.data) == 3);
 
-    amlp::Value map = runProbe(
+    aemlpc::Value map = runProbe(
         "mapping m;\n"
         "m = ([ \"a\": 1, \"b\": 2, ]);\n"
         "return m[\"b\"];\n");
@@ -1314,7 +1314,7 @@ static void testArithmeticOnNonNumericOperandThrows() {
             "string s;\n"
             "s = \"x\";\n"
             "return s - 1;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         subThrew = true;
     }
     assert(subThrew);
@@ -1325,7 +1325,7 @@ static void testArithmeticOnNonNumericOperandThrows() {
             "string s;\n"
             "s = \"x\";\n"
             "return s * 1;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         mulThrew = true;
     }
     assert(mulThrew);
@@ -1336,7 +1336,7 @@ static void testArithmeticOnNonNumericOperandThrows() {
             "string s;\n"
             "s = \"x\";\n"
             "return s / 1;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         divThrew = true;
     }
     assert(divThrew);
@@ -1347,7 +1347,7 @@ static void testArithmeticOnNonNumericOperandThrows() {
             "string s;\n"
             "s = \"x\";\n"
             "return s % 1;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         modThrew = true;
     }
     assert(modThrew);
@@ -1358,7 +1358,7 @@ static void testArithmeticOnNonNumericOperandThrows() {
             "string s;\n"
             "s = \"x\";\n"
             "return -s;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         negThrew = true;
     }
     assert(negThrew);
@@ -1370,7 +1370,7 @@ static void testDivisionAndModuloByZeroThrow() {
     bool divThrew = false;
     try {
         runProbe("return 5 / 0;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         divThrew = true;
     }
     assert(divThrew);
@@ -1378,7 +1378,7 @@ static void testDivisionAndModuloByZeroThrow() {
     bool modThrew = false;
     try {
         runProbe("return 5 % 0;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         modThrew = true;
     }
     assert(modThrew);
@@ -1390,14 +1390,14 @@ static void testRealBlockingLineArithmetic() {
     // Reproduces the exact arithmetic from the real blocking line:
     //   write("("+(t/60)+"."+(t%60)+")\n");
     // with t = 125, matching 2 minutes and 5 seconds.
-    amlp::Value divResult = runProbe(
+    aemlpc::Value divResult = runProbe(
         "int t;\n"
         "t = 125;\n"
         "return t / 60;\n");
     assert(std::holds_alternative<int64_t>(divResult.data));
     assert(std::get<int64_t>(divResult.data) == 2);
 
-    amlp::Value modResult = runProbe(
+    aemlpc::Value modResult = runProbe(
         "int t;\n"
         "t = 125;\n"
         "return t % 60;\n");
@@ -1408,25 +1408,25 @@ static void testRealBlockingLineArithmetic() {
 }
 
 static void testRangeDotDotTokenizes() {
-    amlp::Lexer lexer("..");
+    aemlpc::Lexer lexer("..");
     auto tokens = lexer.tokenize();
     assert(tokens.size() == 2); // the ".." symbol, then End
-    assert(tokens[0].type == amlp::TokenType::Symbol);
+    assert(tokens[0].type == aemlpc::TokenType::Symbol);
     assert(tokens[0].text == "..");
 
     // The exact real shape, name[0..0], must tokenize as a single ".."
     // symbol between the two Number tokens, not two separate "." tokens
     // (which is not even a valid symbol on its own in this lexer).
-    amlp::Lexer shapeLexer("name[0..0]");
+    aemlpc::Lexer shapeLexer("name[0..0]");
     auto shapeTokens = shapeLexer.tokenize();
-    std::vector<std::pair<amlp::TokenType, std::string>> expected = {
-        {amlp::TokenType::Ident, "name"},
-        {amlp::TokenType::Symbol, "["},
-        {amlp::TokenType::Number, "0"},
-        {amlp::TokenType::Symbol, ".."},
-        {amlp::TokenType::Number, "0"},
-        {amlp::TokenType::Symbol, "]"},
-        {amlp::TokenType::End, ""},
+    std::vector<std::pair<aemlpc::TokenType, std::string>> expected = {
+        {aemlpc::TokenType::Ident, "name"},
+        {aemlpc::TokenType::Symbol, "["},
+        {aemlpc::TokenType::Number, "0"},
+        {aemlpc::TokenType::Symbol, ".."},
+        {aemlpc::TokenType::Number, "0"},
+        {aemlpc::TokenType::Symbol, "]"},
+        {aemlpc::TokenType::End, ""},
     };
     assert(shapeTokens.size() == expected.size());
     for (size_t i = 0; i < expected.size(); ++i) {
@@ -1436,7 +1436,7 @@ static void testRangeDotDotTokenizes() {
 
     // Regression check: an ordinary single index, name[0], must be
     // completely unaffected, no ".." token appears anywhere.
-    amlp::Lexer singleLexer("name[0]");
+    aemlpc::Lexer singleLexer("name[0]");
     auto singleTokens = singleLexer.tokenize();
     for (const auto& t : singleTokens) {
         assert(t.text != "..");
@@ -1452,23 +1452,23 @@ static void testRangeIndexParsesWithRangeEndSet() {
         "    string shard;\n"
         "    shard = name[0..0];\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[2].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[2].get());
     assert(assign != nullptr);
 
-    auto* idx = dynamic_cast<amlp::IndexExpr*>(assign->value.get());
+    auto* idx = dynamic_cast<aemlpc::IndexExpr*>(assign->value.get());
     assert(idx != nullptr);
     assert(idx->rangeEnd != nullptr);
 
-    auto* startLit = dynamic_cast<amlp::IntLiteral*>(idx->index.get());
+    auto* startLit = dynamic_cast<aemlpc::IntLiteral*>(idx->index.get());
     assert(startLit != nullptr);
     assert(startLit->value == 0);
 
-    auto* endLit = dynamic_cast<amlp::IntLiteral*>(idx->rangeEnd.get());
+    auto* endLit = dynamic_cast<aemlpc::IntLiteral*>(idx->rangeEnd.get());
     assert(endLit != nullptr);
     assert(endLit->value == 0);
 
@@ -1482,15 +1482,15 @@ static void testSingleIndexStillParsesWithNullRangeEnd() {
         "    mixed one;\n"
         "    one = items[0];\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[2].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[2].get());
     assert(assign != nullptr);
 
-    auto* idx = dynamic_cast<amlp::IndexExpr*>(assign->value.get());
+    auto* idx = dynamic_cast<aemlpc::IndexExpr*>(assign->value.get());
     assert(idx != nullptr);
     assert(idx->rangeEnd == nullptr);
 
@@ -1509,23 +1509,23 @@ static void testRealShapeRangeIndexBindsToNameNotConcatenation() {
         "    string path;\n"
         "    path = \"/secure/save/users\"+\"/\"+name[0..0];\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[2].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[2].get());
     assert(assign != nullptr);
 
-    auto* outerAdd = dynamic_cast<amlp::BinaryExpr*>(assign->value.get());
+    auto* outerAdd = dynamic_cast<aemlpc::BinaryExpr*>(assign->value.get());
     assert(outerAdd != nullptr);
-    assert(outerAdd->op == amlp::BinOp::Add);
+    assert(outerAdd->op == aemlpc::BinOp::Add);
 
-    auto* rangeIdx = dynamic_cast<amlp::IndexExpr*>(outerAdd->right.get());
+    auto* rangeIdx = dynamic_cast<aemlpc::IndexExpr*>(outerAdd->right.get());
     assert(rangeIdx != nullptr);
     assert(rangeIdx->rangeEnd != nullptr);
 
-    auto* nameRef = dynamic_cast<amlp::VarRefExpr*>(rangeIdx->target.get());
+    auto* nameRef = dynamic_cast<aemlpc::VarRefExpr*>(rangeIdx->target.get());
     assert(nameRef != nullptr);
     assert(nameRef->name == "name");
 
@@ -1542,16 +1542,16 @@ static void testCodegenEmitsRangeIndexOnlyWhenRangeEndPresent() {
         "    shard = name[0..0];\n"
         "    one = items[0];\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawRangeIndex = false, sawPlainIndex = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::RangeIndex) sawRangeIndex = true;
-        if (instr.op == amlp::OpCode::Index) sawPlainIndex = true;
+        if (instr.op == aemlpc::OpCode::RangeIndex) sawRangeIndex = true;
+        if (instr.op == aemlpc::OpCode::Index) sawPlainIndex = true;
     }
     assert(sawRangeIndex);
     assert(sawPlainIndex);
@@ -1560,21 +1560,21 @@ static void testCodegenEmitsRangeIndexOnlyWhenRangeEndPresent() {
 }
 
 static void testStringRangeIndexExecutesWithCorrectBounds() {
-    amlp::Value firstChar = runProbe(
+    aemlpc::Value firstChar = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[0..0];\n");
     assert(std::holds_alternative<std::string>(firstChar.data));
     assert(std::get<std::string>(firstChar.data) == "h");
 
-    amlp::Value middle = runProbe(
+    aemlpc::Value middle = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[1..3];\n");
     assert(std::holds_alternative<std::string>(middle.data));
     assert(std::get<std::string>(middle.data) == "ell");
 
-    amlp::Value whole = runProbe(
+    aemlpc::Value whole = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[0..4];\n");
@@ -1582,7 +1582,7 @@ static void testStringRangeIndexExecutesWithCorrectBounds() {
     assert(std::get<std::string>(whole.data) == "hello");
 
     // End beyond the string's length is clamped, not an error.
-    amlp::Value clamped = runProbe(
+    aemlpc::Value clamped = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[0..99];\n");
@@ -1591,7 +1591,7 @@ static void testStringRangeIndexExecutesWithCorrectBounds() {
 
     // An inverted range names no characters, and returns "" rather
     // than throwing.
-    amlp::Value inverted = runProbe(
+    aemlpc::Value inverted = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[3..1];\n");
@@ -1599,7 +1599,7 @@ static void testStringRangeIndexExecutesWithCorrectBounds() {
     assert(std::get<std::string>(inverted.data).empty());
 
     // An empty target at [0..0] also names no characters.
-    amlp::Value emptyTarget = runProbe(
+    aemlpc::Value emptyTarget = runProbe(
         "string s;\n"
         "s = \"\";\n"
         "return s[0..0];\n");
@@ -1616,7 +1616,7 @@ static void testStringRangeIndexNegativeStartThrows() {
             "string s;\n"
             "s = \"hello\";\n"
             "return s[-1..2];\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -1625,7 +1625,7 @@ static void testStringRangeIndexNegativeStartThrows() {
 }
 
 static void testArrayRangeIndexExecutesWithCorrectBounds() {
-    amlp::Value middleSlice = runProbe(
+    aemlpc::Value middleSlice = runProbe(
         "mixed *items;\n"
         "mixed *sliced;\n"
         "items = ({ 1, 2, 3, 4 });\n"
@@ -1635,7 +1635,7 @@ static void testArrayRangeIndexExecutesWithCorrectBounds() {
     assert(std::get<int64_t>(middleSlice.data) == 1);
 
     // End beyond the array's length is clamped, not an error.
-    amlp::Value clampedSlice = runProbe(
+    aemlpc::Value clampedSlice = runProbe(
         "mixed *items;\n"
         "mixed *sliced;\n"
         "items = ({ 1, 2, 3 });\n"
@@ -1645,7 +1645,7 @@ static void testArrayRangeIndexExecutesWithCorrectBounds() {
     assert(std::get<int64_t>(clampedSlice.data) == 1);
 
     // An inverted range yields an empty array, not an error.
-    amlp::Value invertedSlice = runProbe(
+    aemlpc::Value invertedSlice = runProbe(
         "mixed *items;\n"
         "mixed *sliced;\n"
         "items = ({ 1, 2, 3 });\n"
@@ -1663,7 +1663,7 @@ static void testRealBlockingLineRangeIndex() {
     //   DIR_USERS+"/"+name[0..0]
     // with a fixed name, matching the single-character-prefix sharding
     // idiom directly.
-    amlp::Value shard = runProbe(
+    aemlpc::Value shard = runProbe(
         "string name;\n"
         "name = \"thurtea\";\n"
         "return name[0..0];\n");
@@ -1674,10 +1674,10 @@ static void testRealBlockingLineRangeIndex() {
 }
 
 static void testTernaryQuestionMarkTokenizes() {
-    amlp::Lexer lexer("?");
+    aemlpc::Lexer lexer("?");
     auto tokens = lexer.tokenize();
     assert(tokens.size() == 2); // the "?" symbol, then End
-    assert(tokens[0].type == amlp::TokenType::Symbol);
+    assert(tokens[0].type == aemlpc::TokenType::Symbol);
     assert(tokens[0].text == "?");
 
     std::cout << "testTernaryQuestionMarkTokenizes OK\n";
@@ -1688,15 +1688,15 @@ static void testTernaryRealShapeTokenizes() {
     // surrounding parens: caught ? "catch" : "runtime". Confirms '?'
     // and the already-whitelisted ':' both come through correctly in
     // sequence.
-    amlp::Lexer lexer("caught ? \"catch\" : \"runtime\"");
+    aemlpc::Lexer lexer("caught ? \"catch\" : \"runtime\"");
     auto tokens = lexer.tokenize();
-    std::vector<std::pair<amlp::TokenType, std::string>> expected = {
-        {amlp::TokenType::Ident, "caught"},
-        {amlp::TokenType::Symbol, "?"},
-        {amlp::TokenType::String, "catch"},
-        {amlp::TokenType::Symbol, ":"},
-        {amlp::TokenType::String, "runtime"},
-        {amlp::TokenType::End, ""},
+    std::vector<std::pair<aemlpc::TokenType, std::string>> expected = {
+        {aemlpc::TokenType::Ident, "caught"},
+        {aemlpc::TokenType::Symbol, "?"},
+        {aemlpc::TokenType::String, "catch"},
+        {aemlpc::TokenType::Symbol, ":"},
+        {aemlpc::TokenType::String, "runtime"},
+        {aemlpc::TokenType::End, ""},
     };
     assert(tokens.size() == expected.size());
     for (size_t i = 0; i < expected.size(); ++i) {
@@ -1716,26 +1716,26 @@ static void testTernaryParsesToTernaryExpr() {
         "    mixed result;\n"
         "    result = a ? b : c;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[4].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[4].get());
     assert(assign != nullptr);
 
-    auto* tern = dynamic_cast<amlp::TernaryExpr*>(assign->value.get());
+    auto* tern = dynamic_cast<aemlpc::TernaryExpr*>(assign->value.get());
     assert(tern != nullptr);
 
-    auto* cond = dynamic_cast<amlp::VarRefExpr*>(tern->condition.get());
+    auto* cond = dynamic_cast<aemlpc::VarRefExpr*>(tern->condition.get());
     assert(cond != nullptr);
     assert(cond->name == "a");
 
-    auto* thenRef = dynamic_cast<amlp::VarRefExpr*>(tern->thenBranch.get());
+    auto* thenRef = dynamic_cast<aemlpc::VarRefExpr*>(tern->thenBranch.get());
     assert(thenRef != nullptr);
     assert(thenRef->name == "b");
 
-    auto* elseRef = dynamic_cast<amlp::VarRefExpr*>(tern->elseBranch.get());
+    auto* elseRef = dynamic_cast<aemlpc::VarRefExpr*>(tern->elseBranch.get());
     assert(elseRef != nullptr);
     assert(elseRef->name == "c");
 
@@ -1752,15 +1752,15 @@ static void testParenthesizedTernaryParsesUnchanged() {
         "    mixed name;\n"
         "    return (name ? name : \"Mudlib\");\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* ret = dynamic_cast<amlp::ReturnStmt*>(body[1].get());
+    auto* ret = dynamic_cast<aemlpc::ReturnStmt*>(body[1].get());
     assert(ret != nullptr);
 
-    auto* tern = dynamic_cast<amlp::TernaryExpr*>(ret->expr.get());
+    auto* tern = dynamic_cast<aemlpc::TernaryExpr*>(ret->expr.get());
     assert(tern != nullptr);
 
     std::cout << "testParenthesizedTernaryParsesUnchanged OK\n";
@@ -1777,30 +1777,30 @@ static void testTernaryRightAssociativity() {
         "    mixed result;\n"
         "    result = a ? b : c ? d : e;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[6].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[6].get());
     assert(assign != nullptr);
 
-    auto* outer = dynamic_cast<amlp::TernaryExpr*>(assign->value.get());
+    auto* outer = dynamic_cast<aemlpc::TernaryExpr*>(assign->value.get());
     assert(outer != nullptr);
 
-    auto* outerCond = dynamic_cast<amlp::VarRefExpr*>(outer->condition.get());
+    auto* outerCond = dynamic_cast<aemlpc::VarRefExpr*>(outer->condition.get());
     assert(outerCond != nullptr);
     assert(outerCond->name == "a");
 
-    auto* outerThen = dynamic_cast<amlp::VarRefExpr*>(outer->thenBranch.get());
+    auto* outerThen = dynamic_cast<aemlpc::VarRefExpr*>(outer->thenBranch.get());
     assert(outerThen != nullptr);
     assert(outerThen->name == "b");
 
     // a ? b : (c ? d : e), not a left-associative (incorrect) grouping.
-    auto* inner = dynamic_cast<amlp::TernaryExpr*>(outer->elseBranch.get());
+    auto* inner = dynamic_cast<aemlpc::TernaryExpr*>(outer->elseBranch.get());
     assert(inner != nullptr);
 
-    auto* innerCond = dynamic_cast<amlp::VarRefExpr*>(inner->condition.get());
+    auto* innerCond = dynamic_cast<aemlpc::VarRefExpr*>(inner->condition.get());
     assert(innerCond != nullptr);
     assert(innerCond->name == "c");
 
@@ -1818,21 +1818,21 @@ static void testTernaryThenBranchNesting() {
         "    mixed result;\n"
         "    result = a ? (b ? c : d) : e;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assign = dynamic_cast<amlp::AssignStmt*>(body[6].get());
+    auto* assign = dynamic_cast<aemlpc::AssignStmt*>(body[6].get());
     assert(assign != nullptr);
 
-    auto* outer = dynamic_cast<amlp::TernaryExpr*>(assign->value.get());
+    auto* outer = dynamic_cast<aemlpc::TernaryExpr*>(assign->value.get());
     assert(outer != nullptr);
 
-    auto* inner = dynamic_cast<amlp::TernaryExpr*>(outer->thenBranch.get());
+    auto* inner = dynamic_cast<aemlpc::TernaryExpr*>(outer->thenBranch.get());
     assert(inner != nullptr);
 
-    auto* innerCond = dynamic_cast<amlp::VarRefExpr*>(inner->condition.get());
+    auto* innerCond = dynamic_cast<aemlpc::VarRefExpr*>(inner->condition.get());
     assert(innerCond != nullptr);
     assert(innerCond->name == "b");
 
@@ -1848,19 +1848,19 @@ static void testCodegenEmitsJumpOpcodesForTernary() {
         "    int result;\n"
         "    result = a ? b : c;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     int jumpIfFalseIdx = -1, jumpIdx = -1;
     for (size_t i = 0; i < compiled.code.size(); ++i) {
-        if (compiled.code[i].op == amlp::OpCode::JumpIfFalse) {
+        if (compiled.code[i].op == aemlpc::OpCode::JumpIfFalse) {
             assert(jumpIfFalseIdx == -1); // exactly one
             jumpIfFalseIdx = static_cast<int>(i);
         }
-        if (compiled.code[i].op == amlp::OpCode::Jump) {
+        if (compiled.code[i].op == aemlpc::OpCode::Jump) {
             assert(jumpIdx == -1); // exactly one
             jumpIdx = static_cast<int>(i);
         }
@@ -1877,15 +1877,15 @@ static void testCodegenEmitsJumpOpcodesForTernary() {
 }
 
 static void testTernaryVmExecutesCorrectBranch() {
-    amlp::Value truthy = runProbe("return 1 ? 10 : 20;\n");
+    aemlpc::Value truthy = runProbe("return 1 ? 10 : 20;\n");
     assert(std::holds_alternative<int64_t>(truthy.data));
     assert(std::get<int64_t>(truthy.data) == 10);
 
-    amlp::Value falsy = runProbe("return 0 ? 10 : 20;\n");
+    aemlpc::Value falsy = runProbe("return 0 ? 10 : 20;\n");
     assert(std::holds_alternative<int64_t>(falsy.data));
     assert(std::get<int64_t>(falsy.data) == 20);
 
-    amlp::Value fromComparison = runProbe("return (5 == 5) ? \"yes\" : \"no\";\n");
+    aemlpc::Value fromComparison = runProbe("return (5 == 5) ? \"yes\" : \"no\";\n");
     assert(std::holds_alternative<std::string>(fromComparison.data));
     assert(std::get<std::string>(fromComparison.data) == "yes");
 
@@ -1898,7 +1898,7 @@ static void testTernaryOnlyEvaluatesTakenBranch() {
     // test. It must never run, because the condition (1) already
     // selects the then-branch. Same reasoning as the logical-operators
     // slice's own short-circuit tests above.
-    amlp::Value result = runProbe("return 1 ? 1 : nonexistent_marker_efun();\n");
+    aemlpc::Value result = runProbe("return 1 ? 1 : nonexistent_marker_efun();\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -1917,7 +1917,7 @@ static void testRealBlockingLineTernary() {
     // same way this VM already represents "no object" for an "object"-
     // typed slot, int 0 stored directly, no distinct null sentinel,
     // and isTruthy() must treat that as false, taking the else-branch.
-    amlp::Value nullCase = runProbe(
+    aemlpc::Value nullCase = runProbe(
         "object obj;\n"
         "string objfn;\n"
         "obj = 0;\n"
@@ -1935,8 +1935,8 @@ static void testRealBlockingLineTernary() {
 
 static void testObjectVarDeclParsesSingleDeclaration() {
     std::string src = "object __Unguarded;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.empty());
@@ -1951,8 +1951,8 @@ static void testObjectVarDeclParsesSingleDeclaration() {
 static void testObjectVarDeclParsesCommaSeparatedNames() {
     // Real shape from secure/daemon/master.c raw line 21.
     std::string src = "mapping __Groups, __ReadAccess, __WriteAccess;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.size() == 3);
@@ -1971,8 +1971,8 @@ static void testObjectVarDeclThenFunctionBothParse() {
         "object foo;\n"
         "void create() {\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.size() == 1);
@@ -1988,8 +1988,8 @@ static void testFunctionDeclarationStillParsesAfterPrefixRefactor() {
     // split: a real prototype shape from master.h must parse exactly as
     // it did before the refactor.
     std::string src = "static private void load_access(string cfg, mapping ref);\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.empty());
@@ -2009,8 +2009,8 @@ static void testFunctionDeclarationStillParsesAfterPrefixRefactor() {
 
 static void testObjectVarDeclArrayStarParses() {
     std::string src = "mixed *items;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.size() == 1);
@@ -2026,13 +2026,13 @@ static void testObjectVarDeclParsesInitializerExpression() {
     // ({ ... });" (see Ast.hpp's ObjectVarDecl comment and
     // CodeGen::generate()'s own "$objvarinit" synthesis).
     std::string src = "int x = 5;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.size() == 1);
     assert(program->objectVars[0]->name == "x");
-    auto* init = dynamic_cast<amlp::IntLiteral*>(program->objectVars[0]->initializer.get());
+    auto* init = dynamic_cast<aemlpc::IntLiteral*>(program->objectVars[0]->initializer.get());
     assert(init != nullptr && init->value == 5);
 
     std::cout << "testObjectVarDeclParsesInitializerExpression OK\n";
@@ -2042,15 +2042,15 @@ static void testObjectVarDeclParsesInitializerInCommaList() {
     // Same shape, but for the second-or-later name in a comma-separated
     // list, not just the first: "a" has no initializer, "b" does.
     std::string src = "int a, b = 5;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->objectVars.size() == 2);
     assert(program->objectVars[0]->name == "a");
     assert(program->objectVars[0]->initializer == nullptr);
     assert(program->objectVars[1]->name == "b");
-    auto* init = dynamic_cast<amlp::IntLiteral*>(program->objectVars[1]->initializer.get());
+    auto* init = dynamic_cast<aemlpc::IntLiteral*>(program->objectVars[1]->initializer.get());
     assert(init != nullptr && init->value == 5);
 
     std::cout << "testObjectVarDeclParsesInitializerInCommaList OK\n";
@@ -2064,8 +2064,8 @@ static void testRealBlockingLinesObjectVarDecl() {
         "static private string __PlayerName;\n"
         "static private object __NewPlayer;\n"
         "static private mapping __Groups, __ReadAccess, __WriteAccess;\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.empty());
@@ -2087,10 +2087,10 @@ static void testCodegenEmitsPushObjectVarForRead() {
         "mixed get() {\n"
         "    return ob;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     assert(compiled.objectVarNames.size() == 1);
@@ -2098,7 +2098,7 @@ static void testCodegenEmitsPushObjectVarForRead() {
 
     bool sawPushObjectVar = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::PushObjectVar) {
+        if (instr.op == aemlpc::OpCode::PushObjectVar) {
             assert(instr.operand == 0);
             sawPushObjectVar = true;
         }
@@ -2114,15 +2114,15 @@ static void testCodegenEmitsStoreObjectVarForWrite() {
         "void set(int v) {\n"
         "    x = v;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawStoreObjectVar = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::StoreObjectVar) {
+        if (instr.op == aemlpc::OpCode::StoreObjectVar) {
             assert(instr.operand == 0);
             sawStoreObjectVar = true;
         }
@@ -2139,10 +2139,10 @@ static void testCodegenLocalShadowsObjectVariableOfSameName() {
         "    int x;\n"
         "    x = 1;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     // The inner "x" is a local declared inside probe(), which must
@@ -2152,8 +2152,8 @@ static void testCodegenLocalShadowsObjectVariableOfSameName() {
     // reference driver's compiler.c/grammar.y).
     bool sawStoreLocal = false, sawStoreObjectVar = false;
     for (const auto& instr : compiled.code) {
-        if (instr.op == amlp::OpCode::StoreLocal) sawStoreLocal = true;
-        if (instr.op == amlp::OpCode::StoreObjectVar) sawStoreObjectVar = true;
+        if (instr.op == aemlpc::OpCode::StoreLocal) sawStoreLocal = true;
+        if (instr.op == aemlpc::OpCode::StoreObjectVar) sawStoreObjectVar = true;
     }
     assert(sawStoreLocal);
     assert(!sawStoreObjectVar);
@@ -2183,16 +2183,16 @@ static void testCodegenDuplicateObjectVariableIsLegalLastDeclarationWins() {
         "    x = 42;\n"
         "}\n"
         "int query_x() { return x; }\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
 
-    amlp::CompiledProgram compiled;
+    aemlpc::CompiledProgram compiled;
     bool threw = false;
     try {
         compiled = codegen.generate(*program);
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(!threw);
@@ -2214,15 +2214,15 @@ static void testCodegenUndeclaredVariableStillThrows() {
         "void probe() {\n"
         "    write(nowhere);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
 
     bool threw = false;
     try {
         codegen.generate(*program);
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -2240,13 +2240,13 @@ static void testCodegenUndeclaredVariableStillThrows() {
 // persists across separate VM::callFunction() calls, not just within
 // one, and so a test can construct more than one LpcObject from the
 // same compiled program to confirm storage is per-instance.
-static std::shared_ptr<amlp::LpcObject> compileProgramObject(const std::string& src) {
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+static std::shared_ptr<aemlpc::LpcObject> compileProgramObject(const std::string& src) {
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
-    auto compiled = std::make_shared<amlp::CompiledProgram>(codegen.generate(*program));
-    return std::make_shared<amlp::LpcObject>("program_object", compiled);
+    aemlpc::CodeGen codegen;
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(codegen.generate(*program));
+    return std::make_shared<aemlpc::LpcObject>("program_object", compiled);
 }
 
 static void testObjectVariablePersistsAcrossSeparateCalls() {
@@ -2262,25 +2262,25 @@ static void testObjectVariablePersistsAcrossSeparateCalls() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     // Before any write, the slot holds real LPC's own default: the
     // integer 0 (see LpcObject.cpp's own comment. Not this driver's
     // separate monostate "no value" sentinel, which real LPC has no
     // equivalent of at the ordinary-declared-variable level).
-    amlp::Value before = vm.callFunction(obj, "read_counter", {});
+    aemlpc::Value before = vm.callFunction(obj, "read_counter", {});
     assert(std::holds_alternative<int64_t>(before.data));
     assert(std::get<int64_t>(before.data) == 0);
 
     vm.callFunction(obj, "write_counter",
-                     std::vector<amlp::Value>{amlp::Value(static_cast<int64_t>(7))});
+                     std::vector<aemlpc::Value>{aemlpc::Value(static_cast<int64_t>(7))});
 
     // A separate, later call must observe the earlier call's write:
     // object-variable state lives on the LpcObject instance, not in any
     // one call's locals.
-    amlp::Value after = vm.callFunction(obj, "read_counter", {});
+    aemlpc::Value after = vm.callFunction(obj, "read_counter", {});
     assert(std::holds_alternative<int64_t>(after.data));
     assert(std::get<int64_t>(after.data) == 7);
 
@@ -2301,21 +2301,21 @@ static void testObjectVariableIsPerInstanceNotSharedAcrossObjects() {
     auto objA = compileProgramObject(src);
     auto objB = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(objA, "write_counter",
-                     std::vector<amlp::Value>{amlp::Value(static_cast<int64_t>(99))});
+                     std::vector<aemlpc::Value>{aemlpc::Value(static_cast<int64_t>(99))});
 
-    amlp::Value aResult = vm.callFunction(objA, "read_counter", {});
+    aemlpc::Value aResult = vm.callFunction(objA, "read_counter", {});
     assert(std::holds_alternative<int64_t>(aResult.data));
     assert(std::get<int64_t>(aResult.data) == 99);
 
     // objB is a separate LpcObject instance (even though compiled from
     // the same source), so its own storage must be untouched. Still at
     // real LPC's own default (0), not objA's write.
-    amlp::Value bResult = vm.callFunction(objB, "read_counter", {});
+    aemlpc::Value bResult = vm.callFunction(objB, "read_counter", {});
     assert(std::holds_alternative<int64_t>(bResult.data));
     assert(std::get<int64_t>(bResult.data) == 0);
 
@@ -2341,22 +2341,22 @@ static void testObjectVariableShadowedByLocalAtRuntime() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "set_object_x",
-                     std::vector<amlp::Value>{amlp::Value(static_cast<int64_t>(1))});
+                     std::vector<aemlpc::Value>{aemlpc::Value(static_cast<int64_t>(1))});
 
     // shadow_probe()'s own local "x" must shadow the object variable: it
     // returns the local's value, not the object variable's.
-    amlp::Value shadowed = vm.callFunction(obj, "shadow_probe", {});
+    aemlpc::Value shadowed = vm.callFunction(obj, "shadow_probe", {});
     assert(std::holds_alternative<int64_t>(shadowed.data));
     assert(std::get<int64_t>(shadowed.data) == 999);
 
     // The object variable itself must be untouched by shadow_probe()'s
     // local, confirmed by a separate function with no local named "x".
-    amlp::Value objectX = vm.callFunction(obj, "read_object_x", {});
+    aemlpc::Value objectX = vm.callFunction(obj, "read_object_x", {});
     assert(std::holds_alternative<int64_t>(objectX.data));
     assert(std::get<int64_t>(objectX.data) == 1);
 
@@ -2381,12 +2381,12 @@ static void testRealShapeMappingObjectVariableReadWrite() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "set_groups", {});
-    amlp::Value result = vm.callFunction(obj, "get_a", {});
+    aemlpc::Value result = vm.callFunction(obj, "get_a", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -2405,9 +2405,9 @@ static void testRealShapeMappingObjectVariableReadWrite() {
 // mudlib_stub fixtures.
 struct ObjectVarHarness {
     std::string tempDir;
-    amlp::Config config;
-    amlp::ObjectManager objects;
-    amlp::VM vm;
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects;
+    aemlpc::VM vm;
 
     // extraConfigLines: raw "key: value\n" lines appended after the
     // fixed defaults below, for the rare test that needs a config key
@@ -2493,7 +2493,7 @@ static void testObjectVariableReentrancySafeAcrossNestedCloneObject() {
     // stack-scoped parameter), either counter would no longer read 41,
     // or inner_marker would not have been correctly written to 99 against
     // the inner object's own separate storage, or both.
-    amlp::Value result = harness.vm.callFunction(outer, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(outer, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -2511,19 +2511,19 @@ static void testLocalVarDeclCommaSeparatedNamesParse() {
         "void probe() {\n"
         "    string file, fl, ac;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     assert(body.size() == 1);
-    auto* block = dynamic_cast<amlp::Block*>(body[0].get());
+    auto* block = dynamic_cast<aemlpc::Block*>(body[0].get());
     assert(block != nullptr);
     assert(block->statements.size() == 3);
 
     std::vector<std::string> names;
     for (auto& stmt : block->statements) {
-        auto* decl = dynamic_cast<amlp::VarDeclStmt*>(stmt.get());
+        auto* decl = dynamic_cast<aemlpc::VarDeclStmt*>(stmt.get());
         assert(decl != nullptr);
         names.push_back(decl->name);
     }
@@ -2535,7 +2535,7 @@ static void testLocalVarDeclCommaSeparatedNamesParse() {
 }
 
 static void testLocalVarDeclCommaListVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string a, b, c;\n"
         "a = \"x\"; b = \"y\"; c = \"z\";\n"
         "return a + b + c;\n");
@@ -2558,7 +2558,7 @@ static void testLocalVarDeclCommaListVmExecution() {
 // that block ends, not visible to code after it (real LPC/C block scoping,
 // not the old flat/leaky behavior).
 static void testSiblingBlocksMayReuseALocalNameNeitherNestedInTheOther() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int total;\n"
         "{\n"
         "    int me;\n"
@@ -2586,7 +2586,7 @@ static void testNameDeclaredInABlockIsUndeclaredOnceThatBlockEnds() {
             "    onlyHere = 1;\n"
             "}\n"
             "return onlyHere;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -2603,16 +2603,16 @@ static void testForLoopParsesToForStmt() {
         "        write(\"x\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* forStmt = dynamic_cast<amlp::ForStmt*>(body[0].get());
+    auto* forStmt = dynamic_cast<aemlpc::ForStmt*>(body[0].get());
     assert(forStmt != nullptr);
-    assert(dynamic_cast<amlp::VarDeclStmt*>(forStmt->init.get()) != nullptr);
+    assert(dynamic_cast<aemlpc::VarDeclStmt*>(forStmt->init.get()) != nullptr);
     assert(forStmt->condition != nullptr);
-    assert(dynamic_cast<amlp::AssignExpr*>(forStmt->update.get()) != nullptr);
+    assert(dynamic_cast<aemlpc::AssignExpr*>(forStmt->update.get()) != nullptr);
     assert(forStmt->body->statements.size() == 1);
 
     std::cout << "testForLoopParsesToForStmt OK\n";
@@ -2625,12 +2625,12 @@ static void testForLoopEmptyClausesParse() {
         "        return;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* forStmt = dynamic_cast<amlp::ForStmt*>(body[0].get());
+    auto* forStmt = dynamic_cast<aemlpc::ForStmt*>(body[0].get());
     assert(forStmt != nullptr);
     assert(forStmt->init == nullptr);
     assert(forStmt->condition == nullptr);
@@ -2640,7 +2640,7 @@ static void testForLoopEmptyClausesParse() {
 }
 
 static void testForLoopWithAssignInitVmSumsExpectedTotal() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int sum;\n"
         "int i;\n"
         "sum = 0;\n"
@@ -2658,7 +2658,7 @@ static void testForLoopWithDeclInitAndIncDecUpdateVmExecution() {
     // Exercises the two shapes real for-loops in this mudlib actually use:
     // a declaration-with-initializer init clause, and "i++" (rather than
     // "i = i + 1") in the update clause.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int sum;\n"
         "sum = 0;\n"
         "for (int i = 0; i < 5; i++) {\n"
@@ -2674,12 +2674,12 @@ static void testForLoopWithDeclInitAndIncDecUpdateVmExecution() {
 // --- ++/-- ------------------------------------------------------------
 
 static void testIncDecOperatorsTokenize() {
-    amlp::Lexer lexer("i++ ++i i-- --i");
+    aemlpc::Lexer lexer("i++ ++i i-- --i");
     auto tokens = lexer.tokenize();
     int plusPlusCount = 0, minusMinusCount = 0;
     for (auto& t : tokens) {
-        if (t.type == amlp::TokenType::Symbol && t.text == "++") ++plusPlusCount;
-        if (t.type == amlp::TokenType::Symbol && t.text == "--") ++minusMinusCount;
+        if (t.type == aemlpc::TokenType::Symbol && t.text == "++") ++plusPlusCount;
+        if (t.type == aemlpc::TokenType::Symbol && t.text == "--") ++minusMinusCount;
     }
     assert(plusPlusCount == 2);
     assert(minusMinusCount == 2);
@@ -2693,23 +2693,23 @@ static void testPrefixAndPostfixIncDecParseToIncDecExpr() {
         "    ++a;\n"
         "    b--;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* prefixStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
-    auto* prefixExpr = dynamic_cast<amlp::IncDecExpr*>(prefixStmt->expr.get());
+    auto* prefixStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
+    auto* prefixExpr = dynamic_cast<aemlpc::IncDecExpr*>(prefixStmt->expr.get());
     assert(prefixExpr != nullptr);
     assert(prefixExpr->prefix == true);
-    assert(prefixExpr->op == amlp::IncDecOp::Inc);
+    assert(prefixExpr->op == aemlpc::IncDecOp::Inc);
     assert(prefixExpr->name == "a");
 
-    auto* postfixStmt = dynamic_cast<amlp::ExprStmt*>(body[1].get());
-    auto* postfixExpr = dynamic_cast<amlp::IncDecExpr*>(postfixStmt->expr.get());
+    auto* postfixStmt = dynamic_cast<aemlpc::ExprStmt*>(body[1].get());
+    auto* postfixExpr = dynamic_cast<aemlpc::IncDecExpr*>(postfixStmt->expr.get());
     assert(postfixExpr != nullptr);
     assert(postfixExpr->prefix == false);
-    assert(postfixExpr->op == amlp::IncDecOp::Dec);
+    assert(postfixExpr->op == aemlpc::IncDecOp::Dec);
     assert(postfixExpr->name == "b");
 
     std::cout << "testPrefixAndPostfixIncDecParseToIncDecExpr OK\n";
@@ -2728,13 +2728,13 @@ static void testPostfixIncDecOnRangeIndexTargetThrows() {
         "void probe() {\n"
         "    arr[0..1]++;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
 
     bool threw = false;
     try {
         parser.parseProgram();
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -2747,22 +2747,22 @@ static void testPostfixIncDecOnIndexedTargetParsesToIndexedIncDecExpr() {
         "void probe() {\n"
         "    healing[\"intox\"]--;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* stmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* stmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(stmt != nullptr);
-    auto* incDec = dynamic_cast<amlp::IncDecExpr*>(stmt->expr.get());
+    auto* incDec = dynamic_cast<aemlpc::IncDecExpr*>(stmt->expr.get());
     assert(incDec != nullptr);
     assert(incDec->prefix == false);
-    assert(incDec->op == amlp::IncDecOp::Dec);
+    assert(incDec->op == aemlpc::IncDecOp::Dec);
     assert(incDec->name.empty());
     assert(incDec->indexTarget != nullptr);
-    auto* target = dynamic_cast<amlp::VarRefExpr*>(incDec->indexTarget.get());
+    auto* target = dynamic_cast<aemlpc::VarRefExpr*>(incDec->indexTarget.get());
     assert(target != nullptr && target->name == "healing");
-    auto* key = dynamic_cast<amlp::StringLiteral*>(incDec->indexKey.get());
+    auto* key = dynamic_cast<aemlpc::StringLiteral*>(incDec->indexKey.get());
     assert(key != nullptr && key->value == "intox");
 
     std::cout << "testPostfixIncDecOnIndexedTargetParsesToIndexedIncDecExpr OK\n";
@@ -2774,7 +2774,7 @@ static void testIndexedPostfixIncDecVmExecutionReturnsOldValueAndMutates() {
     // shape ("healing[\"intox\"]--"), confirmed against the reference
     // driver's grammar.y restricted "lvalue" nonterminal covering both
     // a bare variable and an indexed target.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([]);\n"
         "m[\"x\"] = 5;\n"
@@ -2788,7 +2788,7 @@ static void testIndexedPostfixIncDecVmExecutionReturnsOldValueAndMutates() {
 }
 
 static void testIndexedPrefixIncDecVmExecutionReturnsNewValueAndMutates() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([]);\n"
         "m[\"x\"] = 5;\n"
@@ -2802,7 +2802,7 @@ static void testIndexedPrefixIncDecVmExecutionReturnsNewValueAndMutates() {
 }
 
 static void testPrefixIncrementVmExecutionReturnsNewValueAndMutates() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 5;\n"
         "int y;\n"
@@ -2815,7 +2815,7 @@ static void testPrefixIncrementVmExecutionReturnsNewValueAndMutates() {
 }
 
 static void testPostfixIncrementVmExecutionReturnsOldValueAndMutates() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "x = 5;\n"
         "int y;\n"
@@ -2833,18 +2833,18 @@ static void testBareCallToLocalFunctionEmitsCallOpcode() {
     std::string src =
         "int helper() { return 1; }\n"
         "int probe() { return helper(); }\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawCall = false;
     for (auto& instr : compiled.code) {
         // A plain bare call must never fall back to the old
         // always-CallEfun routing. Resolution now happens at run time.
-        assert(instr.op != amlp::OpCode::CallEfun);
-        if (instr.op == amlp::OpCode::Call) {
+        assert(instr.op != aemlpc::OpCode::CallEfun);
+        if (instr.op == aemlpc::OpCode::Call) {
             const std::string& name = compiled.stringPool[instr.operand];
             if (name == "helper") sawCall = true;
         }
@@ -2863,11 +2863,11 @@ static void testSameObjectBareCallInvokesLocalFunctionAtRuntime() {
         "    return helper();\n"
         "}\n";
     auto obj = compileProgramObject(src);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "caller", {});
+    aemlpc::Value result = vm.callFunction(obj, "caller", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -2875,7 +2875,7 @@ static void testSameObjectBareCallInvokesLocalFunctionAtRuntime() {
 }
 
 static void testBareCallFallsBackToEfunWhenNoLocalFunctionMatches() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *arr;\n"
         "arr = ({ 1, 2, 3 });\n"
         "return sizeof(arr);\n");
@@ -2889,7 +2889,7 @@ static void testUndefinedBareCallThrowsClearError() {
     bool threw = false;
     try {
         runProbe("return totally_undefined_name();\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -2905,16 +2905,16 @@ static void testSscanfParsesToSscanfExprWithVarNames() {
         "    string a, b;\n"
         "    sscanf(\"foo bar\", \"%s %s\", a, b);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
     // body[0] is the "string a, b;" comma-decl Block; the sscanf() call
     // itself is body[1].
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[1].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[1].get());
     assert(exprStmt != nullptr);
-    auto* sscanfExpr = dynamic_cast<amlp::SscanfExpr*>(exprStmt->expr.get());
+    auto* sscanfExpr = dynamic_cast<aemlpc::SscanfExpr*>(exprStmt->expr.get());
     assert(sscanfExpr != nullptr);
     assert(sscanfExpr->varNames.size() == 2);
     assert(sscanfExpr->varNames[0] == "a");
@@ -2928,13 +2928,13 @@ static void testSscanfNonIdentifierOutputArgThrows() {
         "void probe() {\n"
         "    sscanf(\"foo\", \"%s\", 5);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
 
     bool threw = false;
     try {
         parser.parseProgram();
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -2945,7 +2945,7 @@ static void testSscanfNonIdentifierOutputArgThrows() {
 static void testSscanfVmMatchesLiteralDelimitedTokens() {
     // Mirrors secure/daemon/master.c's own
     // "sscanf(lines[i], \"(%s) %s\", fl, ac)" shape.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string fl, ac;\n"
         "int n;\n"
         "n = sscanf(\"(foo) bar\", \"(%s) %s\", fl, ac);\n"
@@ -2958,7 +2958,7 @@ static void testSscanfVmMatchesLiteralDelimitedTokens() {
 
 static void testSscanfVmMatchesIntegerSpecifier() {
     // Mirrors master.c's "sscanf(str, \"for %d\", x)" shape.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "int n;\n"
         "n = sscanf(\"for 5\", \"for %d\", x);\n"
@@ -2973,7 +2973,7 @@ static void testSscanfVmSkipModifierDoesNotConsumeOutputSlot() {
     // Mirrors master.c's "sscanf(file, REALMS_DIRS+\"/%s/%*s\", nom)"
     // shape: "%*s" matches and counts toward the match total but does not
     // consume (or require) an output variable.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string nom;\n"
         "int n;\n"
         "n = sscanf(\"/realms/foo/bar\", \"/realms/%s/%*s\", nom);\n"
@@ -2989,7 +2989,7 @@ static void testSscanfVmPartialMatchLeavesLaterVarsUntouchedAndReturnsPartialCou
     // find any digits in what follows ("xyz"). Sscanf stops there,
     // returning only the matches made so far and leaving "b" (whose slot
     // was never reached) at whatever it already held.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string a;\n"
         "int b;\n"
         "b = 999;\n"
@@ -3008,7 +3008,7 @@ static void testSscanfVmPartialMatchLeavesLaterVarsUntouchedAndReturnsPartialCou
 // a new mudlib call site this time.
 
 static void testSscanfVmMatchesHexSpecifier() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "int n;\n"
         "n = sscanf(\"ff\", \"%x\", x);\n"
@@ -3019,7 +3019,7 @@ static void testSscanfVmMatchesHexSpecifier() {
 }
 
 static void testSscanfVmHexSpecifierAcceptsLeading0xPrefix() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x;\n"
         "int n;\n"
         "n = sscanf(\"0x1A\", \"%x\", x);\n"
@@ -3030,7 +3030,7 @@ static void testSscanfVmHexSpecifierAcceptsLeading0xPrefix() {
 }
 
 static void testSscanfVmMatchesFloatSpecifier() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "float x;\n"
         "int n;\n"
         "n = sscanf(\"3.5\", \"%f\", x);\n"
@@ -3044,7 +3044,7 @@ static void testSscanfVmAdjacentSThenDWithNoLiteralBetween() {
     // "%s%d" with no literal separator: %s must scan ahead to find where
     // the digits start, matching real inter_sscanf()'s own lookahead
     // rather than throwing.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string a;\n"
         "int b;\n"
         "int n;\n"
@@ -3056,7 +3056,7 @@ static void testSscanfVmAdjacentSThenDWithNoLiteralBetween() {
 }
 
 static void testSscanfVmAdjacentSThenXWithNoLiteralBetween() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string a;\n"
         "int b;\n"
         "int n;\n"
@@ -3070,7 +3070,7 @@ static void testSscanfVmAdjacentSThenXWithNoLiteralBetween() {
 static void testSscanfVmAdjacentSThenLiteralPercentWithNoLiteralBetween() {
     // "%s%%": %s adjacent to a literal "%" character in the input (not
     // another specifier). Real inter_sscanf()'s own "case '%':" lookahead.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string a;\n"
         "int n;\n"
         "n = sscanf(\"75%\", \"%s%%\", a);\n"
@@ -3090,7 +3090,7 @@ static void testSscanfVmTwoAdjacentSSpecifiersThrows() {
             "string a, b;\n"
             "sscanf(\"abcdef\", \"%s%s\", a, b);\n"
             "return 0;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -3104,8 +3104,8 @@ static void testInheritStatementParsesPathAndConcatenation() {
         "inherit \"/secure/std/daemon\";\n"
         "inherit \"/secure/daemon\" + \"/refs\";\n"
         "void create() {}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->inherits.size() == 2);
@@ -3141,8 +3141,8 @@ static void testInheritStatementParsesAdjacentStringLiteralsWithNoOperator() {
         "inherit \"/lib\" \"/std\" \"/daemon\";\n"
         "inherit \"/secure\" \"/daemon\" + \"/refs\" \"/extra\";\n"
         "void create() {}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->inherits.size() == 2);
@@ -3187,7 +3187,7 @@ static void testArrayReservedWordKeywordFormWorksInEveryPositionTheStarSuffixAlr
 
     auto obj = harness.objects.cloneObject("/array_kw_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 23); // 2*10 (local_names) + 2 (efuns_arr) + 1 (items)
 
@@ -3242,7 +3242,7 @@ static void testBareArrayKeywordWithNoPrecedingTypeWorksInEveryPositionIncluding
 
     auto obj = harness.objects.cloneObject("/bare_array_kw_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     // 2*10 (local_names) + 2 (efuns_arr) + 1 (items) + 2*100 (foreach ran twice)
     assert(std::get<int64_t>(result.data) == 223);
@@ -3270,7 +3270,7 @@ static void testInheritedFunctionFallbackInvokedAtRuntime() {
 
     // greet_count() is never defined in child.c: probe()'s bare call to
     // it must fall through to the inherited program.
-    amlp::Value result = harness.vm.callFunction(child, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(child, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 7);
 
@@ -3303,8 +3303,8 @@ static void testInheritedObjectVariableSlotsShareStorageWithParent() {
     // object variable by name. Both must agree on which slot "shared"
     // lives in. This is CodeGen's inheritedObjectVarNames flattening.
     harness.vm.callFunction(child, "set_shared",
-        std::vector<amlp::Value>{amlp::Value(static_cast<int64_t>(55))});
-    amlp::Value result = harness.vm.callFunction(child, "read_shared", {});
+        std::vector<aemlpc::Value>{aemlpc::Value(static_cast<int64_t>(55))});
+    aemlpc::Value result = harness.vm.callFunction(child, "read_shared", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 55);
 
@@ -3336,16 +3336,16 @@ static void testTypeCastParsesAsNoOpWrappingInnerExpr() {
         "void probe() {\n"
         "    (string)x;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
     // The cast contributes nothing to the AST: the expression is exactly
     // the bare VarRefExpr it wrapped, not some CastExpr wrapper.
-    auto* ref = dynamic_cast<amlp::VarRefExpr*>(exprStmt->expr.get());
+    auto* ref = dynamic_cast<aemlpc::VarRefExpr*>(exprStmt->expr.get());
     assert(ref != nullptr);
     assert(ref->name == "x");
 
@@ -3353,7 +3353,7 @@ static void testTypeCastParsesAsNoOpWrappingInnerExpr() {
 }
 
 static void testTypeCastVmExecutionIsNoOp() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string s;\n"
         "s = \"hi\";\n"
         "return (string)s + (string)\"!\";\n");
@@ -3367,7 +3367,7 @@ static void testTypeCastVmExecutionIsNoOp() {
 // contents happen to equal an operator's token text (e.g. "!") must never
 // be mistaken for that operator by the parser's lookahead.
 static void testStringLiteralMatchingOperatorTextParsesAsLiteralNotOperator() {
-    amlp::Value result = runProbe("return (string)\"!\" + \"x\";\n");
+    aemlpc::Value result = runProbe("return (string)\"!\" + \"x\";\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "!x");
 
@@ -3401,7 +3401,7 @@ static void testCallOtherWithVariableFunctionNameVmExecution() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 9);
 
@@ -3432,7 +3432,7 @@ static void testIndexThenCallOtherOnResultVmExecution() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 7);
 
@@ -3466,8 +3466,8 @@ static void testArrayFormCallOtherCallsEveryElementAndReturnsResultsInOrder() {
     auto caller = harness.objects.cloneObject("/afco_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 3);
     assert(std::get<int64_t>((*arr)->items[0].data) == 10);
@@ -3502,8 +3502,8 @@ static void testArrayFormCallOtherSkipsADestructedElementLeavingItsSlotZero() {
     auto caller = harness.objects.cloneObject("/afcd_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 3);
     assert(std::get<int64_t>((*arr)->items[0].data) == 10);
@@ -3537,8 +3537,8 @@ static void testArrayFormCallOtherSkipsAMissingFunctionOnOneElementLeavingItsSlo
     auto caller = harness.objects.cloneObject("/afcm_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 2);
     assert(std::get<int64_t>((*arr)->items[0].data) == 10);
@@ -3569,8 +3569,8 @@ static void testArrayFormCallOtherResolvesAStringElementViaFindObject() {
     auto caller = harness.objects.cloneObject("/afcs_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 2);
     assert(std::get<int64_t>((*arr)->items[0].data) == 42);
@@ -3605,12 +3605,12 @@ static void testArrayFormCallOtherSideEffectMovesEveryElementLikeRealReinitiate(
     auto caller = harness.objects.cloneObject("/afmv_caller");
     assert(dest != nullptr && caller != nullptr);
 
-    harness.vm.callFunction(caller, "reinitiate", {amlp::Value(dest)});
+    harness.vm.callFunction(caller, "reinitiate", {aemlpc::Value(dest)});
 
     assert(dest->inventory().size() == 2);
     for (const auto& moved : dest->inventory()) {
-        amlp::Value env = harness.vm.callFunction(moved, "probe_env", {});
-        auto* envPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&env.data);
+        aemlpc::Value env = harness.vm.callFunction(moved, "probe_env", {});
+        auto* envPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&env.data);
         assert(envPtr != nullptr && *envPtr == dest);
     }
 
@@ -3640,7 +3640,7 @@ static void testEfunOverrideBypassesLocalFunctionOfSameName() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 3); // real sizeof(), not the local shadow
 
@@ -3652,12 +3652,12 @@ static void testEfunOverrideBypassesLocalFunctionOfSameName() {
 // real master.c boot (line 115: "files += ({ lines[i] });").
 
 static void testCompoundAssignOperatorsTokenize() {
-    amlp::Lexer lexer("a += b -= c *= d /= e %= f");
+    aemlpc::Lexer lexer("a += b -= c *= d /= e %= f");
     auto tokens = lexer.tokenize();
     std::vector<std::string> expectedOps = {"+=", "-=", "*=", "/=", "%="};
     size_t opIdx = 0;
     for (const auto& t : tokens) {
-        if (t.type == amlp::TokenType::Symbol) {
+        if (t.type == aemlpc::TokenType::Symbol) {
             assert(t.text == expectedOps[opIdx]);
             ++opIdx;
         }
@@ -3672,24 +3672,24 @@ static void testCompoundAssignParsesToCompoundAssignExpr() {
         "void probe() {\n"
         "    x += 1;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* assign = dynamic_cast<amlp::AssignExpr*>(exprStmt->expr.get());
+    auto* assign = dynamic_cast<aemlpc::AssignExpr*>(exprStmt->expr.get());
     assert(assign != nullptr);
     assert(assign->isCompound);
-    assert(assign->compoundOp == amlp::BinOp::Add);
+    assert(assign->compoundOp == aemlpc::BinOp::Add);
     assert(assign->name == "x");
 
     std::cout << "testCompoundAssignParsesToCompoundAssignExpr OK\n";
 }
 
 static void testCompoundAssignVmExecutionOnIntAndArray() {
-    amlp::Value intResult = runProbe(
+    aemlpc::Value intResult = runProbe(
         "int x;\n"
         "x = 5;\n"
         "x += 3;\n"
@@ -3699,7 +3699,7 @@ static void testCompoundAssignVmExecutionOnIntAndArray() {
 
     // Mirrors master.c's own "files += ({ lines[i] });" shape: "+="
     // reuses the Add opcode's existing array-concatenation behavior.
-    amlp::Value arrResult = runProbe(
+    aemlpc::Value arrResult = runProbe(
         "mixed *files;\n"
         "files = ({ 1 });\n"
         "files += ({ 2, 3 });\n"
@@ -3719,22 +3719,22 @@ static void testBitAndParsesToBinaryExprWithBitAndOp() {
         "void probe() {\n"
         "    a & b;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* bin = dynamic_cast<amlp::BinaryExpr*>(exprStmt->expr.get());
+    auto* bin = dynamic_cast<aemlpc::BinaryExpr*>(exprStmt->expr.get());
     assert(bin != nullptr);
-    assert(bin->op == amlp::BinOp::BitAnd);
+    assert(bin->op == aemlpc::BinOp::BitAnd);
 
     std::cout << "testBitAndParsesToBinaryExprWithBitAndOp OK\n";
 }
 
 static void testBitAndVmExecutionOnInts() {
-    amlp::Value result = runProbe("return 6 & 3;\n");
+    aemlpc::Value result = runProbe("return 6 & 3;\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 2); // 110 & 011 == 010
 
@@ -3743,7 +3743,7 @@ static void testBitAndVmExecutionOnInts() {
 
 static void testBitAndVmExecutionOnArraysIsIntersection() {
     // Mirrors master.c's own "sizeof(privs & ok)" shape.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *privs, *ok;\n"
         "privs = ({ \"a\", \"b\", \"c\" });\n"
         "ok = ({ \"b\", \"c\", \"d\" });\n"
@@ -3751,7 +3751,7 @@ static void testBitAndVmExecutionOnArraysIsIntersection() {
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 2); // "b" and "c" are shared
 
-    amlp::Value empty = runProbe(
+    aemlpc::Value empty = runProbe(
         "mixed *privs, *ok;\n"
         "privs = ({ \"a\" });\n"
         "ok = ({ \"z\" });\n"
@@ -3769,17 +3769,17 @@ static void testBitAndVmExecutionOnArraysIsIntersection() {
 // parse level, since parseLogicalAnd went straight to parseBitAnd with
 // nothing in between.
 static void testBitOrAndBitXorVmExecutionOnInts() {
-    amlp::Value orResult = runProbe("return 1 | 2;\n");
+    aemlpc::Value orResult = runProbe("return 1 | 2;\n");
     assert(std::holds_alternative<int64_t>(orResult.data));
     assert(std::get<int64_t>(orResult.data) == 3);
 
-    amlp::Value xorResult = runProbe("return 6 ^ 3;\n");
+    aemlpc::Value xorResult = runProbe("return 6 ^ 3;\n");
     assert(std::holds_alternative<int64_t>(xorResult.data));
     assert(std::get<int64_t>(xorResult.data) == 5);
 
     // "||" must still tokenize and parse as logical-or, not two adjacent
     // "|" bitwise-or tokens.
-    amlp::Value orElse = runProbe("return 0 || 5;\n");
+    aemlpc::Value orElse = runProbe("return 0 || 5;\n");
     assert(std::holds_alternative<int64_t>(orElse.data));
     assert(std::get<int64_t>(orElse.data) == 5);
 
@@ -3796,18 +3796,18 @@ static void testBitOrAndBitXorVmExecutionOnInts() {
 // 10) | (1 << 0))" flag-combining idiom, one of 226 real plain "<<"/
 // ">>" call sites across the corpus.
 static void testShiftOperatorsVmExecutionOnInts() {
-    amlp::Value leftShift = runProbe("return 1 << 4;\n");
+    aemlpc::Value leftShift = runProbe("return 1 << 4;\n");
     assert(std::holds_alternative<int64_t>(leftShift.data));
     assert(std::get<int64_t>(leftShift.data) == 16);
 
-    amlp::Value rightShift = runProbe("return 80 >> 2;\n");
+    aemlpc::Value rightShift = runProbe("return 80 >> 2;\n");
     assert(std::holds_alternative<int64_t>(rightShift.data));
     assert(std::get<int64_t>(rightShift.data) == 20);
 
     // Real corpus shape verbatim (secure/daemon/master.c's own real
     // eventPrint() flag-combining call): two shifted flags combined
     // with plain "|".
-    amlp::Value combined = runProbe("return (1 << 10) | (1 << 0);\n");
+    aemlpc::Value combined = runProbe("return (1 << 10) | (1 << 0);\n");
     assert(std::holds_alternative<int64_t>(combined.data));
     assert(std::get<int64_t>(combined.data) == 1025);
 
@@ -3821,11 +3821,11 @@ static void testShiftOperatorsVmExecutionOnInts() {
 // Confirmed against the same real grammar.y.pre precedence table cited
 // above, not assumed to match plain C by convention alone.
 static void testShiftOperatorPrecedenceBetweenRelationalAndAdditive() {
-    amlp::Value relational = runProbe("return (1 << 2 < 8);\n"); // (4) < 8
+    aemlpc::Value relational = runProbe("return (1 << 2 < 8);\n"); // (4) < 8
     assert(std::holds_alternative<int64_t>(relational.data));
     assert(std::get<int64_t>(relational.data) == 1);
 
-    amlp::Value additive = runProbe("return 1 << 1 + 1;\n"); // 1 << (1+1) == 4
+    aemlpc::Value additive = runProbe("return 1 << 1 + 1;\n"); // 1 << (1+1) == 4
     assert(std::holds_alternative<int64_t>(additive.data));
     assert(std::get<int64_t>(additive.data) == 4);
 
@@ -3837,7 +3837,7 @@ static void testShiftOperatorPrecedenceBetweenRelationalAndAdditive() {
 // sites, the same real binary heap index-doubling/halving idiom this
 // astar pathfinding implementation uses throughout).
 static void testCompoundShiftAssignmentVmExecutionOnInts() {
-    amlp::Value leftShiftEq = runProbe(
+    aemlpc::Value leftShiftEq = runProbe(
         "int i;\n"
         "i = 3;\n"
         "i <<= 2;\n"
@@ -3845,7 +3845,7 @@ static void testCompoundShiftAssignmentVmExecutionOnInts() {
     assert(std::holds_alternative<int64_t>(leftShiftEq.data));
     assert(std::get<int64_t>(leftShiftEq.data) == 12);
 
-    amlp::Value rightShiftEq = runProbe(
+    aemlpc::Value rightShiftEq = runProbe(
         "int v;\n"
         "v = 40;\n"
         "v >>= 1;\n"
@@ -3864,7 +3864,7 @@ static void testCompoundShiftAssignmentVmExecutionOnInts() {
 // connect() is "if(err=catch(ob = clone_object(OB_LOGIN))) { ... }".
 
 static void testCatchEvaluatesToErrorMessageStringWhenGuardedExprThrows() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(totally_undefined_thing_xyz());\n"
         "return err;\n");
@@ -3881,7 +3881,7 @@ static void testCatchEvaluatesToErrorMessageStringWhenGuardedExprThrows() {
 // int 0 on success, discarding expr's own result entirely. Not expr's
 // value, and not an empty string.
 static void testCatchEvaluatesToZeroAndDiscardsGuardedExprValueOnSuccess() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(42);\n"
         "return err;\n");
@@ -3895,7 +3895,7 @@ static void testCatchEvaluatesToZeroAndDiscardsGuardedExprValueOnSuccess() {
 // as if nothing happened. Not just "catch() itself produces a value",
 // the rest of the enclosing statement/function keeps running.
 static void testExecutionContinuesNormallyAfterCatchTrapsAnError() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "int after;\n"
         "err = catch(totally_undefined_thing_xyz());\n"
@@ -3912,7 +3912,7 @@ static void testExecutionContinuesNormallyAfterCatchTrapsAnError() {
 // outer catch() never sees an error at all and evaluates to 0, not to
 // the inner failure's message.
 static void testNestedCatchInnerFailureDoesNotTriggerOuterCatch() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed innerErr, outerErr;\n"
         "outerErr = catch(innerErr = catch(totally_undefined_thing_xyz()));\n"
         "return outerErr;\n");
@@ -3921,7 +3921,7 @@ static void testNestedCatchInnerFailureDoesNotTriggerOuterCatch() {
 
     // The inner catch, checked via a second probe, still caught its own
     // error and produced the message.
-    amlp::Value innerResult = runProbe(
+    aemlpc::Value innerResult = runProbe(
         "mixed innerErr, outerErr;\n"
         "outerErr = catch(innerErr = catch(totally_undefined_thing_xyz()));\n"
         "return innerErr;\n");
@@ -3943,7 +3943,7 @@ static void testNestedCatchInnerFailureDoesNotTriggerOuterCatch() {
 static void testCatchLogsTrappedErrorToStderrByDefault() {
     std::ostringstream captured;
     std::streambuf* originalCerr = std::cerr.rdbuf(captured.rdbuf());
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(totally_undefined_thing_xyz());\n"
         "return err;\n");
@@ -3986,7 +3986,7 @@ static void testCatchTrapsErrorThrownInsideCalledFunctionWithNoCatchOfItsOwn() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(!std::get<std::string>(result.data).empty());
 
@@ -4029,13 +4029,13 @@ static void testCatchInlineInsideIfConditionMatchesMasterConnectShape() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value failureResult =
-        harness.vm.callFunction(caller, "probe", {amlp::Value(static_cast<int64_t>(1))});
+    aemlpc::Value failureResult =
+        harness.vm.callFunction(caller, "probe", {aemlpc::Value(static_cast<int64_t>(1))});
     assert(std::holds_alternative<int64_t>(failureResult.data));
     assert(std::get<int64_t>(failureResult.data) == 1); // error branch taken
 
-    amlp::Value successResult =
-        harness.vm.callFunction(caller, "probe", {amlp::Value(static_cast<int64_t>(0))});
+    aemlpc::Value successResult =
+        harness.vm.callFunction(caller, "probe", {aemlpc::Value(static_cast<int64_t>(0))});
     assert(std::holds_alternative<int64_t>(successResult.data));
     assert(std::get<int64_t>(successResult.data) == 7); // ob correctly assigned, marker() reachable
 
@@ -4071,14 +4071,14 @@ static void testTimeExpressionRunsBodyOnceAndEvaluatesToRealElapsedMicroseconds(
 
     // The body actually ran exactly once (ran == 1), and the result is a
     // real, non-negative elapsed-microseconds value.
-    amlp::Value sideEffect = harness.vm.callFunction(obj, "probe_side_effect", {});
+    aemlpc::Value sideEffect = harness.vm.callFunction(obj, "probe_side_effect", {});
     assert(std::holds_alternative<int64_t>(sideEffect.data));
     assert(std::get<int64_t>(sideEffect.data) == 1000001); // ran==1, result>=0 true
 
     // A body doing real, measurable work takes at least as long as a
     // trivial (empty) one. Confirms this is a real timing measurement,
     // not a stub always returning the same value.
-    amlp::Value busyLonger = harness.vm.callFunction(obj, "probe_busy_longer_than_trivial", {});
+    aemlpc::Value busyLonger = harness.vm.callFunction(obj, "probe_busy_longer_than_trivial", {});
     assert(std::holds_alternative<int64_t>(busyLonger.data));
     assert(std::get<int64_t>(busyLonger.data) == 1);
 
@@ -4094,7 +4094,7 @@ static void testTimeExpressionRunsBodyOnceAndEvaluatesToRealElapsedMicroseconds(
 // catch_value svalue_t (not a string-typed field).
 
 static void testThrowIntIsCaughtVerbatimByCatch() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(throw(42));\n"
         "return err;\n");
@@ -4105,7 +4105,7 @@ static void testThrowIntIsCaughtVerbatimByCatch() {
 }
 
 static void testThrowStringIsCaughtVerbatimByCatch() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(throw(\"custom error\"));\n"
         "return err;\n");
@@ -4120,12 +4120,12 @@ static void testThrowArrayValueIsCaughtVerbatimByCatch() {
     // only ever produce a string, but throw() can hand back any value,
     // including a structured one. A real, common LPC idiom for
     // signaling an error code plus data together.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed err;\n"
         "err = catch(throw(({ \"ERR_CODE\", 7 })));\n"
         "return err;\n");
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr);
     assert(arr->items.size() == 2);
     assert(std::holds_alternative<std::string>(arr->items[0].data));
@@ -4140,7 +4140,7 @@ static void testThrowWithWrongArgCountThrowsLpcRuntimeError() {
     bool threw = false;
     try {
         runProbe("throw();\nreturn 0;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -4176,9 +4176,9 @@ static void testThrowInsideCalledFunctionWithNoCatchOfItsOwnReachesCallersCatchI
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr);
     assert(arr->items.size() == 2);
     assert(std::get<std::string>(arr->items[0].data) == "ERR_CODE");
@@ -4197,14 +4197,14 @@ static void testAdjacentStringLiteralsParseAsSingleConcatenatedLiteral() {
         "void probe() {\n"
         "    \"foo\" \"bar\";\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* lit = dynamic_cast<amlp::StringLiteral*>(exprStmt->expr.get());
+    auto* lit = dynamic_cast<aemlpc::StringLiteral*>(exprStmt->expr.get());
     assert(lit != nullptr);
     assert(lit->value == "foobar");
 
@@ -4212,7 +4212,7 @@ static void testAdjacentStringLiteralsParseAsSingleConcatenatedLiteral() {
 }
 
 static void testAdjacentStringLiteralsVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "return \"Saving all players; \"\n"
         "       \"please reconnect shortly.\";\n");
     assert(std::holds_alternative<std::string>(result.data));
@@ -4235,30 +4235,30 @@ static void testBreakAndContinueParseToDedicatedStmtNodes() {
         "        continue;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* whileStmt = dynamic_cast<amlp::WhileStmt*>(body[0].get());
+    auto* whileStmt = dynamic_cast<aemlpc::WhileStmt*>(body[0].get());
     assert(whileStmt != nullptr);
-    assert(dynamic_cast<amlp::BreakStmt*>(whileStmt->body->statements[0].get()) != nullptr);
-    assert(dynamic_cast<amlp::ContinueStmt*>(whileStmt->body->statements[1].get()) != nullptr);
+    assert(dynamic_cast<aemlpc::BreakStmt*>(whileStmt->body->statements[0].get()) != nullptr);
+    assert(dynamic_cast<aemlpc::ContinueStmt*>(whileStmt->body->statements[1].get()) != nullptr);
 
     std::cout << "testBreakAndContinueParseToDedicatedStmtNodes OK\n";
 }
 
 static void testBreakOutsideLoopThrowsAtCodegen() {
     std::string src = "void probe() { break; }\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
 
     bool threw = false;
     try {
         codegen.generate(*program);
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -4267,7 +4267,7 @@ static void testBreakOutsideLoopThrowsAtCodegen() {
 }
 
 static void testBreakStopsForLoopEarlyVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int sum;\n"
         "sum = 0;\n"
         "for (int i = 0; i < 10; i++) {\n"
@@ -4282,7 +4282,7 @@ static void testBreakStopsForLoopEarlyVmExecution() {
 }
 
 static void testContinueSkipsRestOfForLoopBodyVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int sum;\n"
         "sum = 0;\n"
         "for (int i = 0; i < 5; i++) {\n"
@@ -4299,7 +4299,7 @@ static void testContinueSkipsRestOfForLoopBodyVmExecution() {
 static void testContinueInWhileLoopSkipsToConditionRecheckVmExecution() {
     // Mirrors check_access()'s real shape: a while loop whose body is
     // mostly "if (...) continue;" guard clauses.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int sum;\n"
         "i = 0;\n"
@@ -4324,7 +4324,7 @@ static void testContinueInWhileLoopSkipsToConditionRecheckVmExecution() {
 // while loop's own body.
 
 static void testDoWhileExecutesBodyAtLeastOnceEvenWhenConditionFalseVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int count;\n"
         "i = 0;\n"
@@ -4339,7 +4339,7 @@ static void testDoWhileExecutesBodyAtLeastOnceEvenWhenConditionFalseVmExecution(
 }
 
 static void testDoWhileLoopsWhileConditionTrueVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int sum;\n"
         "i = 0;\n"
@@ -4358,7 +4358,7 @@ static void testContinueInDoWhileLoopSkipsToConditionRecheckVmExecution() {
     // Mirrors testContinueInWhileLoopSkipsToConditionRecheckVmExecution:
     // continue must still reach the condition check (real do-while
     // semantics), not restart the body from its own top unconditionally.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int sum;\n"
         "i = 0;\n"
@@ -4375,7 +4375,7 @@ static void testContinueInDoWhileLoopSkipsToConditionRecheckVmExecution() {
 }
 
 static void testBreakStopsDoWhileLoopEarlyVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int sum;\n"
         "i = 0;\n"
@@ -4394,7 +4394,7 @@ static void testBreakStopsDoWhileLoopEarlyVmExecution() {
 static void testBreakInInnerLoopDoesNotAffectOuterLoopVmExecution() {
     // Nested loops: break/continue must resolve against the innermost
     // enclosing loop only (CodeGen's loopStack_ push/pop per loop).
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int outerSum;\n"
         "outerSum = 0;\n"
         "for (int i = 0; i < 3; i++) {\n"
@@ -4420,7 +4420,7 @@ static void testBreakInInnerLoopDoesNotAffectOuterLoopVmExecution() {
 // through parseStatement()'s expression-statement path, and parseExpr()
 // seeing ";" as its very first token threw "expected expression".
 static void testNullStatementAsLoopBodyParsesAndExecutesAsNoOp() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string str;\n"
         "int i;\n"
         "str = \"ab:cd\";\n"
@@ -4455,11 +4455,11 @@ static void testReadFileReturnsFileContentAndFalsyForMissingFile() {
     auto obj = harness.objects.cloneObject("/reader");
     assert(obj != nullptr);
 
-    amlp::Value content = harness.vm.callFunction(obj, "read_it", {});
+    aemlpc::Value content = harness.vm.callFunction(obj, "read_it", {});
     assert(std::holds_alternative<std::string>(content.data));
     assert(std::get<std::string>(content.data) == "line one\nline two\n");
 
-    amlp::Value missing = harness.vm.callFunction(obj, "read_missing", {});
+    aemlpc::Value missing = harness.vm.callFunction(obj, "read_missing", {});
     assert(std::holds_alternative<int64_t>(missing.data));
     assert(std::get<int64_t>(missing.data) == 0);
 
@@ -4480,11 +4480,11 @@ static void testWriteFileThenReadFileRoundTrips() {
     auto obj = harness.objects.cloneObject("/writer");
     assert(obj != nullptr);
 
-    amlp::Value writeResult = harness.vm.callFunction(obj, "write_it", {});
+    aemlpc::Value writeResult = harness.vm.callFunction(obj, "write_it", {});
     assert(std::holds_alternative<int64_t>(writeResult.data));
     assert(std::get<int64_t>(writeResult.data) == 1);
 
-    amlp::Value content = harness.vm.callFunction(obj, "read_it", {});
+    aemlpc::Value content = harness.vm.callFunction(obj, "read_it", {});
     assert(std::holds_alternative<std::string>(content.data));
     assert(std::get<std::string>(content.data) == "hello world\n");
 
@@ -4515,11 +4515,11 @@ static void testWriteFileThenReadFileRoundTripsWithNoLeadingSlashPath() {
     auto obj = harness.objects.cloneObject("/writer2");
     assert(obj != nullptr);
 
-    amlp::Value writeResult = harness.vm.callFunction(obj, "write_it", {});
+    aemlpc::Value writeResult = harness.vm.callFunction(obj, "write_it", {});
     assert(std::holds_alternative<int64_t>(writeResult.data));
     assert(std::get<int64_t>(writeResult.data) == 1);
 
-    amlp::Value content = harness.vm.callFunction(obj, "read_it", {});
+    aemlpc::Value content = harness.vm.callFunction(obj, "read_it", {});
     assert(std::holds_alternative<std::string>(content.data));
     assert(std::get<std::string>(content.data) == "hello relative\n");
 
@@ -4568,7 +4568,7 @@ static void testMasterObjectCreateCanCallASimulEfunOnlyWhenSimulEfunLoadsFirst()
         assert(harness.objects.loadSimulEfunObject());
         assert(harness.objects.loadMasterObject());
 
-        amlp::Value ready = harness.vm.callFunction(
+        aemlpc::Value ready = harness.vm.callFunction(
             harness.objects.masterObject(), "query_ready", {});
         assert(std::holds_alternative<int64_t>(ready.data));
         assert(std::get<int64_t>(ready.data) == 1);
@@ -4606,7 +4606,7 @@ static void testValidWriteDeniesFileEfunWhenMasterExplicitlyReturnsZero() {
     auto caller = harness.objects.cloneObject("/vw_deny_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -4628,7 +4628,7 @@ static void testValidWriteRewritesPathWhenMasterReturnsAString() {
     auto caller = harness.objects.cloneObject("/vw_rewrite_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -4665,10 +4665,10 @@ static void testValidWriteReceivesRealArgumentShapePerDialect() {
         harness.vm.callFunction(caller, "probe", {});
 
         auto master = harness.objects.masterObject();
-        amlp::Value ob = harness.vm.callFunction(master, "query_captured_ob", {});
-        assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(ob.data));
-        assert(std::get<std::shared_ptr<amlp::LpcObject>>(ob.data) == caller);
-        amlp::Value func = harness.vm.callFunction(master, "query_captured_func", {});
+        aemlpc::Value ob = harness.vm.callFunction(master, "query_captured_ob", {});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(ob.data));
+        assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(ob.data) == caller);
+        aemlpc::Value func = harness.vm.callFunction(master, "query_captured_func", {});
         assert(std::holds_alternative<std::string>(func.data));
         assert(std::get<std::string>(func.data) == "write_file");
     }
@@ -4708,13 +4708,13 @@ static void testValidWriteReceivesRealArgumentShapePerDialect() {
         harness.vm.callFunction(caller, "probe", {});
 
         auto master = harness.objects.masterObject();
-        amlp::Value uid = harness.vm.callFunction(master, "query_captured_uid", {});
+        aemlpc::Value uid = harness.vm.callFunction(master, "query_captured_uid", {});
         assert(std::holds_alternative<std::string>(uid.data));
         assert(std::get<std::string>(uid.data) == "TestPriv");
-        amlp::Value ob = harness.vm.callFunction(master, "query_captured_ob", {});
-        assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(ob.data));
-        assert(std::get<std::shared_ptr<amlp::LpcObject>>(ob.data) == caller);
-        amlp::Value func = harness.vm.callFunction(master, "query_captured_func", {});
+        aemlpc::Value ob = harness.vm.callFunction(master, "query_captured_ob", {});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(ob.data));
+        assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(ob.data) == caller);
+        aemlpc::Value func = harness.vm.callFunction(master, "query_captured_func", {});
         assert(std::holds_alternative<std::string>(func.data));
         assert(std::get<std::string>(func.data) == "write_file");
     }
@@ -4753,7 +4753,7 @@ static void testCheckValidPathRejectsParentDirectoryTraversalFluffos() {
         harness.tempDir.substr(0, harness.tempDir.find_last_of('/')) + "/amlp_row32_escaped.txt";
     std::remove(outsidePath.c_str()); // in case a prior failed run left it behind
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0); // denied, matching real file.c:750's bare "return 0"
 
@@ -4779,7 +4779,7 @@ static void testCheckValidPathRejectsEmbeddedHashFluffos() {
     auto caller = harness.objects.cloneObject("/hash_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -4803,7 +4803,7 @@ static void testCheckValidPathRejectsLeadingDotSlashFluffos() {
     auto caller = harness.objects.cloneObject("/dotslash_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -4826,11 +4826,11 @@ static void testCheckValidPathAcceptsOrdinaryDottedFilenameFluffos() {
     auto caller = harness.objects.cloneObject("/dotted_caller");
     assert(caller != nullptr);
 
-    amlp::Value writeResult = harness.vm.callFunction(caller, "write_it", {});
+    aemlpc::Value writeResult = harness.vm.callFunction(caller, "write_it", {});
     assert(std::holds_alternative<int64_t>(writeResult.data));
     assert(std::get<int64_t>(writeResult.data) == 1);
 
-    amlp::Value readResult = harness.vm.callFunction(caller, "read_it", {});
+    aemlpc::Value readResult = harness.vm.callFunction(caller, "read_it", {});
     assert(std::holds_alternative<std::string>(readResult.data));
     assert(std::get<std::string>(readResult.data) == "data\n");
 
@@ -4855,7 +4855,7 @@ static void testCheckValidPathLdmudThrowsCatchableRuntimeErrorOnTraversal() {
     auto caller = harness.objects.cloneObject("/ldmud_traverse_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     const std::string& msg = std::get<std::string>(result.data);
     assert(msg.find("Illegal path") != std::string::npos);
@@ -4887,11 +4887,11 @@ static void testCheckValidPathLdmudRejectsSpaceButAllowsHash() {
     auto caller = harness.objects.cloneObject("/ldmud_shape_caller");
     assert(caller != nullptr);
 
-    amlp::Value spaceResult = harness.vm.callFunction(caller, "probe_space", {});
+    aemlpc::Value spaceResult = harness.vm.callFunction(caller, "probe_space", {});
     assert(std::holds_alternative<std::string>(spaceResult.data));
     assert(std::get<std::string>(spaceResult.data).find("Illegal path") != std::string::npos);
 
-    amlp::Value hashResult = harness.vm.callFunction(caller, "probe_hash", {});
+    aemlpc::Value hashResult = harness.vm.callFunction(caller, "probe_hash", {});
     assert(std::holds_alternative<int64_t>(hashResult.data));
     assert(std::get<int64_t>(hashResult.data) == 1); // '#' is fine under LDMud
 
@@ -4938,7 +4938,7 @@ static void testAbsoluteIncludePathResolvesAgainstMudlibRoot() {
     auto obj = harness.objects.cloneObject("/main_with_include");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -4979,7 +4979,7 @@ static void testNestedAbsoluteIncludeInsideAnIncludedFileAlsoResolves() {
     auto obj = harness.objects.cloneObject("/outer");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 9); // 7 + 1 + 1
 
@@ -5020,7 +5020,7 @@ static void testMacroComputedAbsoluteIncludeResolvesAgainstMudlibRoot() {
     auto obj = harness.objects.cloneObject("/global_with_computed_include");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 99);
 
@@ -5068,11 +5068,11 @@ static void testEfunDefinedInIfDirectiveResolvesAgainstTheInjectedEfunChecker() 
     auto obj = harness.objects.cloneObject("/efun_defined_probe");
     assert(obj != nullptr);
 
-    amlp::Value registered = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value registered = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(registered.data));
     assert(std::get<int64_t>(registered.data) == 1);
 
-    amlp::Value missing = harness.vm.callFunction(obj, "probe_missing", {});
+    aemlpc::Value missing = harness.vm.callFunction(obj, "probe_missing", {});
     assert(std::holds_alternative<int64_t>(missing.data));
     assert(std::get<int64_t>(missing.data) == 0);
 
@@ -5114,7 +5114,7 @@ static void testGlobalIncludeFileMacroComputedIncludeIsVisibleInTheCompiledObjec
     auto obj = harness.objects.cloneObject("/uses_global_macro");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 17);
 
@@ -5162,7 +5162,7 @@ static void testRecursiveIncludeResolvesARelativeQuotedIncludeAgainstItsOwnInclu
 
     auto obj = harness.objects.cloneObject("/outer");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -5183,7 +5183,7 @@ static void testRecursiveIncludeResolvesAnAngleBracketIncludeReachedTransitively
 
     auto obj = harness.objects.cloneObject("/outer");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 84);
 
@@ -5207,7 +5207,7 @@ static void testRecursiveIncludeResolvesAMacroDefinedAndConsumedEntirelyWithinAT
 
     auto obj = harness.objects.cloneObject("/outer");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 55);
 
@@ -5243,7 +5243,7 @@ static void testRecursiveIncludeHandlesARealIncludeCycleWithoutInfiniteLooping()
 
     auto obj = harness.objects.cloneObject("/outer");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 3);
 
@@ -5277,7 +5277,7 @@ static void testInheritPathWithoutLeadingSlashResolvesSameAsWithOne() {
     auto obj = harness.objects.cloneObject("/child");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 6);
 
@@ -5301,7 +5301,7 @@ static void testCppWarningsDoNotFailPreprocessing() {
     auto obj = harness.objects.cloneObject("/warns");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -5354,16 +5354,16 @@ static void testIncludeDirConfigSupportsColonSeparatedListLikeRealMudosCfg() {
     cfg << "port: 0\n";
     cfg.close();
 
-    amlp::Config config;
+    aemlpc::Config config;
     assert(config.loadFromFile(cfgPath));
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
     objects.setVM(&vm);
 
     auto obj = objects.loadObject("/probe");
     assert(obj != nullptr);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 3);
 
@@ -5384,7 +5384,7 @@ static void testIncludeDirSingleEntryWithNoColonStillWorks() {
         "int probe() { return SINGLE_INCDIR_VALUE; }\n");
     auto obj = harness.objects.cloneObject("/single_incdir_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 9);
     std::cout << "testIncludeDirSingleEntryWithNoColonStillWorks OK\n";
@@ -5408,7 +5408,7 @@ static void testFileDunderPredefineResolvesToRealLpcPathNotHostFilesystemPath() 
     harness.writeFile("/filedunder_probe.c", "mixed probe() { return __FILE__; }\n");
     auto obj = harness.objects.cloneObject("/filedunder_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     // Not an absolute host path (no leading tempDir, no leftover
     // /tmp/amlp_src_XXXXXX staging path). Exactly the real LPC
@@ -5439,15 +5439,15 @@ static void testDirDunderPredefineTruncatesAfterLastSlashWithMultipleSegments() 
     cfg << "port: 0\n";
     cfg.close();
 
-    amlp::Config config;
+    aemlpc::Config config;
     assert(config.loadFromFile(cfgPath));
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
     objects.setVM(&vm);
 
     auto obj = objects.loadObject("/sub/dirdunder_probe");
     assert(obj != nullptr);
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "/sub/");
     std::cout << "testDirDunderPredefineTruncatesAfterLastSlashWithMultipleSegments OK\n";
@@ -5467,7 +5467,7 @@ static void testDirDunderAdjacentToStringLiteralMatchesRealShadowTestShape() {
         "mixed probe() { return __DIR__ \"badshad\"; }\n");
     auto obj = harness.objects.cloneObject("/dirstr_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "/badshad");
     std::cout << "testDirDunderAdjacentToStringLiteralMatchesRealShadowTestShape OK\n";
@@ -5504,7 +5504,7 @@ static void testUnnamedFunctionParameterParsesAndDoesNotBreakOtherLocals() {
         "mixed probe() { return domain_file(\"ignored\"); }\n");
     auto obj = harness.objects.cloneObject("/unnamed_single_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "root");
     std::cout << "testUnnamedFunctionParameterParsesAndDoesNotBreakOtherLocals OK\n";
@@ -5527,7 +5527,7 @@ static void testMultipleUnnamedParametersInOneFunctionDoNotCollide() {
         "}\n");
     auto obj = harness.objects.cloneObject("/unnamed_multi_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     std::cout << "testMultipleUnnamedParametersInOneFunctionDoNotCollide OK\n";
@@ -5548,7 +5548,7 @@ static void testUnnamedParameterMixedWithNamedOnesStaysPositionallyCorrect() {
         "}\n");
     auto obj = harness.objects.cloneObject("/unnamed_mixed_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 99);
     std::cout << "testUnnamedParameterMixedWithNamedOnesStaysPositionallyCorrect OK\n";
@@ -5567,15 +5567,15 @@ static void testToFloatIntArgConvertsToDouble() {
     auto obj = harness.objects.cloneObject("/tf");
     assert(obj != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(obj, "probe_int", {});
+    aemlpc::Value r1 = harness.vm.callFunction(obj, "probe_int", {});
     assert(std::holds_alternative<double>(r1.data));
     assert(std::get<double>(r1.data) == 42.0);
 
-    amlp::Value r2 = harness.vm.callFunction(obj, "probe_neg", {});
+    aemlpc::Value r2 = harness.vm.callFunction(obj, "probe_neg", {});
     assert(std::holds_alternative<double>(r2.data));
     assert(std::get<double>(r2.data) == -3.0);
 
-    amlp::Value r3 = harness.vm.callFunction(obj, "probe_zero", {});
+    aemlpc::Value r3 = harness.vm.callFunction(obj, "probe_zero", {});
     assert(std::holds_alternative<double>(r3.data));
     assert(std::get<double>(r3.data) == 0.0);
 
@@ -5591,12 +5591,12 @@ static void testToFloatStringArgParsesLeadingFloat() {
     auto obj = harness.objects.cloneObject("/tf2");
     assert(obj != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(obj, "probe_str", {});
+    aemlpc::Value r1 = harness.vm.callFunction(obj, "probe_str", {});
     assert(std::holds_alternative<double>(r1.data));
     // Allow small floating-point epsilon
     assert(std::get<double>(r1.data) > 3.13 && std::get<double>(r1.data) < 3.15);
 
-    amlp::Value r2 = harness.vm.callFunction(obj, "probe_bad", {});
+    aemlpc::Value r2 = harness.vm.callFunction(obj, "probe_bad", {});
     assert(std::holds_alternative<double>(r2.data));
     assert(std::get<double>(r2.data) == 0.0);
 
@@ -5611,7 +5611,7 @@ static void testToFloatFloatArgPassesThrough() {
     auto obj = harness.objects.cloneObject("/tf3");
     assert(obj != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<double>(r.data));
     assert(std::get<double>(r.data) == 2.5);
     std::cout << "testToFloatFloatArgPassesThrough OK\n";
@@ -5630,7 +5630,7 @@ static void testTypeofReturnsCorrectTypeStringForEachKind() {
     assert(obj != nullptr);
 
     auto checkStr = [&](const std::string& fn, const std::string& expected) {
-        amlp::Value r = harness.vm.callFunction(obj, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(obj, fn, {});
         assert(std::holds_alternative<std::string>(r.data));
         assert(std::get<std::string>(r.data) == expected);
     };
@@ -5655,11 +5655,11 @@ static void testRenameFileAndVerifyViaReadFile() {
     auto obj = harness.objects.cloneObject("/renamer");
     assert(obj != nullptr);
 
-    amlp::Value rv = harness.vm.callFunction(obj, "do_rename", {});
+    aemlpc::Value rv = harness.vm.callFunction(obj, "do_rename", {});
     assert(std::holds_alternative<int64_t>(rv.data));
     assert(std::get<int64_t>(rv.data) == 0); // 0 = success
 
-    amlp::Value content = harness.vm.callFunction(obj, "read_dst", {});
+    aemlpc::Value content = harness.vm.callFunction(obj, "read_dst", {});
     assert(std::holds_alternative<std::string>(content.data));
     assert(std::get<std::string>(content.data) == "rename me\n");
     std::cout << "testRenameFileAndVerifyViaReadFile OK\n";
@@ -5681,15 +5681,15 @@ static void testRmdirRemovesEmptyDirectoryAndFailsOnNonEmpty() {
     auto obj = harness.objects.cloneObject("/rmdirer");
     assert(obj != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(obj, "rm_empty", {});
+    aemlpc::Value r1 = harness.vm.callFunction(obj, "rm_empty", {});
     assert(std::holds_alternative<int64_t>(r1.data));
     assert(std::get<int64_t>(r1.data) == 1); // success
 
-    amlp::Value r2 = harness.vm.callFunction(obj, "rm_nonempty", {});
+    aemlpc::Value r2 = harness.vm.callFunction(obj, "rm_nonempty", {});
     assert(std::holds_alternative<int64_t>(r2.data));
     assert(std::get<int64_t>(r2.data) == 0); // non-empty: fail
 
-    amlp::Value r3 = harness.vm.callFunction(obj, "rm_missing", {});
+    aemlpc::Value r3 = harness.vm.callFunction(obj, "rm_missing", {});
     assert(std::holds_alternative<int64_t>(r3.data));
     assert(std::get<int64_t>(r3.data) == 0); // missing: fail
     std::cout << "testRmdirRemovesEmptyDirectoryAndFailsOnNonEmpty OK\n";
@@ -5707,19 +5707,19 @@ static void testAbsReturnsPositiveForNegativeIntAndFloat() {
     auto obj = harness.objects.cloneObject("/abstest");
     assert(obj != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(obj, "probe_neg_int", {});
+    aemlpc::Value r1 = harness.vm.callFunction(obj, "probe_neg_int", {});
     assert(std::holds_alternative<int64_t>(r1.data));
     assert(std::get<int64_t>(r1.data) == 7);
 
-    amlp::Value r2 = harness.vm.callFunction(obj, "probe_pos_int", {});
+    aemlpc::Value r2 = harness.vm.callFunction(obj, "probe_pos_int", {});
     assert(std::holds_alternative<int64_t>(r2.data));
     assert(std::get<int64_t>(r2.data) == 5);
 
-    amlp::Value r3 = harness.vm.callFunction(obj, "probe_neg_float", {});
+    aemlpc::Value r3 = harness.vm.callFunction(obj, "probe_neg_float", {});
     assert(std::holds_alternative<double>(r3.data));
     assert(std::get<double>(r3.data) == 2.5);
 
-    amlp::Value r4 = harness.vm.callFunction(obj, "probe_pos_float", {});
+    aemlpc::Value r4 = harness.vm.callFunction(obj, "probe_pos_float", {});
     assert(std::holds_alternative<double>(r4.data));
     assert(std::get<double>(r4.data) == 3.0);
     std::cout << "testAbsReturnsPositiveForNegativeIntAndFloat OK\n";
@@ -5737,19 +5737,19 @@ static void testMaxAndMinReturnCorrectElementFromIntArray() {
     auto obj = harness.objects.cloneObject("/minmaxtest");
     assert(obj != nullptr);
 
-    amlp::Value maxVal = harness.vm.callFunction(obj, "probe_max", {});
+    aemlpc::Value maxVal = harness.vm.callFunction(obj, "probe_max", {});
     assert(std::holds_alternative<int64_t>(maxVal.data));
     assert(std::get<int64_t>(maxVal.data) == 9);
 
-    amlp::Value minVal = harness.vm.callFunction(obj, "probe_min", {});
+    aemlpc::Value minVal = harness.vm.callFunction(obj, "probe_min", {});
     assert(std::holds_alternative<int64_t>(minVal.data));
     assert(std::get<int64_t>(minVal.data) == 1);
 
-    amlp::Value maxIdx = harness.vm.callFunction(obj, "probe_max_idx", {});
+    aemlpc::Value maxIdx = harness.vm.callFunction(obj, "probe_max_idx", {});
     assert(std::holds_alternative<int64_t>(maxIdx.data));
     assert(std::get<int64_t>(maxIdx.data) == 5); // index of 9
 
-    amlp::Value minIdx = harness.vm.callFunction(obj, "probe_min_idx", {});
+    aemlpc::Value minIdx = harness.vm.callFunction(obj, "probe_min_idx", {});
     assert(std::holds_alternative<int64_t>(minIdx.data));
     assert(std::get<int64_t>(minIdx.data) == 1); // first occurrence of 1
     std::cout << "testMaxAndMinReturnCorrectElementFromIntArray OK\n";
@@ -5775,7 +5775,7 @@ static void testMathEfunsSqrtFloorCeilCosExpLog() {
     assert(obj != nullptr);
 
     auto checkApprox = [&](const std::string& fn, double expected) {
-        amlp::Value r = harness.vm.callFunction(obj, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(obj, fn, {});
         assert(std::holds_alternative<double>(r.data));
         double got = std::get<double>(r.data);
         assert(got > expected - 1e-9 && got < expected + 1e-9);
@@ -5811,7 +5811,7 @@ static void testTrigAndLog10EfunsMatchKnownExactValues() {
     assert(obj != nullptr);
 
     auto checkApprox = [&](const std::string& fn, double expected) {
-        amlp::Value r = harness.vm.callFunction(obj, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(obj, fn, {});
         assert(std::holds_alternative<double>(r.data));
         double got = std::get<double>(r.data);
         assert(got > expected - 1e-9 && got < expected + 1e-9);
@@ -5841,16 +5841,16 @@ static void testAsinAcosThrowOutsideDomainButAtanDoesNot() {
 
     bool asinThrew = false;
     try { harness.vm.callFunction(obj, "probe_asin_bad", {}); }
-    catch (const amlp::LpcRuntimeError&) { asinThrew = true; }
+    catch (const aemlpc::LpcRuntimeError&) { asinThrew = true; }
     assert(asinThrew);
 
     bool acosThrew = false;
     try { harness.vm.callFunction(obj, "probe_acos_bad", {}); }
-    catch (const amlp::LpcRuntimeError&) { acosThrew = true; }
+    catch (const aemlpc::LpcRuntimeError&) { acosThrew = true; }
     assert(acosThrew);
 
     // Must not throw: well within float range, no domain restriction.
-    amlp::Value atanResult = harness.vm.callFunction(obj, "probe_atan_big", {});
+    aemlpc::Value atanResult = harness.vm.callFunction(obj, "probe_atan_big", {});
     assert(std::holds_alternative<double>(atanResult.data));
 
     std::cout << "testAsinAcosThrowOutsideDomainButAtanDoesNot OK\n";
@@ -5868,15 +5868,15 @@ static void testRegexpBasicMatchReturnsOneAndNoMatchReturnsZero() {
     auto ob = harness.objects.cloneObject("/regprobe");
     assert(ob != nullptr);
 
-    amlp::Value matched = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("the quick brown fox")),
-         amlp::Value(std::string("qu[a-z]+"))});
+    aemlpc::Value matched = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("the quick brown fox")),
+         aemlpc::Value(std::string("qu[a-z]+"))});
     assert(std::holds_alternative<int64_t>(matched.data));
     assert(std::get<int64_t>(matched.data) == 1);
 
-    amlp::Value noMatch = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("the quick brown fox")),
-         amlp::Value(std::string("^slow"))});
+    aemlpc::Value noMatch = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("the quick brown fox")),
+         aemlpc::Value(std::string("^slow"))});
     assert(std::holds_alternative<int64_t>(noMatch.data));
     assert(std::get<int64_t>(noMatch.data) == 0);
 
@@ -5896,7 +5896,7 @@ static void testRegexpThirdArgIllegalForStringFormThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -5918,30 +5918,30 @@ static void testRegexpArrayFormSelectsMatchingLinesWithIndexAndInvertFlags() {
     auto ob = harness.objects.cloneObject("/regarr");
     assert(ob != nullptr);
 
-    auto lines = std::make_shared<amlp::Array>();
-    lines->items.push_back(amlp::Value(std::string("apple")));
-    lines->items.push_back(amlp::Value(std::string("banana")));
-    lines->items.push_back(amlp::Value(std::string("cherry")));
-    lines->items.push_back(amlp::Value(std::string("date")));
+    auto lines = std::make_shared<aemlpc::Array>();
+    lines->items.push_back(aemlpc::Value(std::string("apple")));
+    lines->items.push_back(aemlpc::Value(std::string("banana")));
+    lines->items.push_back(aemlpc::Value(std::string("cherry")));
+    lines->items.push_back(aemlpc::Value(std::string("date")));
 
-    amlp::Value plain = harness.vm.callFunction(ob, "plain",
-        {amlp::Value(lines), amlp::Value(std::string("an"))});
-    auto* plainArr = std::get_if<std::shared_ptr<amlp::Array>>(&plain.data);
+    aemlpc::Value plain = harness.vm.callFunction(ob, "plain",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("an"))});
+    auto* plainArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&plain.data);
     assert(plainArr != nullptr && (*plainArr)->items.size() == 1);
     assert(std::get<std::string>((*plainArr)->items[0].data) == "banana");
 
-    amlp::Value withIdx = harness.vm.callFunction(ob, "withIndex",
-        {amlp::Value(lines), amlp::Value(std::string("^[ab]"))});
-    auto* withIdxArr = std::get_if<std::shared_ptr<amlp::Array>>(&withIdx.data);
+    aemlpc::Value withIdx = harness.vm.callFunction(ob, "withIndex",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("^[ab]"))});
+    auto* withIdxArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&withIdx.data);
     assert(withIdxArr != nullptr && (*withIdxArr)->items.size() == 4);
     assert(std::get<std::string>((*withIdxArr)->items[0].data) == "apple");
     assert(std::get<int64_t>((*withIdxArr)->items[1].data) == 1);
     assert(std::get<std::string>((*withIdxArr)->items[2].data) == "banana");
     assert(std::get<int64_t>((*withIdxArr)->items[3].data) == 2);
 
-    amlp::Value inv = harness.vm.callFunction(ob, "inverted",
-        {amlp::Value(lines), amlp::Value(std::string("^[ab]"))});
-    auto* invArr = std::get_if<std::shared_ptr<amlp::Array>>(&inv.data);
+    aemlpc::Value inv = harness.vm.callFunction(ob, "inverted",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("^[ab]"))});
+    auto* invArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&inv.data);
     assert(invArr != nullptr && (*invArr)->items.size() == 2);
     assert(std::get<std::string>((*invArr)->items[0].data) == "cherry");
     assert(std::get<std::string>((*invArr)->items[1].data) == "date");
@@ -5959,7 +5959,7 @@ static void testRegexpBadPatternThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -5975,10 +5975,10 @@ static void testRegexplodeSplitsStringOnPatternMatches() {
     auto ob = harness.objects.cloneObject("/regexplodeprobe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("ab12cd34ef")),
-         amlp::Value(std::string("[0-9]+"))});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("ab12cd34ef")),
+         aemlpc::Value(std::string("[0-9]+"))});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 5);
     assert(std::get<std::string>((*arr)->items[0].data) == "ab");
     assert(std::get<std::string>((*arr)->items[1].data) == "12");
@@ -6000,10 +6000,10 @@ static void testRegexplodeWithCaptureGroupPatternUsesFullMatchNotGroupText() {
     auto ob = harness.objects.cloneObject("/regexplodegroup");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("xx[42]yy[7]zz")),
-         amlp::Value(std::string("\\[([0-9]+)\\]"))});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("xx[42]yy[7]zz")),
+         aemlpc::Value(std::string("\\[([0-9]+)\\]"))});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 5);
     assert(std::get<std::string>((*arr)->items[0].data) == "xx");
     assert(std::get<std::string>((*arr)->items[1].data) == "[42]");
@@ -6027,27 +6027,27 @@ static void testRegAssocMatchesRealDocCommentExample() {
     auto ob = harness.objects.cloneObject("/regassocprobe");
     assert(ob != nullptr);
 
-    auto pats = std::make_shared<amlp::Array>();
-    pats->items.push_back(amlp::Value(std::string("haha")));
-    pats->items.push_back(amlp::Value(std::string("te")));
-    auto toks = std::make_shared<amlp::Array>();
-    toks->items.push_back(amlp::Value(int64_t{2}));
-    toks->items.push_back(amlp::Value(int64_t{3}));
+    auto pats = std::make_shared<aemlpc::Array>();
+    pats->items.push_back(aemlpc::Value(std::string("haha")));
+    pats->items.push_back(aemlpc::Value(std::string("te")));
+    auto toks = std::make_shared<aemlpc::Array>();
+    toks->items.push_back(aemlpc::Value(int64_t{2}));
+    toks->items.push_back(aemlpc::Value(int64_t{3}));
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("testhahatest")),
-         amlp::Value(pats), amlp::Value(toks), amlp::Value(int64_t{4})});
-    auto* outer = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("testhahatest")),
+         aemlpc::Value(pats), aemlpc::Value(toks), aemlpc::Value(int64_t{4})});
+    auto* outer = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(outer != nullptr && (*outer)->items.size() == 2);
 
-    auto* texts = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[0].data);
+    auto* texts = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[0].data);
     assert(texts != nullptr && (*texts)->items.size() == 7);
     const char* expectedTexts[7] = {"", "te", "st", "haha", "", "te", "st"};
     for (int i = 0; i < 7; ++i) {
         assert(std::get<std::string>((*texts)->items[i].data) == expectedTexts[i]);
     }
 
-    auto* tokens = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[1].data);
+    auto* tokens = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[1].data);
     assert(tokens != nullptr && (*tokens)->items.size() == 7);
     const int64_t expectedTokens[7] = {4, 3, 4, 2, 4, 3, 4};
     for (int i = 0; i < 7; ++i) {
@@ -6069,19 +6069,19 @@ static void testRegAssocZeroPatternsReturnsWholeStringWithDefaultToken() {
     auto ob = harness.objects.cloneObject("/regassocempty");
     assert(ob != nullptr);
 
-    auto emptyArr = std::make_shared<amlp::Array>();
+    auto emptyArr = std::make_shared<aemlpc::Array>();
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("untouched")),
-         amlp::Value(emptyArr), amlp::Value(emptyArr), amlp::Value(int64_t{9})});
-    auto* outer = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("untouched")),
+         aemlpc::Value(emptyArr), aemlpc::Value(emptyArr), aemlpc::Value(int64_t{9})});
+    auto* outer = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(outer != nullptr && (*outer)->items.size() == 2);
 
-    auto* texts = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[0].data);
+    auto* texts = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[0].data);
     assert(texts != nullptr && (*texts)->items.size() == 1);
     assert(std::get<std::string>((*texts)->items[0].data) == "untouched");
 
-    auto* tokens = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[1].data);
+    auto* tokens = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[1].data);
     assert(tokens != nullptr && (*tokens)->items.size() == 1);
     assert(std::get<int64_t>((*tokens)->items[0].data) == 9);
 
@@ -6110,13 +6110,13 @@ static void testMapDeleteAndMDeleteAliasBothRemoveTheKey() {
     auto ob = harness.objects.cloneObject("/mapdel");
     assert(ob != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(ob, "probe_map_delete", {});
-    auto* map1 = std::get_if<std::shared_ptr<amlp::Mapping>>(&r1.data);
+    aemlpc::Value r1 = harness.vm.callFunction(ob, "probe_map_delete", {});
+    auto* map1 = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&r1.data);
     assert(map1 != nullptr && (*map1)->entries.size() == 1);
     assert(std::get<std::string>((*map1)->entries[0].first.data) == "b");
 
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe_m_delete", {});
-    auto* map2 = std::get_if<std::shared_ptr<amlp::Mapping>>(&r2.data);
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe_m_delete", {});
+    auto* map2 = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&r2.data);
     assert(map2 != nullptr && (*map2)->entries.size() == 1);
     assert(std::get<std::string>((*map2)->entries[0].first.data) == "a");
 
@@ -6144,16 +6144,16 @@ static void testAllocateAllocateMappingCopyAndValues() {
 
     // allocate(3): three elements, each defaulting to int 0 (real
     // func_spec.c's own default).
-    amlp::Value a1 = vm.callFunction(ob, "probe_allocate", {});
-    auto* arr1 = std::get_if<std::shared_ptr<amlp::Array>>(&a1.data);
+    aemlpc::Value a1 = vm.callFunction(ob, "probe_allocate", {});
+    auto* arr1 = std::get_if<std::shared_ptr<aemlpc::Array>>(&a1.data);
     assert(arr1 != nullptr && (*arr1)->items.size() == 3);
     for (auto& item : (*arr1)->items) {
         assert(std::holds_alternative<int64_t>(item.data) && std::get<int64_t>(item.data) == 0);
     }
 
     // allocate(3, "x"): every slot initialized to the given value instead.
-    amlp::Value a2 = vm.callFunction(ob, "probe_allocate_init", {});
-    auto* arr2 = std::get_if<std::shared_ptr<amlp::Array>>(&a2.data);
+    aemlpc::Value a2 = vm.callFunction(ob, "probe_allocate_init", {});
+    auto* arr2 = std::get_if<std::shared_ptr<aemlpc::Array>>(&a2.data);
     assert(arr2 != nullptr && (*arr2)->items.size() == 3);
     for (auto& item : (*arr2)->items) {
         assert(std::holds_alternative<std::string>(item.data) && std::get<std::string>(item.data) == "x");
@@ -6162,30 +6162,30 @@ static void testAllocateAllocateMappingCopyAndValues() {
     // allocate_mapping(10): a real, empty mapping (the capacity hint has
     // no observable effect on this driver's own Mapping, per
     // EfunTable.cpp's own comment).
-    amlp::Value m = vm.callFunction(ob, "probe_allocate_mapping", {});
-    auto* mapPtr = std::get_if<std::shared_ptr<amlp::Mapping>>(&m.data);
+    aemlpc::Value m = vm.callFunction(ob, "probe_allocate_mapping", {});
+    auto* mapPtr = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&m.data);
     assert(mapPtr != nullptr && *mapPtr != nullptr && (*mapPtr)->entries.empty());
 
     // copy(): a real deep copy. Mutating the copy must not affect the
     // original (the key behavior that distinguishes copy() from a plain
     // reference/alias).
-    auto srcArr = std::make_shared<amlp::Array>();
-    srcArr->items.push_back(amlp::Value(static_cast<int64_t>(111)));
-    amlp::Value copyResult = vm.callFunction(ob, "copy_and_mutate", {amlp::Value(srcArr)});
-    auto* pair = std::get_if<std::shared_ptr<amlp::Array>>(&copyResult.data);
+    auto srcArr = std::make_shared<aemlpc::Array>();
+    srcArr->items.push_back(aemlpc::Value(static_cast<int64_t>(111)));
+    aemlpc::Value copyResult = vm.callFunction(ob, "copy_and_mutate", {aemlpc::Value(srcArr)});
+    auto* pair = std::get_if<std::shared_ptr<aemlpc::Array>>(&copyResult.data);
     assert(pair != nullptr && (*pair)->items.size() == 2);
-    auto* originalAfter = std::get_if<std::shared_ptr<amlp::Array>>(&(*pair)->items[0].data);
-    auto* dupAfter = std::get_if<std::shared_ptr<amlp::Array>>(&(*pair)->items[1].data);
+    auto* originalAfter = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*pair)->items[0].data);
+    auto* dupAfter = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*pair)->items[1].data);
     assert(std::get<int64_t>((*originalAfter)->items[0].data) == 111);
     assert(std::get<int64_t>((*dupAfter)->items[0].data) == 999);
 
     // values(): every value in insertion order, matching keys()'s own
     // already-tested ordering.
-    auto srcMap = std::make_shared<amlp::Mapping>();
-    srcMap->entries.push_back({amlp::Value(std::string("a")), amlp::Value(static_cast<int64_t>(1))});
-    srcMap->entries.push_back({amlp::Value(std::string("b")), amlp::Value(static_cast<int64_t>(2))});
-    amlp::Value valsResult = vm.callFunction(ob, "probe_values", {amlp::Value(srcMap)});
-    auto* valsArr = std::get_if<std::shared_ptr<amlp::Array>>(&valsResult.data);
+    auto srcMap = std::make_shared<aemlpc::Mapping>();
+    srcMap->entries.push_back({aemlpc::Value(std::string("a")), aemlpc::Value(static_cast<int64_t>(1))});
+    srcMap->entries.push_back({aemlpc::Value(std::string("b")), aemlpc::Value(static_cast<int64_t>(2))});
+    aemlpc::Value valsResult = vm.callFunction(ob, "probe_values", {aemlpc::Value(srcMap)});
+    auto* valsArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&valsResult.data);
     assert(valsArr != nullptr && (*valsArr)->items.size() == 2);
     assert(std::get<int64_t>((*valsArr)->items[0].data) == 1);
     assert(std::get<int64_t>((*valsArr)->items[1].data) == 2);
@@ -6202,11 +6202,11 @@ static void testClasspAlwaysReturnsFalseSinceNoClassTypeExists() {
     auto ob = harness.objects.cloneObject("/classptest");
     assert(ob != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(ob, "probe_int", {});
+    aemlpc::Value r1 = harness.vm.callFunction(ob, "probe_int", {});
     assert(std::get<int64_t>(r1.data) == 0);
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe_string", {});
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe_string", {});
     assert(std::get<int64_t>(r2.data) == 0);
-    amlp::Value r3 = harness.vm.callFunction(ob, "probe_array", {});
+    aemlpc::Value r3 = harness.vm.callFunction(ob, "probe_array", {});
     assert(std::get<int64_t>(r3.data) == 0);
 
     std::cout << "testClasspAlwaysReturnsFalseSinceNoClassTypeExists OK\n";
@@ -6227,15 +6227,15 @@ static void testAllPreviousObjectsReturnsSameArrayAsPreviousObjectMinusOne() {
     auto caller = harness.objects.cloneObject("/allprevcaller");
     assert(caller != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(caller, "call_probe", {});
-    auto* arr1 = std::get_if<std::shared_ptr<amlp::Array>>(&r1.data);
+    aemlpc::Value r1 = harness.vm.callFunction(caller, "call_probe", {});
+    auto* arr1 = std::get_if<std::shared_ptr<aemlpc::Array>>(&r1.data);
     assert(arr1 != nullptr && (*arr1)->items.size() == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arr1)->items[0].data) == caller);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arr1)->items[0].data) == caller);
 
-    amlp::Value r2 = harness.vm.callFunction(caller, "call_probe_via_flag", {});
-    auto* arr2 = std::get_if<std::shared_ptr<amlp::Array>>(&r2.data);
+    aemlpc::Value r2 = harness.vm.callFunction(caller, "call_probe_via_flag", {});
+    auto* arr2 = std::get_if<std::shared_ptr<aemlpc::Array>>(&r2.data);
     assert(arr2 != nullptr && (*arr2)->items.size() == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arr2)->items[0].data) == caller);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arr2)->items[0].data) == caller);
 
     std::cout << "testAllPreviousObjectsReturnsSameArrayAsPreviousObjectMinusOne OK\n";
 }
@@ -6253,9 +6253,9 @@ static void testLocaltimeReturnsElevenElementArrayMatchingKnownEpochInstant() {
     auto ob = harness.objects.cloneObject("/localtimetest");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(int64_t{1111111111})});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(int64_t{1111111111})});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 11);
     for (int i = 0; i < 8; ++i) {
         assert(std::holds_alternative<int64_t>((*arr)->items[i].data));
@@ -6281,7 +6281,7 @@ static void testTimeReturnsPlausibleCurrentEpochAndCtimeFormatsAKnownInstant() {
     assert(ob != nullptr);
 
     std::time_t before = std::time(nullptr);
-    amlp::Value t = harness.vm.callFunction(ob, "probe_time", {});
+    aemlpc::Value t = harness.vm.callFunction(ob, "probe_time", {});
     std::time_t after = std::time(nullptr);
     assert(std::holds_alternative<int64_t>(t.data));
     int64_t got = std::get<int64_t>(t.data);
@@ -6292,7 +6292,7 @@ static void testTimeReturnsPlausibleCurrentEpochAndCtimeFormatsAKnownInstant() {
     // so the year digits below cannot roll to an adjacent year. Real
     // ctime() format is always exactly 25 characters, trailing newline
     // included ("Www Mmm dd hh:mm:ss yyyy\n").
-    amlp::Value c = harness.vm.callFunction(ob, "probe_ctime", {amlp::Value(int64_t{1111111111})});
+    aemlpc::Value c = harness.vm.callFunction(ob, "probe_ctime", {aemlpc::Value(int64_t{1111111111})});
     assert(std::holds_alternative<std::string>(c.data));
     const std::string& s = std::get<std::string>(c.data);
     assert(s.size() == 25);
@@ -6310,8 +6310,8 @@ static void testStatOnRegularFileReturnsSizeAndMtimeArray() {
     auto ob = harness.objects.cloneObject("/stattest");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 3);
     assert(std::get<int64_t>((*arr)->items[0].data) == 5);
     assert(std::holds_alternative<int64_t>((*arr)->items[1].data));
@@ -6330,15 +6330,15 @@ static void testReadBytesReadsSubrangeAndHandlesNegativeStartAndMissingFile() {
     auto ob = harness.objects.cloneObject("/readbytestest");
     assert(ob != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(ob, "probe_range", {});
+    aemlpc::Value r1 = harness.vm.callFunction(ob, "probe_range", {});
     assert(std::holds_alternative<std::string>(r1.data));
     assert(std::get<std::string>(r1.data) == "cde");
 
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe_neg_start", {});
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe_neg_start", {});
     assert(std::holds_alternative<std::string>(r2.data));
     assert(std::get<std::string>(r2.data) == "ghij");
 
-    amlp::Value r3 = harness.vm.callFunction(ob, "probe_missing", {});
+    aemlpc::Value r3 = harness.vm.callFunction(ob, "probe_missing", {});
     assert(std::holds_alternative<int64_t>(r3.data));
     assert(std::get<int64_t>(r3.data) == 0);
 
@@ -6354,11 +6354,11 @@ static void testWriteBytesOverwritesAtOffsetThenReadBytesConfirmsIt() {
     auto ob = harness.objects.cloneObject("/writebytestest");
     assert(ob != nullptr);
 
-    amlp::Value writeResult = harness.vm.callFunction(ob, "probe_write", {});
+    aemlpc::Value writeResult = harness.vm.callFunction(ob, "probe_write", {});
     assert(std::holds_alternative<int64_t>(writeResult.data));
     assert(std::get<int64_t>(writeResult.data) == 1);
 
-    amlp::Value readResult = harness.vm.callFunction(ob, "probe_read", {});
+    aemlpc::Value readResult = harness.vm.callFunction(ob, "probe_read", {});
     assert(std::holds_alternative<std::string>(readResult.data));
     assert(std::get<std::string>(readResult.data) == "abXYefgh");
 
@@ -6374,12 +6374,12 @@ static void testLinkCreatesASecondNameForTheSameFileContent() {
     auto ob = harness.objects.cloneObject("/linktest");
     assert(ob != nullptr);
 
-    amlp::Value linkResult = harness.vm.callFunction(ob, "probe_link", {});
+    aemlpc::Value linkResult = harness.vm.callFunction(ob, "probe_link", {});
     assert(std::holds_alternative<int64_t>(linkResult.data));
     // Real link() shares rename()'s own inverted convention: 0 = success.
     assert(std::get<int64_t>(linkResult.data) == 0);
 
-    amlp::Value readResult = harness.vm.callFunction(ob, "probe_read_linked", {});
+    aemlpc::Value readResult = harness.vm.callFunction(ob, "probe_read_linked", {});
     assert(std::holds_alternative<std::string>(readResult.data));
     assert(std::get<std::string>(readResult.data) == "shared content\n");
 
@@ -6395,19 +6395,19 @@ static void testUniqueArrayGroupsElementsByClosureResultAndExcludesSkipValue() {
     auto ob = harness.objects.cloneObject("/uniqarrtest");
     assert(ob != nullptr);
 
-    auto arr = std::make_shared<amlp::Array>();
+    auto arr = std::make_shared<aemlpc::Array>();
     for (int64_t v : {1, 2, 3, 4, 5, 6, 9}) arr->items.emplace_back(v);
     // 1%3=1, 2%3=2, 3%3=0(skip default), 4%3=1, 5%3=2, 6%3=0(skip), 9%3=0(skip)
     // Groups expected (order not asserted beyond membership): {1,4} and {2,5}.
     // 3, 6, 9 are excluded (classifier result 0 == default skip value).
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(arr)});
-    auto* groups = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(arr)});
+    auto* groups = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(groups != nullptr && (*groups)->items.size() == 2);
 
     std::vector<std::vector<int64_t>> actual;
     for (const auto& g : (*groups)->items) {
-        auto* gArr = std::get_if<std::shared_ptr<amlp::Array>>(&g.data);
+        auto* gArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&g.data);
         assert(gArr != nullptr);
         std::vector<int64_t> nums;
         for (const auto& item : (*gArr)->items) nums.push_back(std::get<int64_t>(item.data));
@@ -6436,12 +6436,12 @@ static void testBaseNameReturnsSameAsFileNameSinceNoCloneSuffixExistsHere() {
     auto ob = harness.objects.cloneObject("/basenametest");
     assert(ob != nullptr);
 
-    amlp::Value self = harness.vm.callFunction(ob, "probe_self", {});
+    aemlpc::Value self = harness.vm.callFunction(ob, "probe_self", {});
     assert(std::holds_alternative<std::string>(self.data));
     assert(std::get<std::string>(self.data) == ob->filename());
 
-    amlp::Value viaArg = harness.vm.callFunction(ob, "probe_arg", {amlp::Value(ob)});
-    amlp::Value viaFileName = harness.vm.callFunction(ob, "probe_file_name", {amlp::Value(ob)});
+    aemlpc::Value viaArg = harness.vm.callFunction(ob, "probe_arg", {aemlpc::Value(ob)});
+    aemlpc::Value viaFileName = harness.vm.callFunction(ob, "probe_file_name", {aemlpc::Value(ob)});
     assert(std::get<std::string>(viaArg.data) == std::get<std::string>(viaFileName.data));
 
     std::cout << "testBaseNameReturnsSameAsFileNameSinceNoCloneSuffixExistsHere OK\n";
@@ -6454,7 +6454,7 @@ static void testDebugMessageAcceptsAStringArgumentAndDoesNotThrow() {
     auto ob = harness.objects.cloneObject("/debugmsgtest");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
@@ -6468,11 +6468,11 @@ static void testUptimeIsNonNegativeAndNonDecreasingAcrossTwoCalls() {
     auto ob = harness.objects.cloneObject("/uptimetest");
     assert(ob != nullptr);
 
-    amlp::Value first = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value first = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(first.data));
     assert(std::get<int64_t>(first.data) >= 0);
 
-    amlp::Value second = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value second = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(second.data) >= std::get<int64_t>(first.data));
 
     std::cout << "testUptimeIsNonNegativeAndNonDecreasingAcrossTwoCalls OK\n";
@@ -6493,11 +6493,11 @@ static void testSysNetworkPortsReturnsOneRealTelnetEntryMatchingConfig() {
     auto ob = harness.objects.cloneObject("/snp_probe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto outer = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto outer = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(outer && outer->items.size() == 1);
 
-    auto entry = std::get<std::shared_ptr<amlp::Array>>(outer->items[0].data);
+    auto entry = std::get<std::shared_ptr<aemlpc::Array>>(outer->items[0].data);
     assert(entry && entry->items.size() == 4);
     assert(std::get<int64_t>(entry->items[0].data) == 1); // real 1-indexed slot
     assert(std::get<std::string>(entry->items[1].data) == "telnet");
@@ -6514,8 +6514,8 @@ static void testRusageReturnsMappingWithExpectedKeysAndNonNegativeValues() {
     auto ob = harness.objects.cloneObject("/rusagetest");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto* map = std::get_if<std::shared_ptr<amlp::Mapping>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto* map = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&result.data);
     assert(map != nullptr && *map);
     assert((*map)->entries.size() == 16);
 
@@ -6557,14 +6557,14 @@ static void testCommandDispatchesToCurrentObjectsOwnActionTableAndReturnsTruthy(
     harness.vm.callFunction(ob, "register_hook", {});
     harness.vm.popCommandGiver();
 
-    amlp::Value hit = harness.vm.callFunction(ob, "probe_hit", {});
+    aemlpc::Value hit = harness.vm.callFunction(ob, "probe_hit", {});
     assert(std::holds_alternative<int64_t>(hit.data));
     assert(std::get<int64_t>(hit.data) == 1);
 
-    amlp::Value forced = harness.vm.callFunction(ob, "query_was_forced", {});
+    aemlpc::Value forced = harness.vm.callFunction(ob, "query_was_forced", {});
     assert(std::get<int64_t>(forced.data) == 1);
 
-    amlp::Value miss = harness.vm.callFunction(ob, "probe_miss", {});
+    aemlpc::Value miss = harness.vm.callFunction(ob, "probe_miss", {});
     assert(std::get<int64_t>(miss.data) == 0);
 
     std::cout << "testCommandDispatchesToCurrentObjectsOwnActionTableAndReturnsTruthy OK\n";
@@ -6577,9 +6577,9 @@ static void testShutdownSetsSchedulerRequestFlag() {
     auto ob = harness.objects.cloneObject("/shutdowntest");
     assert(ob != nullptr);
 
-    assert(!amlp::Scheduler::isShutdownRequested());
+    assert(!aemlpc::Scheduler::isShutdownRequested());
     harness.vm.callFunction(ob, "probe", {});
-    assert(amlp::Scheduler::isShutdownRequested());
+    assert(aemlpc::Scheduler::isShutdownRequested());
 
     std::cout << "testShutdownSetsSchedulerRequestFlag OK\n";
 }
@@ -6591,7 +6591,7 @@ static void testInEditAlwaysReturnsFalseSinceEdIsNotImplemented() {
     auto ob = harness.objects.cloneObject("/ineditest");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -6609,17 +6609,17 @@ static void testInInputReflectsPendingInputToStateOnAConnectedObject() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
 
-    amlp::Value before = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value before = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(before.data) == 0);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
-    amlp::Value after = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value after = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(after.data) == 1);
 
     ::close(fds[1]);
@@ -6633,22 +6633,22 @@ static void testMatchPathReturnsDeepestMatchingPrefix() {
     auto ob = harness.objects.cloneObject("/matchpathtest");
     assert(ob != nullptr);
 
-    auto m = std::make_shared<amlp::Mapping>();
-    m->entries.emplace_back(amlp::Value(std::string("/")), amlp::Value(std::string("low")));
-    m->entries.emplace_back(amlp::Value(std::string("/domains/")), amlp::Value(std::string("mid")));
-    m->entries.emplace_back(amlp::Value(std::string("/domains/Praxis/")), amlp::Value(std::string("high")));
+    auto m = std::make_shared<aemlpc::Mapping>();
+    m->entries.emplace_back(aemlpc::Value(std::string("/")), aemlpc::Value(std::string("low")));
+    m->entries.emplace_back(aemlpc::Value(std::string("/domains/")), aemlpc::Value(std::string("mid")));
+    m->entries.emplace_back(aemlpc::Value(std::string("/domains/Praxis/")), aemlpc::Value(std::string("high")));
 
-    amlp::Value deep = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(m), amlp::Value(std::string("/domains/Praxis/room.c"))});
+    aemlpc::Value deep = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(m), aemlpc::Value(std::string("/domains/Praxis/room.c"))});
     assert(std::holds_alternative<std::string>(deep.data));
     assert(std::get<std::string>(deep.data) == "high");
 
-    amlp::Value mid = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(m), amlp::Value(std::string("/domains/other.c"))});
+    aemlpc::Value mid = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(m), aemlpc::Value(std::string("/domains/other.c"))});
     assert(std::get<std::string>(mid.data) == "mid");
 
-    amlp::Value none = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::make_shared<amlp::Mapping>()), amlp::Value(std::string("/anything"))});
+    aemlpc::Value none = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::make_shared<aemlpc::Mapping>()), aemlpc::Value(std::string("/anything"))});
     assert(std::holds_alternative<int64_t>(none.data));
     assert(std::get<int64_t>(none.data) == 0);
 
@@ -6657,7 +6657,7 @@ static void testMatchPathReturnsDeepestMatchingPrefix() {
 
 static void testCallOutInfoListsPendingEntryWithOwnerFunctionAndDelay() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/coinfotest.c",
         "int probe() { return call_out(\"idle\", 60); }\n"
@@ -6667,13 +6667,13 @@ static void testCallOutInfoListsPendingEntryWithOwnerFunctionAndDelay() {
     assert(ob != nullptr);
 
     harness.vm.callFunction(ob, "probe", {});
-    amlp::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&infoResult.data);
+    aemlpc::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&infoResult.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
 
-    auto* entry = std::get_if<std::shared_ptr<amlp::Array>>(&(*arr)->items[0].data);
+    auto* entry = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*arr)->items[0].data);
     assert(entry != nullptr && (*entry)->items.size() == 3);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*entry)->items[0].data) == ob);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*entry)->items[0].data) == ob);
     assert(std::get<std::string>((*entry)->items[1].data) == "idle");
     assert(std::holds_alternative<int64_t>((*entry)->items[2].data));
     int64_t delay = std::get<int64_t>((*entry)->items[2].data);
@@ -6711,11 +6711,11 @@ static void testShadowAttachInterceptsCallOtherWhenShadowDefinesFunction() {
     auto caller = harness.objects.cloneObject("/sh_caller");
     assert(victim != nullptr && shadowOb != nullptr && caller != nullptr);
 
-    amlp::Value attachResult = harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(attachResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(attachResult.data) == victim);
+    aemlpc::Value attachResult = harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(attachResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(attachResult.data) == victim);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(victim)});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(victim)});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "shadow");
 
@@ -6748,11 +6748,11 @@ static void testShadowFallsThroughToVictimWhenFunctionUndefinedOnShadowRegardles
     auto shadowOb = harness.objects.cloneObject("/sh2_shadow");
     auto caller = harness.objects.cloneObject("/sh2_caller");
     assert(victim != nullptr && shadowOb != nullptr && caller != nullptr);
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
 
     // Not defined on the shadow at all. Falls through to the victim's
     // own definition, matching real "function not found, retry".
-    amlp::Value undef = harness.vm.callFunction(caller, "probe_undefined", {amlp::Value(victim)});
+    aemlpc::Value undef = harness.vm.callFunction(caller, "probe_undefined", {aemlpc::Value(victim)});
     assert(std::holds_alternative<std::string>(undef.data));
     assert(std::get<std::string>(undef.data) == "victim-answer");
 
@@ -6761,7 +6761,7 @@ static void testShadowFallsThroughToVictimWhenFunctionUndefinedOnShadowRegardles
     // error), no fall-through attempted. The next test below proves
     // this is genuinely the shadow's own copy running, not the
     // victim's, using bodies that return distinguishable values.
-    amlp::Value falsy = harness.vm.callFunction(caller, "probe_falsy", {amlp::Value(victim)});
+    aemlpc::Value falsy = harness.vm.callFunction(caller, "probe_falsy", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(falsy.data));
     assert(std::get<int64_t>(falsy.data) == 0);
 
@@ -6792,9 +6792,9 @@ static void testShadowDefinedFunctionReturningFalsyIsStillFinalNotAFallThroughTr
     auto shadowOb = harness.objects.cloneObject("/sh3_shadow");
     auto caller = harness.objects.cloneObject("/sh3_caller");
     assert(victim != nullptr && shadowOb != nullptr && caller != nullptr);
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(victim)});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -6823,12 +6823,12 @@ static void testShadowGuardsAgainstReenteringItselfViaCurrentObjectCheck() {
     auto victim = harness.objects.cloneObject("/sh4_victim");
     auto shadowOb = harness.objects.cloneObject("/sh4_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
 
     // Called directly ON the shadow object (so current_object during the
     // nested victim->greet() call other is the shadow itself). must
     // reach the victim's own real greet(), not re-intercept itself.
-    amlp::Value result = harness.vm.callFunction(shadowOb, "call_victim_directly", {amlp::Value(victim)});
+    aemlpc::Value result = harness.vm.callFunction(shadowOb, "call_victim_directly", {aemlpc::Value(victim)});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "victim");
 
@@ -6849,7 +6849,7 @@ static void testShadowDestructingVictimCascadesEntireChain() {
     auto victim = harness.objects.cloneObject("/sh5_victim");
     auto shadowOb = harness.objects.cloneObject("/sh5_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(!victim->isDestructed());
     assert(!shadowOb->isDestructed());
 
@@ -6876,7 +6876,7 @@ static void testShadowDestructingShadowSplicesItOutLeavingVictimIntact() {
     auto victim = harness.objects.cloneObject("/sh6_victim");
     auto shadowOb = harness.objects.cloneObject("/sh6_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
 
     harness.objects.destructObject(shadowOb);
     assert(shadowOb->isDestructed());
@@ -6902,7 +6902,7 @@ static void testShadowDeniedWhenMasterHasNoValidShadowApproval() {
     auto victim1 = noMaster.objects.cloneObject("/sh7_victim");
     auto shadow1 = noMaster.objects.cloneObject("/sh7_shadow");
     assert(victim1 != nullptr && shadow1 != nullptr);
-    amlp::Value r1 = noMaster.vm.callFunction(shadow1, "attach", {amlp::Value(victim1)});
+    aemlpc::Value r1 = noMaster.vm.callFunction(shadow1, "attach", {aemlpc::Value(victim1)});
     assert(std::holds_alternative<std::monostate>(r1.data));
     assert(!victim1->shadowedBy().lock());
 
@@ -6917,7 +6917,7 @@ static void testShadowDeniedWhenMasterHasNoValidShadowApproval() {
     auto victim2 = rejecting.objects.cloneObject("/sh7b_victim");
     auto shadow2 = rejecting.objects.cloneObject("/sh7b_shadow");
     assert(victim2 != nullptr && shadow2 != nullptr);
-    amlp::Value r2 = rejecting.vm.callFunction(shadow2, "attach", {amlp::Value(victim2)});
+    aemlpc::Value r2 = rejecting.vm.callFunction(shadow2, "attach", {aemlpc::Value(victim2)});
     assert(std::holds_alternative<std::monostate>(r2.data));
     assert(!victim2->shadowedBy().lock());
 
@@ -6941,22 +6941,22 @@ static void testShadowQueryFormAndQueryShadowingReturnBothDirectionsOrZero() {
     assert(victim != nullptr && shadowOb != nullptr);
 
     // Before attaching: neither direction reports a relationship.
-    amlp::Value beforeVictim = harness.vm.callFunction(victim, "who_shadows_me", {});
+    aemlpc::Value beforeVictim = harness.vm.callFunction(victim, "who_shadows_me", {});
     assert(std::holds_alternative<std::monostate>(beforeVictim.data));
-    amlp::Value beforeShadow = harness.vm.callFunction(shadowOb, "who_do_i_shadow", {});
+    aemlpc::Value beforeShadow = harness.vm.callFunction(shadowOb, "who_do_i_shadow", {});
     assert(std::holds_alternative<std::monostate>(beforeShadow.data));
 
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
 
     // shadow(victim, 0): who is currently shadowing victim?
-    amlp::Value afterVictim = harness.vm.callFunction(victim, "who_shadows_me", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(afterVictim.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(afterVictim.data) == shadowOb);
+    aemlpc::Value afterVictim = harness.vm.callFunction(victim, "who_shadows_me", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(afterVictim.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(afterVictim.data) == shadowOb);
 
     // query_shadowing(shadowOb): who does shadowOb itself shadow?
-    amlp::Value afterShadow = harness.vm.callFunction(shadowOb, "who_do_i_shadow", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(afterShadow.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(afterShadow.data) == victim);
+    aemlpc::Value afterShadow = harness.vm.callFunction(shadowOb, "who_do_i_shadow", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(afterShadow.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(afterShadow.data) == victim);
 
     std::cout << "testShadowQueryFormAndQueryShadowingReturnBothDirectionsOrZero OK\n";
 }
@@ -6975,7 +6975,7 @@ static void testShadowRejectsSelfShadowAlreadyShadowingAndAlreadyShadowed() {
     bool threwSelf = false;
     try {
         harness.vm.callFunction(selfOb, "shadow_self", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwSelf = true;
     }
     assert(threwSelf);
@@ -6988,13 +6988,13 @@ static void testShadowRejectsSelfShadowAlreadyShadowingAndAlreadyShadowed() {
     auto v2 = harness.objects.cloneObject("/sh9_v2");
     auto sh = harness.objects.cloneObject("/sh9_shadow");
     assert(v1 != nullptr && v2 != nullptr && sh != nullptr);
-    harness.vm.callFunction(sh, "attach", {amlp::Value(v1)});
+    harness.vm.callFunction(sh, "attach", {aemlpc::Value(v1)});
 
     // sh is already shadowing v1. Attaching to v2 as well must throw.
     bool threwAlreadyShadowing = false;
     try {
-        harness.vm.callFunction(sh, "attach", {amlp::Value(v2)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(sh, "attach", {aemlpc::Value(v2)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwAlreadyShadowing = true;
     }
     assert(threwAlreadyShadowing);
@@ -7012,11 +7012,11 @@ static void testShadowRejectsSelfShadowAlreadyShadowingAndAlreadyShadowed() {
     auto v3 = harness.objects.cloneObject("/sh9_v3");
     auto shForV1b = harness.objects.cloneObject("/sh9_shadow");
     assert(v1b != nullptr && v3 != nullptr && shForV1b != nullptr);
-    harness.vm.callFunction(shForV1b, "attach", {amlp::Value(v1b)});
+    harness.vm.callFunction(shForV1b, "attach", {aemlpc::Value(v1b)});
     bool threwAlreadyShadowed = false;
     try {
-        harness.vm.callFunction(v1b, "attach", {amlp::Value(v3)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(v1b, "attach", {aemlpc::Value(v3)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwAlreadyShadowed = true;
     }
     assert(threwAlreadyShadowed);
@@ -7043,7 +7043,7 @@ static void testShadowLdmudDialectSingleArgReturnsIntAndUsesQueryAllowShadowAppl
     auto shadowOb = harness.objects.cloneObject("/shl1_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    aemlpc::Value result = harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     assert(victim->shadowedBy().lock() == shadowOb);
@@ -7054,8 +7054,8 @@ static void testShadowLdmudDialectSingleArgReturnsIntAndUsesQueryAllowShadowAppl
     auto victim2 = harness.objects.cloneObject("/shl1_victim2");
     bool threw = false;
     try {
-        harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim2)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim2)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -7077,7 +7077,7 @@ static void testShadowLdmudDialectReturnsZeroNotVoidWhenMasterDenies() {
     auto shadowOb = harness.objects.cloneObject("/shl2_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    aemlpc::Value result = harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
     assert(!victim->shadowedBy().lock());
@@ -7104,7 +7104,7 @@ static void testShadowLdmudDialectHasNoDriverLevelMasterObjectGuard() {
     auto master = harness.objects.masterObject();
     assert(shadowOb != nullptr && master != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(shadowOb, "attach", {amlp::Value(master)});
+    aemlpc::Value result = harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(master)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     assert(master->shadowedBy().lock() == shadowOb);
@@ -7149,8 +7149,8 @@ static void testUnshadowSplicesSelfOutOnlyWhenSelfIsItselfShadowingSomething() {
     // file already exercises); calling shadow() with an intermediate
     // shadow object as the argument, not the root victim, would instead
     // trip "Can't shadow a shadow.".
-    harness.vm.callFunction(a, "attach", {amlp::Value(b)});
-    harness.vm.callFunction(x, "attach", {amlp::Value(b)});
+    harness.vm.callFunction(a, "attach", {aemlpc::Value(b)});
+    harness.vm.callFunction(x, "attach", {aemlpc::Value(b)});
     assert(a->shadowing().lock() == b);
     assert(a->shadowedBy().lock() == x);
 
@@ -7172,7 +7172,7 @@ static void testUnshadowSplicesSelfOutOnlyWhenSelfIsItselfShadowingSomething() {
     auto e = harness.objects.cloneObject("/shu_e");
     assert(d != nullptr && e != nullptr);
 
-    harness.vm.callFunction(e, "attach", {amlp::Value(d)});
+    harness.vm.callFunction(e, "attach", {aemlpc::Value(d)});
     assert(d->shadowedBy().lock() == e);
 
     harness.vm.callFunction(d, "do_unshadow", {});
@@ -7209,20 +7209,20 @@ static void testSnoopStartLinksBothDirectionsAndQueryReflectsThem() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    amlp::Value started = harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(started.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(started.data) == victim);
+    aemlpc::Value started = harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(started.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(started.data) == victim);
 
-    amlp::Value who = harness.vm.callFunction(victim, "who_snoops_me", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(who.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(who.data) == snooper);
+    aemlpc::Value who = harness.vm.callFunction(victim, "who_snoops_me", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(who.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(who.data) == snooper);
 
-    amlp::Value whoIAmSnooping = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(whoIAmSnooping.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(whoIAmSnooping.data) == victim);
+    aemlpc::Value whoIAmSnooping = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(whoIAmSnooping.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(whoIAmSnooping.data) == victim);
 
     ::close(fds[1]);
     std::cout << "testSnoopStartLinksBothDirectionsAndQueryReflectsThem OK\n";
@@ -7244,14 +7244,14 @@ static void testSnoopOutputDuplicationCallsReceiveSnoopOnSnooperWithMatchingText
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
 
-    amlp::OutputContext::set(&conn);
-    harness.vm.callFunction(victim, "speak", {amlp::Value(std::string("hello there\n"))});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.callFunction(victim, "speak", {aemlpc::Value(std::string("hello there\n"))});
+    aemlpc::OutputContext::set(nullptr);
 
     // The victim's own connection still receives the text normally.
     // Snoop duplicates output, it never diverts it.
@@ -7260,7 +7260,7 @@ static void testSnoopOutputDuplicationCallsReceiveSnoopOnSnooperWithMatchingText
     assert(n > 0);
     assert(std::string(buf, static_cast<size_t>(n)) == "hello there\n");
 
-    amlp::Value got = harness.vm.callFunction(snooper, "get_got", {});
+    aemlpc::Value got = harness.vm.callFunction(snooper, "get_got", {});
     assert(std::holds_alternative<std::string>(got.data));
     assert(std::get<std::string>(got.data) == "hello there\n");
 
@@ -7281,8 +7281,8 @@ static void testSnoopDeniesNotInteractiveThrowsAndLoopReturnsFalsy() {
     // throw, not a silent 0. plain was never attached to any Connection.
     bool threw = false;
     try {
-        harness.vm.callFunction(snooper, "start", {amlp::Value(plain)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(snooper, "start", {aemlpc::Value(plain)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -7292,9 +7292,9 @@ static void testSnoopDeniesNotInteractiveThrowsAndLoopReturnsFalsy() {
     // equals victim. Denied silently (0), never a throw.
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(snooper);
-    amlp::Value selfResult = harness.vm.callFunction(snooper, "start", {amlp::Value(snooper)});
+    aemlpc::Value selfResult = harness.vm.callFunction(snooper, "start", {aemlpc::Value(snooper)});
     assert(std::holds_alternative<std::monostate>(selfResult.data));
 
     ::close(fds[1]);
@@ -7316,26 +7316,26 @@ static void testSnoopChainCycleDeniedByAntiLoopWalk() {
     int fdsB[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsA) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsB) == 0);
-    amlp::Connection connA(fdsA[0]);
-    amlp::Connection connB(fdsB[0]);
+    aemlpc::Connection connA(fdsA[0]);
+    aemlpc::Connection connB(fdsB[0]);
     connA.attach(a);
     connB.attach(b);
 
     // A snoops B first.
-    amlp::Value r1 = harness.vm.callFunction(a, "start", {amlp::Value(b)});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(r1.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(r1.data) == b);
+    aemlpc::Value r1 = harness.vm.callFunction(a, "start", {aemlpc::Value(b)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(r1.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(r1.data) == b);
 
     // B now tries to snoop A. Would create a 2-cycle (A watching B, B
     // watching A back). The anti-loop walk starting at B finds A one hop
     // up (B->snoopedBy() == A) and denies.
-    amlp::Value r2 = harness.vm.callFunction(b, "start", {amlp::Value(a)});
+    aemlpc::Value r2 = harness.vm.callFunction(b, "start", {aemlpc::Value(a)});
     assert(std::holds_alternative<std::monostate>(r2.data));
 
     // The original, legitimate snoop survives the denied attempt intact.
-    amlp::Value stillA = harness.vm.callFunction(b, "who_snoops_me", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(stillA.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(stillA.data) == a);
+    aemlpc::Value stillA = harness.vm.callFunction(b, "who_snoops_me", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(stillA.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(stillA.data) == a);
 
     ::close(fdsA[1]);
     ::close(fdsB[1]);
@@ -7355,15 +7355,15 @@ static void testSnoopStopFormUnlinksAndReturnsByItself() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
-    amlp::Value stopped = harness.vm.callFunction(snooper, "stop", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(stopped.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(stopped.data) == snooper);
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
+    aemlpc::Value stopped = harness.vm.callFunction(snooper, "stop", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(stopped.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(stopped.data) == snooper);
 
-    amlp::Value afterStop = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
+    aemlpc::Value afterStop = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
     assert(std::holds_alternative<std::monostate>(afterStop.data));
 
     ::close(fds[1]);
@@ -7382,10 +7382,10 @@ static void testSnoopVictimDisconnectClearsBothSidesOfTheRelationship() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(victim->snoopedBy().lock() == snooper);
 
     // Real remove_interactive(): closing the victim's connection.
@@ -7394,7 +7394,7 @@ static void testSnoopVictimDisconnectClearsBothSidesOfTheRelationship() {
     conn.close();
 
     assert(!victim->snoopedBy().lock());
-    amlp::Value afterClose = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
+    aemlpc::Value afterClose = harness.vm.callFunction(snooper, "who_am_i_snooping", {});
     assert(std::holds_alternative<std::monostate>(afterClose.data));
 
     ::close(fds[1]);
@@ -7414,20 +7414,20 @@ static void testSnoopSnooperDestructedClearsVictimsSnoopedBy() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
-    amlp::Value before = harness.vm.callFunction(victim, "who_snoops_me", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(before.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(before.data) == snooper);
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
+    aemlpc::Value before = harness.vm.callFunction(victim, "who_snoops_me", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(before.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(before.data) == snooper);
 
     // Real destruct_object(): "if (ob->flags & O_SNOOP) { scan all_users,
     // clear snooped_by == ob }". Destructing the snooper unlinks
     // whoever it was watching too, not just the snooper's own state.
     harness.vm.destructObject(snooper);
 
-    amlp::Value after = harness.vm.callFunction(victim, "who_snoops_me", {});
+    aemlpc::Value after = harness.vm.callFunction(victim, "who_snoops_me", {});
     assert(std::holds_alternative<std::monostate>(after.data));
 
     ::close(fds[1]);
@@ -7457,10 +7457,10 @@ static void testSnoopLdmudDialectStartReturnsIntOneAndUsesValidSnoopApply() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    amlp::Value started = harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    aemlpc::Value started = harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(started.data));
     assert(std::get<int64_t>(started.data) == 1);
     assert(victim->snoopedBy().lock() == snooper);
@@ -7486,11 +7486,11 @@ static void testSnoopLdmudDialectReturnsZeroWhenMasterDeniesEitherForm() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
     // Start form denied.
-    amlp::Value started = harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    aemlpc::Value started = harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(started.data));
     assert(std::get<int64_t>(started.data) == 0);
     assert(!victim->snoopedBy().lock());
@@ -7500,7 +7500,7 @@ static void testSnoopLdmudDialectReturnsZeroWhenMasterDeniesEitherForm() {
     // denying master blocks it too, confirmed against set_snoop()'s own
     // "The function calls master->valid_snoop() to test if the snoop is
     // allowed" comment, which is not scoped to the start form only.
-    amlp::Value stopped = harness.vm.callFunction(snooper, "stop", {});
+    aemlpc::Value stopped = harness.vm.callFunction(snooper, "stop", {});
     assert(std::holds_alternative<int64_t>(stopped.data));
     assert(std::get<int64_t>(stopped.data) == 0);
 
@@ -7525,19 +7525,19 @@ static void testSnoopLdmudDialectStopFormReturnsOneWhenSomethingWasUnlinkedElseZ
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
     // Nothing to stop yet. Real set_snoop()'s own "if (!on ||
     // on->closing) return 0;" path.
-    amlp::Value stoppedEmpty = harness.vm.callFunction(snooper, "stop", {});
+    aemlpc::Value stoppedEmpty = harness.vm.callFunction(snooper, "stop", {});
     assert(std::holds_alternative<int64_t>(stoppedEmpty.data));
     assert(std::get<int64_t>(stoppedEmpty.data) == 0);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(victim->snoopedBy().lock() == snooper);
 
-    amlp::Value stoppedReal = harness.vm.callFunction(snooper, "stop", {});
+    aemlpc::Value stoppedReal = harness.vm.callFunction(snooper, "stop", {});
     assert(std::holds_alternative<int64_t>(stoppedReal.data));
     assert(std::get<int64_t>(stoppedReal.data) == 1);
     assert(!victim->snoopedBy().lock());
@@ -7561,7 +7561,7 @@ static void testSnoopLdmudDialectNonInteractiveVictimReturnsZeroNotThrow() {
     auto snooper = harness.objects.cloneObject("/snl4_snooper");
     assert(victim != nullptr && snooper != nullptr);
 
-    amlp::Value started = harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    aemlpc::Value started = harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(std::holds_alternative<int64_t>(started.data));
     assert(std::get<int64_t>(started.data) == 0);
 
@@ -7587,19 +7587,19 @@ static void testSnoopLdmudDialectChainCycleReturnsNegativeOne() {
     int fdsB[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsA) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsB) == 0);
-    amlp::Connection connA(fdsA[0]);
-    amlp::Connection connB(fdsB[0]);
+    aemlpc::Connection connA(fdsA[0]);
+    aemlpc::Connection connB(fdsB[0]);
     connA.attach(a);
     connB.attach(b);
 
-    amlp::Value r1 = harness.vm.callFunction(a, "start", {amlp::Value(b)});
+    aemlpc::Value r1 = harness.vm.callFunction(a, "start", {aemlpc::Value(b)});
     assert(std::holds_alternative<int64_t>(r1.data));
     assert(std::get<int64_t>(r1.data) == 1);
 
     // B now tries to snoop A. Would create a 2-cycle. Real
     // set_snoop()'s own loop check returns -1 specifically for this case,
     // distinct from a plain 0 denial.
-    amlp::Value r2 = harness.vm.callFunction(b, "start", {amlp::Value(a)});
+    aemlpc::Value r2 = harness.vm.callFunction(b, "start", {aemlpc::Value(a)});
     assert(std::holds_alternative<int64_t>(r2.data));
     assert(std::get<int64_t>(r2.data) == -1);
 
@@ -7648,7 +7648,7 @@ std::string readAvailable(int fd) {
 static void testIacSequencesAreStrippedAndNeverReachDispatchedLines() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     // IAC WILL <99 = unsupported> "hel" IAC DO <99> "lo\n"
@@ -7670,7 +7670,7 @@ static void testIacSequencesAreStrippedAndNeverReachDispatchedLines() {
 static void testIacIacIsAnEscapedLiteral0xffDataByteNotACommand() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     std::string raw = "a";
@@ -7691,7 +7691,7 @@ static void testIacIacIsAnEscapedLiteral0xffDataByteNotACommand() {
 static void testTelnetWillEchoAndNawsAreSilentlyAcceptedOtherOptionsRefused() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     // IAC WILL ECHO, IAC WILL NAWS: both silently accepted, no reply.
@@ -7719,7 +7719,7 @@ static void testTelnetWillEchoAndNawsAreSilentlyAcceptedOtherOptionsRefused() {
 static void testTelnetDoEchoIsSilentlyAcceptedOtherOptionsRefusedWithWont() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     std::string raw1;
@@ -7744,7 +7744,7 @@ static void testTelnetDoEchoIsSilentlyAcceptedOtherOptionsRefusedWithWont() {
 static void testNawsSubnegotiationUpdatesTerminalWidthAndHeight() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     assert(conn.terminalWidth() == 0 && conn.terminalHeight() == 0);
 
@@ -7770,7 +7770,7 @@ static void testNawsSubnegotiationSplitAcrossTwoReadsStillParsesCorrectly() {
     // is the sharpest case (SB, IAC, and SE are all real, distinct states).
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     std::string part1;
@@ -7802,7 +7802,7 @@ static void testQueryScreenWidthAndHeightReturnNegotiatedValues() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
@@ -7814,8 +7814,8 @@ static void testQueryScreenWidthAndHeightReturnNegotiatedValues() {
     ::write(fds[1], raw.data(), raw.size());
     conn.pollLines();
 
-    amlp::Value w = harness.vm.callFunction(ob, "probe_w", {amlp::Value(ob)});
-    amlp::Value h = harness.vm.callFunction(ob, "probe_h", {amlp::Value(ob)});
+    aemlpc::Value w = harness.vm.callFunction(ob, "probe_w", {aemlpc::Value(ob)});
+    aemlpc::Value h = harness.vm.callFunction(ob, "probe_h", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(w.data) == 100);
     assert(std::get<int64_t>(h.data) == 40);
 
@@ -7831,7 +7831,7 @@ static void testQueryTerminalTypeReturnsNegotiatedValueAndThrowsWhenNotInteracti
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
@@ -7843,7 +7843,7 @@ static void testQueryTerminalTypeReturnsNegotiatedValueAndThrowsWhenNotInteracti
     ::write(fds[1], raw.data(), raw.size());
     conn.pollLines();
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "XTERM");
 
@@ -7854,8 +7854,8 @@ static void testQueryTerminalTypeReturnsNegotiatedValueAndThrowsWhenNotInteracti
     assert(plain != nullptr);
     bool threw = false;
     try {
-        harness.vm.callFunction(plain, "probe", {amlp::Value(plain)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(plain, "probe", {aemlpc::Value(plain)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -7873,13 +7873,13 @@ static void testInputToNoEchoFlagSendsIacWillEchoImmediately() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     std::string reply = readAvailable(fds[1]);
     assert(reply.size() == 3);
@@ -7900,13 +7900,13 @@ static void testEchoReenabledWithIacWontEchoWhenAwaitedLineArrives() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     readAvailable(fds[1]);  // drain the WILL ECHO from registration
 
     ::write(fds[1], "secret\n", 7);
@@ -7929,7 +7929,7 @@ static void testWindowSizeUpdateFlagSetOnNawsAndConsumedOnce() {
     // byte sequence, just also asserting the flag side of handleSubnegotiation().
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     // Nothing has happened yet: no update pending.
@@ -7959,7 +7959,7 @@ static void testWindowSizeUpdateFlagNotSetByPlainDataLines() {
     // strictly tied to a NAWS subnegotiation actually being parsed.
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     ::write(fds[1], "hello\n", 6);
@@ -8002,7 +8002,7 @@ static void testWindowSizeUpdateFlagNotSetByPlainDataLines() {
 static void testTelnetWillTtypeIsAnsweredWithSbTtypeSendProbeNotRefused() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     std::string raw;
@@ -8022,7 +8022,7 @@ static void testTelnetWillTtypeIsAnsweredWithSbTtypeSendProbeNotRefused() {
 static void testTtypeSubnegotiationUpdatesTerminalTypeAndFlagOnce() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     assert(conn.terminalType().empty());
     assert(conn.takeTerminalTypeUpdate() == false);
@@ -8052,7 +8052,7 @@ static void testTtypeSubnegotiationWithNonIsQualByteIsIgnored() {
     // say) carries no terminal-type string and must not update anything.
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
 
     std::string raw;
@@ -8086,7 +8086,7 @@ static void testTerminalColourSubstitutesRecognizedTokensWithMaxColorsOn() {
     auto ob = harness.objects.cloneObject("/tcolour1");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<std::string>(r.data) == "\x1b[31mhello\x1b[0m");
 
     std::cout << "testTerminalColourSubstitutesRecognizedTokensWithMaxColorsOn OK\n";
@@ -8102,7 +8102,7 @@ static void testTerminalColourStripsRecognizedTokensWithMaxColorsOff() {
     auto ob = harness.objects.cloneObject("/tcolour2");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<std::string>(r.data) == "hello");
 
     std::cout << "testTerminalColourStripsRecognizedTokensWithMaxColorsOff OK\n";
@@ -8118,7 +8118,7 @@ static void testTerminalColourLeavesUnrecognizedTokensAndPlainTextAsIs() {
     auto ob = harness.objects.cloneObject("/tcolour3");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     // "BOGUS" is not a key in colours at all. Left exactly as literal
     // text, same as real no_colours()/message() leave any unrecognized
     // segment (including ordinary plain text) completely untouched.
@@ -8137,7 +8137,7 @@ static void testTerminalColourWithNoMarkupReturnsStringUnchanged() {
     auto ob = harness.objects.cloneObject("/tcolour4");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<std::string>(r.data) == "just plain text");
 
     std::cout << "testTerminalColourWithNoMarkupReturnsStringUnchanged OK\n";
@@ -8157,7 +8157,7 @@ static void testTerminalColourMultipleRealCodesInOneString() {
     auto ob = harness.objects.cloneObject("/tcolour5");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<std::string>(r.data) ==
            "\x1b[1m\x1b[32mok\x1b[0m \x1b[36mbye\x1b[0m");
 
@@ -8209,17 +8209,17 @@ static void testQueryIpNumberAndQueryIpNameReturnLoopbackAddressForCurrentConnec
 
     int serverFd, clientFd;
     makeLoopbackTcpPair(serverFd, clientFd);
-    amlp::Connection conn(serverFd);
+    aemlpc::Connection conn(serverFd);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
-    amlp::Value numResult = harness.vm.callFunction(ob, "probe_num", {});
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Value numResult = harness.vm.callFunction(ob, "probe_num", {});
     // No DNS resolution in this driver (a blocking reverse lookup would
     // stall every other connection). query_ip_name() always falls back
     // to the same numeric IP query_ip_number() returns, per its own
     // EfunTable.cpp comment.
-    amlp::Value nameResult = harness.vm.callFunction(ob, "probe_name", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Value nameResult = harness.vm.callFunction(ob, "probe_name", {});
+    aemlpc::OutputContext::set(nullptr);
 
     assert(std::get<std::string>(numResult.data) == "127.0.0.1");
     assert(std::get<std::string>(nameResult.data) == "127.0.0.1");
@@ -8234,8 +8234,8 @@ static void testQueryIpNumberReturnsZeroWithNoCurrentConnection() {
     auto ob = harness.objects.cloneObject("/ip_probe2");
     assert(ob != nullptr);
 
-    amlp::OutputContext::set(nullptr);
-    amlp::Value r = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::OutputContext::set(nullptr);
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::monostate>(r.data));
 
     std::cout << "testQueryIpNumberReturnsZeroWithNoCurrentConnection OK\n";
@@ -8254,25 +8254,25 @@ static void testSocketStatusReturnsRealShapeArrayForKnownFdAndIncludesItInTheAll
     assert(ob != nullptr);
     auto& vm = harness.vm;
 
-    amlp::Value bindResult = vm.callFunction(ob, "make", {});
-    assert(std::get<int64_t>(bindResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value bindResult = vm.callFunction(ob, "make", {});
+    assert(std::get<int64_t>(bindResult.data) == aemlpc::SocketErr::Success);
     int fd = static_cast<int>(std::get<int64_t>(vm.callFunction(ob, "get_fd", {}).data));
 
     // Real shape (lib/packages/sockets_spec.c's own doc comment):
     // [fd, state, mode, local addr, remote addr, owner].
-    amlp::Value one = vm.callFunction(ob, "probe_one", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&one.data);
+    aemlpc::Value one = vm.callFunction(ob, "probe_one", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&one.data);
     assert(arr != nullptr && (*arr)->items.size() == 6);
     assert(std::get<int64_t>((*arr)->items[0].data) == fd);
     assert(std::get<std::string>((*arr)->items[1].data) == "BOUND");
     assert(std::get<std::string>((*arr)->items[2].data) == "DATAGRAM");
 
-    amlp::Value all = vm.callFunction(ob, "probe_all", {});
-    auto* allArr = std::get_if<std::shared_ptr<amlp::Array>>(&all.data);
+    aemlpc::Value all = vm.callFunction(ob, "probe_all", {});
+    auto* allArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&all.data);
     assert(allArr != nullptr);
     bool found = false;
     for (auto& entry : (*allArr)->items) {
-        auto* entryArr = std::get_if<std::shared_ptr<amlp::Array>>(&entry.data);
+        auto* entryArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&entry.data);
         if (entryArr && *entryArr && !(*entryArr)->items.empty() &&
             std::holds_alternative<int64_t>((*entryArr)->items[0].data) &&
             std::get<int64_t>((*entryArr)->items[0].data) == fd) {
@@ -8284,7 +8284,7 @@ static void testSocketStatusReturnsRealShapeArrayForKnownFdAndIncludesItInTheAll
     // Cleanup: this socket must not linger in the global SocketRegistry
     // (shared across every test in this binary) for later tests to trip
     // over.
-    amlp::SocketRegistry::forceRemove(fd);
+    aemlpc::SocketRegistry::forceRemove(fd);
     std::cout << "testSocketStatusReturnsRealShapeArrayForKnownFdAndIncludesItInTheAllForm OK\n";
 }
 
@@ -8304,9 +8304,9 @@ static void testSocketStatusReturnsRealShapeArrayForKnownFdAndIncludesItInTheAll
 // delivers the event (a loopback connect()/accept() is normally near-
 // instant, but never synchronous). Bounded so a genuine regression hangs
 // the test suite for at most ~1 second rather than forever.
-static void pollSocketsUntil(amlp::VM& vm, const std::function<bool()>& done) {
+static void pollSocketsUntil(aemlpc::VM& vm, const std::function<bool()>& done) {
     for (int i = 0; i < 200 && !done(); ++i) {
-        amlp::Server::pollSockets(vm);
+        aemlpc::Server::pollSockets(vm);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }
@@ -8324,18 +8324,18 @@ static void testSocketCreateRejectsUnsupportedModesAndReturnsIncreasingHandles()
     // LpcSocket.hpp's own SocketMode comment. Each must reject with
     // SocketErr::EModeNotSupp (-12), matching real socket_create()'s own
     // "default: return EEMODENOTSUPP;" for any mode outside its switch.
-    amlp::Value mud = harness.vm.callFunction(ob, "make", {amlp::Value(static_cast<int64_t>(0))});
-    amlp::Value streamBinary = harness.vm.callFunction(ob, "make", {amlp::Value(static_cast<int64_t>(3))});
-    amlp::Value datagramBinary = harness.vm.callFunction(ob, "make", {amlp::Value(static_cast<int64_t>(4))});
-    assert(std::get<int64_t>(mud.data) == amlp::SocketErr::EModeNotSupp);
-    assert(std::get<int64_t>(streamBinary.data) == amlp::SocketErr::EModeNotSupp);
-    assert(std::get<int64_t>(datagramBinary.data) == amlp::SocketErr::EModeNotSupp);
+    aemlpc::Value mud = harness.vm.callFunction(ob, "make", {aemlpc::Value(static_cast<int64_t>(0))});
+    aemlpc::Value streamBinary = harness.vm.callFunction(ob, "make", {aemlpc::Value(static_cast<int64_t>(3))});
+    aemlpc::Value datagramBinary = harness.vm.callFunction(ob, "make", {aemlpc::Value(static_cast<int64_t>(4))});
+    assert(std::get<int64_t>(mud.data) == aemlpc::SocketErr::EModeNotSupp);
+    assert(std::get<int64_t>(streamBinary.data) == aemlpc::SocketErr::EModeNotSupp);
+    assert(std::get<int64_t>(datagramBinary.data) == aemlpc::SocketErr::EModeNotSupp);
 
     // STREAM (1) is real and implemented. Handles are a monotonic
     // counter, never reused, per net/instruct.md's own explicit "Key
     // invariants" for this row.
-    amlp::Value h1 = harness.vm.callFunction(ob, "make", {amlp::Value(static_cast<int64_t>(1))});
-    amlp::Value h2 = harness.vm.callFunction(ob, "make", {amlp::Value(static_cast<int64_t>(1))});
+    aemlpc::Value h1 = harness.vm.callFunction(ob, "make", {aemlpc::Value(static_cast<int64_t>(1))});
+    aemlpc::Value h2 = harness.vm.callFunction(ob, "make", {aemlpc::Value(static_cast<int64_t>(1))});
     assert(std::get<int64_t>(h1.data) >= 0);
     assert(std::get<int64_t>(h2.data) > std::get<int64_t>(h1.data));
 
@@ -8350,17 +8350,17 @@ static void testSocketWriteOnUnknownHandleReturnsFdRangeAndErrorTextMatchesReal(
     auto ob = harness.objects.cloneObject("/socktest_err");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "write_to",
-        {amlp::Value(static_cast<int64_t>(99999)), amlp::Value(std::string("x"))});
-    assert(std::get<int64_t>(r.data) == amlp::SocketErr::EFdRange);
+    aemlpc::Value r = harness.vm.callFunction(ob, "write_to",
+        {aemlpc::Value(static_cast<int64_t>(99999)), aemlpc::Value(std::string("x"))});
+    assert(std::get<int64_t>(r.data) == aemlpc::SocketErr::EFdRange);
 
     // Real error_strings[] (socket_err.c), same text, same "-(error+1)"
     // index formula, confirmed directly.
-    amlp::Value s1 = harness.vm.callFunction(ob, "err",
-        {amlp::Value(static_cast<int64_t>(amlp::SocketErr::EFdRange))});
+    aemlpc::Value s1 = harness.vm.callFunction(ob, "err",
+        {aemlpc::Value(static_cast<int64_t>(aemlpc::SocketErr::EFdRange))});
     assert(std::get<std::string>(s1.data) == "Descriptor out of range");
-    amlp::Value s2 = harness.vm.callFunction(ob, "err",
-        {amlp::Value(static_cast<int64_t>(amlp::SocketErr::EModeNotSupp))});
+    aemlpc::Value s2 = harness.vm.callFunction(ob, "err",
+        {aemlpc::Value(static_cast<int64_t>(aemlpc::SocketErr::EModeNotSupp))});
     assert(std::get<std::string>(s2.data) == "Socket mode not supported");
 
     std::cout << "testSocketWriteOnUnknownHandleReturnsFdRangeAndErrorTextMatchesReal OK\n";
@@ -8409,23 +8409,23 @@ static void testSocketStreamCreateBindListenAcceptConnectWriteReadCloseRoundTrip
     // port 0: let the OS pick a free ephemeral port, then read the real
     // bound port straight back out of the registry. No fixed port
     // number to collide with anything else on the test machine.
-    amlp::Value serverResult = vm.callFunction(ob, "start_server", {amlp::Value(static_cast<int64_t>(0))});
+    aemlpc::Value serverResult = vm.callFunction(ob, "start_server", {aemlpc::Value(static_cast<int64_t>(0))});
     int serverFd = static_cast<int>(std::get<int64_t>(serverResult.data));
     assert(serverFd >= 0);
-    auto serverSock = amlp::SocketRegistry::find(serverFd);
+    auto serverSock = aemlpc::SocketRegistry::find(serverFd);
     assert(serverSock != nullptr);
     assert(serverSock->localPort > 0);
 
     std::string addr = "127.0.0.1 " + std::to_string(serverSock->localPort);
-    amlp::Value connectResult = vm.callFunction(ob, "start_client", {amlp::Value(addr)});
-    assert(std::get<int64_t>(connectResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value connectResult = vm.callFunction(ob, "start_client", {aemlpc::Value(addr)});
+    assert(std::get<int64_t>(connectResult.data) == aemlpc::SocketErr::Success);
 
     pollSocketsUntil(vm, [&] {
         return std::get<int64_t>(vm.callFunction(ob, "get_accept_fired", {}).data) == 1;
     });
     assert(std::get<int64_t>(vm.callFunction(ob, "get_accept_fired", {}).data) == 1);
 
-    amlp::Value acceptResult = vm.callFunction(ob, "do_accept", {});
+    aemlpc::Value acceptResult = vm.callFunction(ob, "do_accept", {});
     int acceptedFd = static_cast<int>(std::get<int64_t>(acceptResult.data));
     assert(acceptedFd >= 0);
 
@@ -8439,16 +8439,16 @@ static void testSocketStreamCreateBindListenAcceptConnectWriteReadCloseRoundTrip
     });
     assert(std::get<int64_t>(vm.callFunction(ob, "get_client_write_fired", {}).data) == 1);
 
-    amlp::Value writeResult = vm.callFunction(ob, "send_client_msg", {amlp::Value(std::string("hello server"))});
-    assert(std::get<int64_t>(writeResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value writeResult = vm.callFunction(ob, "send_client_msg", {aemlpc::Value(std::string("hello server"))});
+    assert(std::get<int64_t>(writeResult.data) == aemlpc::SocketErr::Success);
 
     pollSocketsUntil(vm, [&] {
         return !std::get<std::string>(vm.callFunction(ob, "get_server_received", {}).data).empty();
     });
     assert(std::get<std::string>(vm.callFunction(ob, "get_server_received", {}).data) == "hello server");
 
-    amlp::Value replyResult = vm.callFunction(ob, "send_server_reply", {amlp::Value(std::string("hello client"))});
-    assert(std::get<int64_t>(replyResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value replyResult = vm.callFunction(ob, "send_server_reply", {aemlpc::Value(std::string("hello client"))});
+    assert(std::get<int64_t>(replyResult.data) == aemlpc::SocketErr::Success);
 
     pollSocketsUntil(vm, [&] {
         return !std::get<std::string>(vm.callFunction(ob, "get_client_received", {}).data).empty();
@@ -8457,23 +8457,23 @@ static void testSocketStreamCreateBindListenAcceptConnectWriteReadCloseRoundTrip
 
     // Real plain LPC-initiated socket_close(fd): succeeds (EESUCCESS),
     // and the fd is gone from the registry entirely afterward.
-    amlp::Value closeClientResult = vm.callFunction(ob, "close_client", {});
-    assert(std::get<int64_t>(closeClientResult.data) == amlp::SocketErr::Success);
-    amlp::Value closeServerResult = vm.callFunction(ob, "close_server", {});
-    assert(std::get<int64_t>(closeServerResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value closeClientResult = vm.callFunction(ob, "close_client", {});
+    assert(std::get<int64_t>(closeClientResult.data) == aemlpc::SocketErr::Success);
+    aemlpc::Value closeServerResult = vm.callFunction(ob, "close_server", {});
+    assert(std::get<int64_t>(closeServerResult.data) == aemlpc::SocketErr::Success);
 
     // The accepted socket's own peer (the client) just closed. A poll-
     // detected EOF must eventually remove it from the registry too
     // (Server::pollSockets()'s own closeSocketAndFireCallback() path).
     pollSocketsUntil(vm, [&] {
-        return amlp::SocketRegistry::find(acceptedFd) == nullptr;
+        return aemlpc::SocketRegistry::find(acceptedFd) == nullptr;
     });
-    assert(amlp::SocketRegistry::find(acceptedFd) == nullptr);
+    assert(aemlpc::SocketRegistry::find(acceptedFd) == nullptr);
 
     // A write to a now-fully-closed handle is exactly the unknown-handle
     // case: SocketErr::EFdRange.
-    amlp::Value postCloseWrite = vm.callFunction(ob, "send_client_msg", {amlp::Value(std::string("x"))});
-    assert(std::get<int64_t>(postCloseWrite.data) == amlp::SocketErr::EFdRange);
+    aemlpc::Value postCloseWrite = vm.callFunction(ob, "send_client_msg", {aemlpc::Value(std::string("x"))});
+    assert(std::get<int64_t>(postCloseWrite.data) == aemlpc::SocketErr::EFdRange);
 
     std::cout << "testSocketStreamCreateBindListenAcceptConnectWriteReadCloseRoundTrip OK\n";
 }
@@ -8494,10 +8494,10 @@ static void testSocketDatagramWriteAndReadCallbackCarriesSenderAddress() {
     assert(ob != nullptr);
     auto& vm = harness.vm;
 
-    amlp::Value makeA = vm.callFunction(ob, "make_a", {});
-    assert(std::get<int64_t>(makeA.data) == amlp::SocketErr::Success);
-    amlp::Value makeB = vm.callFunction(ob, "make_b", {});
-    assert(std::get<int64_t>(makeB.data) == amlp::SocketErr::Success);
+    aemlpc::Value makeA = vm.callFunction(ob, "make_a", {});
+    assert(std::get<int64_t>(makeA.data) == aemlpc::SocketErr::Success);
+    aemlpc::Value makeB = vm.callFunction(ob, "make_b", {});
+    assert(std::get<int64_t>(makeB.data) == aemlpc::SocketErr::Success);
 
     // b's actual bound ephemeral port is only known to SocketRegistry
     // (never returned to LPC by socket_bind() itself, matching real
@@ -8507,15 +8507,15 @@ static void testSocketDatagramWriteAndReadCallbackCarriesSenderAddress() {
     // b's specific handle rather than scanning for "a bound datagram
     // socket", which could just as easily match a_fd).
     int bFd = static_cast<int>(std::get<int64_t>(vm.callFunction(ob, "get_b_fd", {}).data));
-    auto bSock = amlp::SocketRegistry::find(bFd);
+    auto bSock = aemlpc::SocketRegistry::find(bFd);
     assert(bSock != nullptr);
     int bPort = bSock->localPort;
     assert(bPort > 0);
 
     std::string addr = "127.0.0.1 " + std::to_string(bPort);
-    amlp::Value sendResult = vm.callFunction(ob, "send_to_b",
-        {amlp::Value(addr), amlp::Value(std::string("ping"))});
-    assert(std::get<int64_t>(sendResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value sendResult = vm.callFunction(ob, "send_to_b",
+        {aemlpc::Value(addr), aemlpc::Value(std::string("ping"))});
+    assert(std::get<int64_t>(sendResult.data) == aemlpc::SocketErr::Success);
 
     pollSocketsUntil(vm, [&] {
         return !std::get<std::string>(vm.callFunction(ob, "get_b_received", {}).data).empty();
@@ -8551,22 +8551,22 @@ static void testRegexpAssocAliasProducesSameResultAsRegAssoc() {
     auto ob = harness.objects.cloneObject("/regexpassocprobe");
     assert(ob != nullptr);
 
-    auto pats = std::make_shared<amlp::Array>();
-    pats->items.push_back(amlp::Value(std::string("ha")));
-    auto toks = std::make_shared<amlp::Array>();
-    toks->items.push_back(amlp::Value(int64_t{1}));
+    auto pats = std::make_shared<aemlpc::Array>();
+    pats->items.push_back(aemlpc::Value(std::string("ha")));
+    auto toks = std::make_shared<aemlpc::Array>();
+    toks->items.push_back(aemlpc::Value(int64_t{1}));
 
     // "xhax" against pattern "ha": exactly one match (position 1..3),
     // giving a clean 3-element split (before/match/after). "haha"
     // itself would match twice here (real reg_assoc's own genuinely
     // global scan), which is already what
     // testRegAssocMatchesRealDocCommentExample verifies in more depth.
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("xhax")), amlp::Value(pats),
-         amlp::Value(toks), amlp::Value(int64_t{0})});
-    auto* outer = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("xhax")), aemlpc::Value(pats),
+         aemlpc::Value(toks), aemlpc::Value(int64_t{0})});
+    auto* outer = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(outer != nullptr && (*outer)->items.size() == 2);
-    auto* texts = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[0].data);
+    auto* texts = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[0].data);
     assert(texts != nullptr && (*texts)->items.size() == 3);
     assert(std::get<std::string>((*texts)->items[0].data) == "x");
     assert(std::get<std::string>((*texts)->items[1].data) == "ha");
@@ -8587,15 +8587,15 @@ static void testPcreMatchStringFormReturnsOneAndNoMatchReturnsZero() {
     auto ob = harness.objects.cloneObject("/pcrematchprobe");
     assert(ob != nullptr);
 
-    amlp::Value matched = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("the quick brown fox")),
-         amlp::Value(std::string("qu[a-z]+"))});
+    aemlpc::Value matched = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("the quick brown fox")),
+         aemlpc::Value(std::string("qu[a-z]+"))});
     assert(std::holds_alternative<int64_t>(matched.data));
     assert(std::get<int64_t>(matched.data) == 1);
 
-    amlp::Value noMatch = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("the quick brown fox")),
-         amlp::Value(std::string("^slow"))});
+    aemlpc::Value noMatch = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("the quick brown fox")),
+         aemlpc::Value(std::string("^slow"))});
     assert(std::holds_alternative<int64_t>(noMatch.data));
     assert(std::get<int64_t>(noMatch.data) == 0);
 
@@ -8616,10 +8616,10 @@ static void testPcreMatchStringFormThirdArgIsPcreFlagsNotIllegal() {
     auto ob = harness.objects.cloneObject("/pcrematchflag");
     assert(ob != nullptr);
 
-    amlp::Value withFlag = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value withFlag = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(withFlag.data) == 1);
 
-    amlp::Value withoutFlag = harness.vm.callFunction(ob, "noflag", {});
+    aemlpc::Value withoutFlag = harness.vm.callFunction(ob, "noflag", {});
     assert(std::get<int64_t>(withoutFlag.data) == 0);
 
     std::cout << "testPcreMatchStringFormThirdArgIsPcreFlagsNotIllegal OK\n";
@@ -8637,7 +8637,7 @@ static void testPcreMatchStringFormFourthArgThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -8658,30 +8658,30 @@ static void testPcreMatchArrayFormSelectsMatchingLinesWithIndexAndInvertFlags() 
     auto ob = harness.objects.cloneObject("/pcrematcharr");
     assert(ob != nullptr);
 
-    auto lines = std::make_shared<amlp::Array>();
-    lines->items.push_back(amlp::Value(std::string("apple")));
-    lines->items.push_back(amlp::Value(std::string("banana")));
-    lines->items.push_back(amlp::Value(std::string("cherry")));
-    lines->items.push_back(amlp::Value(std::string("date")));
+    auto lines = std::make_shared<aemlpc::Array>();
+    lines->items.push_back(aemlpc::Value(std::string("apple")));
+    lines->items.push_back(aemlpc::Value(std::string("banana")));
+    lines->items.push_back(aemlpc::Value(std::string("cherry")));
+    lines->items.push_back(aemlpc::Value(std::string("date")));
 
-    amlp::Value plain = harness.vm.callFunction(ob, "plain",
-        {amlp::Value(lines), amlp::Value(std::string("an"))});
-    auto* plainArr = std::get_if<std::shared_ptr<amlp::Array>>(&plain.data);
+    aemlpc::Value plain = harness.vm.callFunction(ob, "plain",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("an"))});
+    auto* plainArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&plain.data);
     assert(plainArr != nullptr && (*plainArr)->items.size() == 1);
     assert(std::get<std::string>((*plainArr)->items[0].data) == "banana");
 
-    amlp::Value withIdx = harness.vm.callFunction(ob, "withIndex",
-        {amlp::Value(lines), amlp::Value(std::string("^[ab]"))});
-    auto* withIdxArr = std::get_if<std::shared_ptr<amlp::Array>>(&withIdx.data);
+    aemlpc::Value withIdx = harness.vm.callFunction(ob, "withIndex",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("^[ab]"))});
+    auto* withIdxArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&withIdx.data);
     assert(withIdxArr != nullptr && (*withIdxArr)->items.size() == 4);
     assert(std::get<std::string>((*withIdxArr)->items[0].data) == "apple");
     assert(std::get<int64_t>((*withIdxArr)->items[1].data) == 1);
     assert(std::get<std::string>((*withIdxArr)->items[2].data) == "banana");
     assert(std::get<int64_t>((*withIdxArr)->items[3].data) == 2);
 
-    amlp::Value inv = harness.vm.callFunction(ob, "inverted",
-        {amlp::Value(lines), amlp::Value(std::string("^[ab]"))});
-    auto* invArr = std::get_if<std::shared_ptr<amlp::Array>>(&inv.data);
+    aemlpc::Value inv = harness.vm.callFunction(ob, "inverted",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("^[ab]"))});
+    auto* invArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&inv.data);
     assert(invArr != nullptr && (*invArr)->items.size() == 2);
     assert(std::get<std::string>((*invArr)->items[0].data) == "cherry");
     assert(std::get<std::string>((*invArr)->items[1].data) == "date");
@@ -8699,13 +8699,13 @@ static void testPcreMatchArrayFormFourthArgIsPcreFlags() {
     auto ob = harness.objects.cloneObject("/pcrematcharr4");
     assert(ob != nullptr);
 
-    auto lines = std::make_shared<amlp::Array>();
-    lines->items.push_back(amlp::Value(std::string("CAT")));
-    lines->items.push_back(amlp::Value(std::string("dog")));
+    auto lines = std::make_shared<aemlpc::Array>();
+    lines->items.push_back(aemlpc::Value(std::string("CAT")));
+    lines->items.push_back(aemlpc::Value(std::string("dog")));
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(lines), amlp::Value(std::string("^cat"))});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(lines), aemlpc::Value(std::string("^cat"))});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
     assert(std::get<std::string>((*arr)->items[0].data) == "CAT");
 
@@ -8726,20 +8726,20 @@ static void testPcreAssocMatchesRealDocCommentExampleWithPcreFlags() {
     auto ob = harness.objects.cloneObject("/pcreassocprobe");
     assert(ob != nullptr);
 
-    auto pats = std::make_shared<amlp::Array>();
-    pats->items.push_back(amlp::Value(std::string("haha")));
-    pats->items.push_back(amlp::Value(std::string("te")));
-    auto toks = std::make_shared<amlp::Array>();
-    toks->items.push_back(amlp::Value(int64_t{2}));
-    toks->items.push_back(amlp::Value(int64_t{3}));
+    auto pats = std::make_shared<aemlpc::Array>();
+    pats->items.push_back(aemlpc::Value(std::string("haha")));
+    pats->items.push_back(aemlpc::Value(std::string("te")));
+    auto toks = std::make_shared<aemlpc::Array>();
+    toks->items.push_back(aemlpc::Value(int64_t{2}));
+    toks->items.push_back(aemlpc::Value(int64_t{3}));
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("TESTHAHATEST")), amlp::Value(pats),
-         amlp::Value(toks), amlp::Value(int64_t{4}), amlp::Value(int64_t{65536})});  // PCRE_I
-    auto* outer = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("TESTHAHATEST")), aemlpc::Value(pats),
+         aemlpc::Value(toks), aemlpc::Value(int64_t{4}), aemlpc::Value(int64_t{65536})});  // PCRE_I
+    auto* outer = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(outer != nullptr && (*outer)->items.size() == 2);
-    auto* texts = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[0].data);
-    auto* toksOut = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[1].data);
+    auto* texts = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[0].data);
+    auto* toksOut = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[1].data);
     assert(texts != nullptr && (*texts)->items.size() == 7);
     // Same shape as real reg_assoc("testhahatest", ...) == ({"", "te",
     // "st", "haha", "", "te", "st"}), ({4,3,4,2,4,3,4}). uppercase
@@ -8767,16 +8767,16 @@ static void testPcreAssocWithoutFlagsOnUppercaseSubjectFindsNoMatches() {
     auto ob = harness.objects.cloneObject("/pcreassocnoflag");
     assert(ob != nullptr);
 
-    auto pats = std::make_shared<amlp::Array>();
-    pats->items.push_back(amlp::Value(std::string("haha")));
-    auto toks = std::make_shared<amlp::Array>();
-    toks->items.push_back(amlp::Value(int64_t{2}));
+    auto pats = std::make_shared<aemlpc::Array>();
+    pats->items.push_back(aemlpc::Value(std::string("haha")));
+    auto toks = std::make_shared<aemlpc::Array>();
+    toks->items.push_back(aemlpc::Value(int64_t{2}));
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("TESTHAHATEST")), amlp::Value(pats),
-         amlp::Value(toks), amlp::Value(int64_t{4})});
-    auto* outer = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
-    auto* texts = std::get_if<std::shared_ptr<amlp::Array>>(&(*outer)->items[0].data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("TESTHAHATEST")), aemlpc::Value(pats),
+         aemlpc::Value(toks), aemlpc::Value(int64_t{4})});
+    auto* outer = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
+    auto* texts = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*outer)->items[0].data);
     assert(texts != nullptr && (*texts)->items.size() == 1);
     assert(std::get<std::string>((*texts)->items[0].data) == "TESTHAHATEST");
 
@@ -8808,7 +8808,7 @@ static void testRemoveActionRemovesPreviouslyAddedActionAndReturnsZeroWhenNothin
     auto room = harness.objects.cloneObject("/ra_room");
     auto mover = harness.objects.cloneObject("/ra_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     assert(harness.vm.dispatchCommand(mover, "look") == true);
 
@@ -8842,21 +8842,21 @@ static void testRmDeletesFileAndReturnsZeroForMissingPath() {
     auto ob = harness.objects.cloneObject("/rm_probe");
     assert(ob != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(ob, "read_it", {});
+    aemlpc::Value before = harness.vm.callFunction(ob, "read_it", {});
     assert(std::holds_alternative<std::string>(before.data));
 
-    amlp::Value rmResult = harness.vm.callFunction(ob, "do_rm",
-        {amlp::Value(std::string("/rm_target.txt"))});
+    aemlpc::Value rmResult = harness.vm.callFunction(ob, "do_rm",
+        {aemlpc::Value(std::string("/rm_target.txt"))});
     assert(std::get<int64_t>(rmResult.data) == 1);
 
     // Real read_file() on a now-missing path returns falsy (0), matching
     // testReadFileReturnsFileContentAndFalsyForMissingFile's own
     // established expectation.
-    amlp::Value after = harness.vm.callFunction(ob, "read_it", {});
+    aemlpc::Value after = harness.vm.callFunction(ob, "read_it", {});
     assert(std::holds_alternative<int64_t>(after.data) && std::get<int64_t>(after.data) == 0);
 
-    amlp::Value rmMissing = harness.vm.callFunction(ob, "do_rm",
-        {amlp::Value(std::string("/rm_target.txt"))});
+    aemlpc::Value rmMissing = harness.vm.callFunction(ob, "do_rm",
+        {aemlpc::Value(std::string("/rm_target.txt"))});
     assert(std::get<int64_t>(rmMissing.data) == 0);
 
     std::cout << "testRmDeletesFileAndReturnsZeroForMissingPath OK\n";
@@ -8884,7 +8884,7 @@ static void testSetEvalLimitActuallyChangesTheEnforcedCeiling() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "spin", {});
-    } catch (const amlp::EvalCostError&) {
+    } catch (const aemlpc::EvalCostError&) {
         threw = true;
     }
     assert(threw);
@@ -8896,7 +8896,7 @@ static void testSetEvalLimitActuallyChangesTheEnforcedCeiling() {
     // no built-in "restore" of its own.
     harness.vm.setMaxEvalCost(1000000);
     harness.vm.resetEvalCost();
-    amlp::Value shortResult = harness.vm.callFunction(ob, "short_loop", {});
+    aemlpc::Value shortResult = harness.vm.callFunction(ob, "short_loop", {});
     assert(std::get<int64_t>(shortResult.data) == 5);
 
     std::cout << "testSetEvalLimitActuallyChangesTheEnforcedCeiling OK\n";
@@ -8917,8 +8917,8 @@ static void testMapAliasCallsMethodOnTargetForEachElementSameAsMapArray() {
     auto caller = harness.objects.cloneObject("/map_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 2);
     assert(std::get<std::string>((*arr)->items[0].data) == "a!");
     assert(std::get<std::string>((*arr)->items[1].data) == "b!");
@@ -8937,15 +8937,15 @@ static void testQueryOnceInteractiveAliasMatchesUserp() {
     auto ob = harness.objects.cloneObject("/qoi_probe");
     assert(ob != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(ob, "check", {amlp::Value(ob)});
+    aemlpc::Value before = harness.vm.callFunction(ob, "check", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(before.data) == 0);
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
 
-    amlp::Value after = harness.vm.callFunction(ob, "check", {amlp::Value(ob)});
+    aemlpc::Value after = harness.vm.callFunction(ob, "check", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(after.data) == 1);
 
     ::close(fds[1]);
@@ -8971,15 +8971,15 @@ static void testObjectsReturnsEveryLiveObjectAndOmitsDestructedOnes() {
     auto a = harness.objects.cloneObject("/objs_a");
     assert(a != nullptr);
 
-    amlp::Value all1 = harness.vm.callFunction(probe, "probe", {});
-    amlp::Value hasA = harness.vm.callFunction(probe, "contains", {all1, amlp::Value(a)});
+    aemlpc::Value all1 = harness.vm.callFunction(probe, "probe", {});
+    aemlpc::Value hasA = harness.vm.callFunction(probe, "contains", {all1, aemlpc::Value(a)});
     assert(std::get<int64_t>(hasA.data) == 1);
-    amlp::Value hasProbe = harness.vm.callFunction(probe, "contains", {all1, amlp::Value(probe)});
+    aemlpc::Value hasProbe = harness.vm.callFunction(probe, "contains", {all1, aemlpc::Value(probe)});
     assert(std::get<int64_t>(hasProbe.data) == 1);
 
     harness.objects.destructObject(a);
-    amlp::Value all2 = harness.vm.callFunction(probe, "probe", {});
-    amlp::Value hasADestructed = harness.vm.callFunction(probe, "contains", {all2, amlp::Value(a)});
+    aemlpc::Value all2 = harness.vm.callFunction(probe, "probe", {});
+    aemlpc::Value hasADestructed = harness.vm.callFunction(probe, "contains", {all2, aemlpc::Value(a)});
     assert(std::get<int64_t>(hasADestructed.data) == 0);
 
     std::cout << "testObjectsReturnsEveryLiveObjectAndOmitsDestructedOnes OK\n";
@@ -9032,10 +9032,10 @@ static void testGetGarbageExcludesStillReferencedClones() {
     auto holder = harness.objects.cloneObject("/garbage_holder");
     assert(holder != nullptr);
 
-    amlp::Value heldRef = harness.vm.callFunction(holder, "get_held", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(heldRef.data));
+    aemlpc::Value heldRef = harness.vm.callFunction(holder, "get_held", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(heldRef.data));
 
-    amlp::Value result = harness.vm.callFunction(probe, "probe", {heldRef});
+    aemlpc::Value result = harness.vm.callFunction(probe, "probe", {heldRef});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -9056,14 +9056,14 @@ static void testObjectsWithStringFilterExcludesFalsyResultsAndAbortsOnMissingFun
     auto probe = harness.objects.cloneObject("/objsf_probe");
     assert(probe != nullptr);
 
-    amlp::Value filtered = harness.vm.callFunction(probe, "probe_filtered", {});
-    amlp::Value hasSelf = harness.vm.callFunction(probe, "contains", {filtered, amlp::Value(probe)});
+    aemlpc::Value filtered = harness.vm.callFunction(probe, "probe_filtered", {});
+    aemlpc::Value hasSelf = harness.vm.callFunction(probe, "contains", {filtered, aemlpc::Value(probe)});
     assert(std::get<int64_t>(hasSelf.data) == 0);
 
     // Real f_objects(): the callback itself failing to exist aborts the
     // whole call to an empty array, not just a per-candidate exclusion.
-    amlp::Value missing = harness.vm.callFunction(probe, "probe_missing", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&missing.data);
+    aemlpc::Value missing = harness.vm.callFunction(probe, "probe_missing", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&missing.data);
     assert(arr != nullptr && (*arr)->items.empty());
 
     std::cout << "testObjectsWithStringFilterExcludesFalsyResultsAndAbortsOnMissingFunction OK\n";
@@ -9087,9 +9087,9 @@ static void testLivingsReturnsOnlyObjectsWithCommandsEnabled() {
     auto probe = harness.objects.cloneObject("/liv_probe");
     assert(probe != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(probe, "probe", {});
-    amlp::Value hasEnabled = harness.vm.callFunction(probe, "contains", {result, amlp::Value(enabled)});
-    amlp::Value hasDisabled = harness.vm.callFunction(probe, "contains", {result, amlp::Value(disabled)});
+    aemlpc::Value result = harness.vm.callFunction(probe, "probe", {});
+    aemlpc::Value hasEnabled = harness.vm.callFunction(probe, "contains", {result, aemlpc::Value(enabled)});
+    aemlpc::Value hasDisabled = harness.vm.callFunction(probe, "contains", {result, aemlpc::Value(disabled)});
     assert(std::get<int64_t>(hasEnabled.data) == 1);
     assert(std::get<int64_t>(hasDisabled.data) == 0);
 
@@ -9120,20 +9120,20 @@ static void testShallowAndDeepInheritListWalkARealThreeLevelChain() {
     // stripped the leading slash instead of ensuring one, silently
     // breaking every real "member_array(\"/std/x.c\",
     // deep_inherit_list(ob))"-style security check).
-    amlp::Value shallow = harness.vm.callFunction(probe, "probe_shallow", {amlp::Value(top)});
-    auto* shallowArr = std::get_if<std::shared_ptr<amlp::Array>>(&shallow.data);
+    aemlpc::Value shallow = harness.vm.callFunction(probe, "probe_shallow", {aemlpc::Value(top)});
+    auto* shallowArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&shallow.data);
     assert(shallowArr != nullptr && (*shallowArr)->items.size() == 1);
     assert(std::get<std::string>((*shallowArr)->items[0].data) == "/gtest_mid.c");
 
     // Real inherit_list is the exact same efun as shallow_inherit_list
     // (efun_defs.c's own F_ALIAS_FLAG), not a second implementation.
-    amlp::Value alias = harness.vm.callFunction(probe, "probe_alias", {amlp::Value(top)});
-    auto* aliasArr = std::get_if<std::shared_ptr<amlp::Array>>(&alias.data);
+    aemlpc::Value alias = harness.vm.callFunction(probe, "probe_alias", {aemlpc::Value(top)});
+    auto* aliasArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&alias.data);
     assert(aliasArr != nullptr && (*aliasArr)->items.size() == 1);
     assert(std::get<std::string>((*aliasArr)->items[0].data) == "/gtest_mid.c");
 
-    amlp::Value deep = harness.vm.callFunction(probe, "probe_deep", {amlp::Value(top)});
-    auto* deepArr = std::get_if<std::shared_ptr<amlp::Array>>(&deep.data);
+    aemlpc::Value deep = harness.vm.callFunction(probe, "probe_deep", {aemlpc::Value(top)});
+    auto* deepArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&deep.data);
     assert(deepArr != nullptr && (*deepArr)->items.size() == 2);
     assert(std::get<std::string>((*deepArr)->items[0].data) == "/gtest_mid.c");
     assert(std::get<std::string>((*deepArr)->items[1].data) == "/gtest_base.c");
@@ -9153,11 +9153,11 @@ static void testClonepTrueForCloneFalseForBlueprintAndNonObject() {
     auto probe = harness.objects.cloneObject("/cp_probe");
     assert(probe != nullptr);
 
-    amlp::Value cloneResult = harness.vm.callFunction(probe, "probe", {amlp::Value(clone)});
+    aemlpc::Value cloneResult = harness.vm.callFunction(probe, "probe", {aemlpc::Value(clone)});
     assert(std::get<int64_t>(cloneResult.data) == 1);
-    amlp::Value blueprintResult = harness.vm.callFunction(probe, "probe", {amlp::Value(blueprint)});
+    aemlpc::Value blueprintResult = harness.vm.callFunction(probe, "probe", {aemlpc::Value(blueprint)});
     assert(std::get<int64_t>(blueprintResult.data) == 0);
-    amlp::Value nonObjectResult = harness.vm.callFunction(probe, "probe", {amlp::Value(static_cast<int64_t>(5))});
+    aemlpc::Value nonObjectResult = harness.vm.callFunction(probe, "probe", {aemlpc::Value(static_cast<int64_t>(5))});
     assert(std::get<int64_t>(nonObjectResult.data) == 0);
 
     std::cout << "testClonepTrueForCloneFalseForBlueprintAndNonObject OK\n";
@@ -9180,9 +9180,9 @@ static void testVirtualpTrueOnlyForACompileObjectResultAndDefaultsToThisObject()
     auto realClone = harness.objects.cloneObject("/vp_target");
     assert(realClone != nullptr);
 
-    amlp::Value selfResult = harness.vm.callFunction(virtualOb, "probe_self", {});
+    aemlpc::Value selfResult = harness.vm.callFunction(virtualOb, "probe_self", {});
     assert(std::get<int64_t>(selfResult.data) == 1);
-    amlp::Value notVirtual = harness.vm.callFunction(realClone, "probe_arg", {amlp::Value(realClone)});
+    aemlpc::Value notVirtual = harness.vm.callFunction(realClone, "probe_arg", {aemlpc::Value(realClone)});
     assert(std::get<int64_t>(notVirtual.data) == 0);
 
     std::cout << "testVirtualpTrueOnlyForACompileObjectResultAndDefaultsToThisObject OK\n";
@@ -9200,16 +9200,16 @@ static void testCallStackMode1ReturnsObjectsCurrentFirstWalkingOutward() {
     auto caller = harness.objects.cloneObject("/cs_caller");
     assert(callee != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "start", {amlp::Value(callee)});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "start", {aemlpc::Value(callee)});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     // Real call_stack(1): current frame (callee) first, walking outward
     // (caller), then the test harness's own top-level dispatch frame.
     assert(arr != nullptr && (*arr)->items.size() >= 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arr)->items[0].data) == callee);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arr)->items[1].data) == caller);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arr)->items[0].data) == callee);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arr)->items[1].data) == caller);
 
-    amlp::Value fileResult = harness.vm.callFunction(caller, "start_filenames", {amlp::Value(callee)});
-    auto* fileArr = std::get_if<std::shared_ptr<amlp::Array>>(&fileResult.data);
+    aemlpc::Value fileResult = harness.vm.callFunction(caller, "start_filenames", {aemlpc::Value(callee)});
+    auto* fileArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&fileResult.data);
     assert(fileArr != nullptr && (*fileArr)->items.size() >= 2);
     assert(std::get<std::string>((*fileArr)->items[0].data) == callee->filename());
     assert(std::get<std::string>((*fileArr)->items[1].data) == caller->filename());
@@ -9228,17 +9228,17 @@ static void testCallStackModes2And3ThrowNotImplementedButModesOutOfRangeAlsoThro
 
     bool threwFn = false;
     try { harness.vm.callFunction(ob, "probe_fn", {}); }
-    catch (const amlp::LpcRuntimeError&) { threwFn = true; }
+    catch (const aemlpc::LpcRuntimeError&) { threwFn = true; }
     assert(threwFn);
 
     bool threwOrigin = false;
     try { harness.vm.callFunction(ob, "probe_origin", {}); }
-    catch (const amlp::LpcRuntimeError&) { threwOrigin = true; }
+    catch (const aemlpc::LpcRuntimeError&) { threwOrigin = true; }
     assert(threwOrigin);
 
     bool threwBad = false;
     try { harness.vm.callFunction(ob, "probe_bad", {}); }
-    catch (const amlp::LpcRuntimeError&) { threwBad = true; }
+    catch (const aemlpc::LpcRuntimeError&) { threwBad = true; }
     assert(threwBad);
 
     std::cout << "testCallStackModes2And3ThrowNotImplementedButModesOutOfRangeAlsoThrow OK\n";
@@ -9260,16 +9260,16 @@ static void testCommandsReturnsRegisteredActionsOnTheCommandGiverItself() {
     auto room = harness.objects.cloneObject("/cmds_room");
     auto mover = harness.objects.cloneObject("/cmds_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(mover, "get_commands", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(mover, "get_commands", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
-    auto* entry = std::get_if<std::shared_ptr<amlp::Array>>(&(*arr)->items[0].data);
+    auto* entry = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*arr)->items[0].data);
     assert(entry != nullptr && (*entry)->items.size() == 4);
     assert(std::get<std::string>((*entry)->items[0].data) == "look");
     assert(std::get<int64_t>((*entry)->items[1].data) == 0);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*entry)->items[2].data) == room);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*entry)->items[2].data) == room);
     assert(std::get<std::string>((*entry)->items[3].data) == "cmd_look");
 
     std::cout << "testCommandsReturnsRegisteredActionsOnTheCommandGiverItself OK\n";
@@ -9283,15 +9283,15 @@ static void testSocketAddressForInteractiveObjectReturnsPeerAddrAndPortOrZero() 
     assert(ob != nullptr);
 
     // Not (yet) interactive: real socket_address() returns 0/falsy.
-    amlp::Value beforeAttach = harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    aemlpc::Value beforeAttach = harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<int64_t>(beforeAttach.data) && std::get<int64_t>(beforeAttach.data) == 0);
 
     int serverFd, clientFd;
     makeLoopbackTcpPair(serverFd, clientFd);
-    amlp::Connection conn(serverFd);
+    aemlpc::Connection conn(serverFd);
     conn.attach(ob);
 
-    amlp::Value afterAttach = harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    aemlpc::Value afterAttach = harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<std::string>(afterAttach.data));
     const std::string& addr = std::get<std::string>(afterAttach.data);
     assert(addr.rfind("127.0.0.1 ", 0) == 0);
@@ -9312,20 +9312,20 @@ static void testSocketAddressForHandleDistinguishesLocalFromRemote() {
     auto ob = harness.objects.cloneObject("/sa_sock_probe");
     assert(ob != nullptr);
 
-    amlp::Value bindResult = harness.vm.callFunction(ob, "make", {});
-    assert(std::get<int64_t>(bindResult.data) == amlp::SocketErr::Success);
+    aemlpc::Value bindResult = harness.vm.callFunction(ob, "make", {});
+    assert(std::get<int64_t>(bindResult.data) == aemlpc::SocketErr::Success);
 
-    amlp::Value local = harness.vm.callFunction(ob, "probe_local", {});
+    aemlpc::Value local = harness.vm.callFunction(ob, "probe_local", {});
     assert(std::holds_alternative<std::string>(local.data));
     assert(std::get<std::string>(local.data).rfind("127.0.0.1 ", 0) == 0);
 
     // Never connected: real remote/peer address is empty (this driver's
     // own LpcSocket::remoteAddr default), matching an unbound peer side.
-    amlp::Value remote = harness.vm.callFunction(ob, "probe_remote", {});
+    aemlpc::Value remote = harness.vm.callFunction(ob, "probe_remote", {});
     assert(std::holds_alternative<std::string>(remote.data));
     assert(std::get<std::string>(remote.data).rfind(" 0", 0) == 0);
 
-    amlp::Value missing = harness.vm.callFunction(ob, "probe_missing_local", {});
+    aemlpc::Value missing = harness.vm.callFunction(ob, "probe_missing_local", {});
     assert(std::get<int64_t>(missing.data) == 0);
 
     std::cout << "testSocketAddressForHandleDistinguishesLocalFromRemote OK\n";
@@ -9356,24 +9356,24 @@ static void testSocketReleaseAndAcquireHandOffOwnershipAndCallbacks() {
     auto target = harness.objects.cloneObject("/sr_target");
     assert(owner != nullptr && target != nullptr);
 
-    amlp::Value madeFd = harness.vm.callFunction(owner, "make", {});
+    aemlpc::Value madeFd = harness.vm.callFunction(owner, "make", {});
     assert(std::get<int64_t>(madeFd.data) >= 0);
     int fd = static_cast<int>(std::get<int64_t>(madeFd.data));
 
-    amlp::Value rc = harness.vm.callFunction(owner, "release_to",
-        { amlp::Value(static_cast<int64_t>(fd)), amlp::Value(target) });
-    assert(std::get<int64_t>(rc.data) == amlp::SocketErr::Success);
+    aemlpc::Value rc = harness.vm.callFunction(owner, "release_to",
+        { aemlpc::Value(static_cast<int64_t>(fd)), aemlpc::Value(target) });
+    assert(std::get<int64_t>(rc.data) == aemlpc::SocketErr::Success);
     assert(std::get<int64_t>(harness.vm.callFunction(target, "did_acquire", {}).data) == 1);
 
     // Real ownership genuinely moved. socket_status()'s own owner slot
     // (index 5, LpcSocket::owner) now reads target, not the original
     // owner, confirming socket_acquire()'s own "lpc_socks[fd].owner_ob =
     // current_object;" actually ran, not just returned success.
-    std::vector<amlp::Value> statusArgs{ amlp::Value(int64_t{fd}) };
-    amlp::Value status = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
-    auto statusArr = std::get<std::shared_ptr<amlp::Array>>(status.data);
+    std::vector<aemlpc::Value> statusArgs{ aemlpc::Value(int64_t{fd}) };
+    aemlpc::Value status = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
+    auto statusArr = std::get<std::shared_ptr<aemlpc::Array>>(status.data);
     assert(!statusArr->items.empty());
-    auto ownerInStatus = std::get<std::shared_ptr<amlp::LpcObject>>(statusArr->items[5].data);
+    auto ownerInStatus = std::get<std::shared_ptr<aemlpc::LpcObject>>(statusArr->items[5].data);
     assert(ownerInStatus == target);
 
     std::cout << "testSocketReleaseAndAcquireHandOffOwnershipAndCallbacks OK\n";
@@ -9405,28 +9405,28 @@ static void testSocketReleaseRevertsWhenNeverAcquiredAndRejectsTheWrongCaller() 
     auto target2 = harness.objects.cloneObject("/sr_target2");
     assert(owner3 != nullptr && target2 != nullptr);
 
-    amlp::Value madeFd = harness.vm.callFunction(owner3, "make", {});
+    aemlpc::Value madeFd = harness.vm.callFunction(owner3, "make", {});
     assert(std::get<int64_t>(madeFd.data) >= 0);
     int fd = static_cast<int>(std::get<int64_t>(madeFd.data));
 
-    amlp::Value rc = harness.vm.callFunction(owner3, "release_to",
-        { amlp::Value(static_cast<int64_t>(fd)), amlp::Value(target2) });
+    aemlpc::Value rc = harness.vm.callFunction(owner3, "release_to",
+        { aemlpc::Value(static_cast<int64_t>(fd)), aemlpc::Value(target2) });
     // target2's own on_handoff2 never itself calls socket_acquire().
     // Only the wrong object tries, and fails. So the outer
     // socket_release() call reverts the release and reports
     // ESockNotRlsd, real socket_release()'s own "S_RELEASE still set
     // after the callback returns" fallback.
-    assert(std::get<int64_t>(rc.data) == amlp::SocketErr::ESockNotRlsd);
+    assert(std::get<int64_t>(rc.data) == aemlpc::SocketErr::ESockNotRlsd);
     assert(std::get<int64_t>(harness.vm.callFunction(target2, "get_wrong_rc", {}).data)
-           == amlp::SocketErr::ESecurity);
+           == aemlpc::SocketErr::ESecurity);
 
     // A stray socket_acquire() on this now-unreleased fd fails too.
     // There is nothing left to acquire.
-    std::vector<amlp::Value> lateArgs{
-        amlp::Value(int64_t{fd}), amlp::Value(std::string("x")),
-        amlp::Value(std::string("y")), amlp::Value(std::string("z")) };
-    amlp::Value late = amlp::EfunTable::instance().call("socket_acquire", harness.vm, lateArgs);
-    assert(std::get<int64_t>(late.data) == amlp::SocketErr::ESockNotRlsd);
+    std::vector<aemlpc::Value> lateArgs{
+        aemlpc::Value(int64_t{fd}), aemlpc::Value(std::string("x")),
+        aemlpc::Value(std::string("y")), aemlpc::Value(std::string("z")) };
+    aemlpc::Value late = aemlpc::EfunTable::instance().call("socket_acquire", harness.vm, lateArgs);
+    assert(std::get<int64_t>(late.data) == aemlpc::SocketErr::ESockNotRlsd);
 
     std::cout << "testSocketReleaseRevertsWhenNeverAcquiredAndRejectsTheWrongCaller OK\n";
 }
@@ -9439,7 +9439,7 @@ static void testQueryHostNameMatchesRealGethostname() {
 
     char buf[256];
     assert(::gethostname(buf, sizeof(buf)) == 0);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == std::string(buf));
 
@@ -9455,13 +9455,13 @@ static void testFlushMessagesIsANoOpThatNeverThrowsForEitherObjectKind() {
 
     // Not interactive at all. Real flush_message() silently does
     // nothing for a non-interactive object.
-    harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
-    harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
 
     ::close(fds[1]);
     std::cout << "testFlushMessagesIsANoOpThatNeverThrowsForEitherObjectKind OK\n";
@@ -9485,7 +9485,7 @@ static void testGlobalIncludeFileMacroResolvesWhenConfigured() {
 
     auto ob = harness.objects.cloneObject("/gif_on");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "get_counter", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "get_counter", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -9527,7 +9527,7 @@ static void testGlobalIncludeFileIsANoOpForMudlibsThatNeverSetIt() {
 
     auto ob = harness.objects.cloneObject("/gif_unused");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(result.data) == 7);
 
     std::cout << "testGlobalIncludeFileIsANoOpForMudlibsThatNeverSetIt OK\n";
@@ -9544,7 +9544,7 @@ static void testSqrtNegativeArgThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(obj, "probe", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -9572,7 +9572,7 @@ static void testLog2ReturnsBaseTwoLogarithmMatchingStandardIdentities() {
     assert(obj != nullptr);
 
     auto probe = [&](double x) -> double {
-        amlp::Value r = harness.vm.callFunction(obj, "probe", {amlp::Value(x)});
+        aemlpc::Value r = harness.vm.callFunction(obj, "probe", {aemlpc::Value(x)});
         assert(std::holds_alternative<double>(r.data));
         return std::get<double>(r.data);
     };
@@ -9598,12 +9598,12 @@ static void testLog2ThrowsOnNonPositiveArgumentLikeRealFLog2() {
     bool threwZero = false, threwNeg = false;
     try {
         harness.vm.callFunction(obj, "probe_zero", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwZero = true;
     }
     try {
         harness.vm.callFunction(obj, "probe_neg", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwNeg = true;
     }
     assert(threwZero);
@@ -9620,7 +9620,7 @@ static void testRoundRoundsHalfAwayFromZeroMatchingRealCLibrarySemantics() {
     assert(obj != nullptr);
 
     auto probe = [&](double x) -> double {
-        amlp::Value r = harness.vm.callFunction(obj, "probe", {amlp::Value(x)});
+        aemlpc::Value r = harness.vm.callFunction(obj, "probe", {aemlpc::Value(x)});
         assert(std::holds_alternative<double>(r.data));
         return std::get<double>(r.data);
     };
@@ -9671,13 +9671,13 @@ static void testSimulEfunResolvesUnknownBareCallToSimulEfunObject() {
 
     // double_it() is defined only on the simul_efun object, never locally
     // or via inherit. This must fall through all the way to tier 3.
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
     // A simul_efun function's own object variables belong to the
     // simul_efun object itself, not whichever object called it.
-    amlp::Value marker = harness.vm.callFunction(harness.objects.simulEfunObject(),
+    aemlpc::Value marker = harness.vm.callFunction(harness.objects.simulEfunObject(),
                                                         "read_marker", {});
     assert(std::holds_alternative<int64_t>(marker.data));
     assert(std::get<int64_t>(marker.data) == 7);
@@ -9705,7 +9705,7 @@ static void testLocalFunctionShadowsSimulEfunOfSameName() {
     auto obj = harness.objects.cloneObject("/shadower");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1); // local wins, not the simul_efun's 100
 
@@ -9718,22 +9718,22 @@ static void testLocalFunctionShadowsSimulEfunOfSameName() {
 
 static void testHeredocTokenizesToStringWithLiteralContent() {
     std::string src = "\"before\" @END\nline one\nline two\nEND;\n\"after\"";
-    amlp::Lexer lexer(src);
+    aemlpc::Lexer lexer(src);
     auto tokens = lexer.tokenize();
     // ["before"](String) ["\nline one\nline two\n"](String) [;](Symbol) ["after"](String) [End]
     assert(tokens.size() == 5);
-    assert(tokens[0].type == amlp::TokenType::String && tokens[0].text == "before");
-    assert(tokens[1].type == amlp::TokenType::String);
+    assert(tokens[0].type == aemlpc::TokenType::String && tokens[0].text == "before");
+    assert(tokens[1].type == aemlpc::TokenType::String);
     assert(tokens[1].text == "line one\nline two\n");
-    assert(tokens[2].type == amlp::TokenType::Symbol && tokens[2].text == ";");
-    assert(tokens[3].type == amlp::TokenType::String && tokens[3].text == "after");
+    assert(tokens[2].type == aemlpc::TokenType::Symbol && tokens[2].text == ";");
+    assert(tokens[3].type == aemlpc::TokenType::String && tokens[3].text == "after");
 
     std::cout << "testHeredocTokenizesToStringWithLiteralContent OK\n";
 }
 
 static void testHeredocVmExecutionMatchesRealShape() {
     // Mirrors secure/SimulEfun/misc.c's own "ret = @END ... END;" shape.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string ret;\n"
         "ret = @END\n"
         "Fd    State\n"
@@ -9748,11 +9748,11 @@ static void testHeredocVmExecutionMatchesRealShape() {
 
 static void testUnterminatedHeredocThrows() {
     std::string src = "\"x\" @END\nno terminator here\n";
-    amlp::Lexer lexer(src);
+    aemlpc::Lexer lexer(src);
     bool threw = false;
     try {
         lexer.tokenize();
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -9769,12 +9769,12 @@ static void testForeachSingleVarParsesToForeachStmt() {
         "        write(\"x\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* fe = dynamic_cast<amlp::ForeachStmt*>(body[0].get());
+    auto* fe = dynamic_cast<aemlpc::ForeachStmt*>(body[0].get());
     assert(fe != nullptr);
     assert(fe->varName == "item");
     assert(fe->declareVar == true);
@@ -9790,12 +9790,12 @@ static void testForeachTwoVarParsesWithValueVar() {
         "        write(\"x\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* fe = dynamic_cast<amlp::ForeachStmt*>(body[0].get());
+    auto* fe = dynamic_cast<aemlpc::ForeachStmt*>(body[0].get());
     assert(fe != nullptr);
     assert(fe->varName == "key");
     assert(fe->declareVar == false);
@@ -9807,7 +9807,7 @@ static void testForeachTwoVarParsesWithValueVar() {
 }
 
 static void testForeachOverArraySumsElementsVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *arr;\n"
         "int sum;\n"
         "arr = ({ 1, 2, 3, 4 });\n"
@@ -9823,7 +9823,7 @@ static void testForeachOverArraySumsElementsVmExecution() {
 }
 
 static void testForeachOverMappingSingleVarIteratesKeysVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "int sum;\n"
         "m = ([ 1: \"a\", 2: \"b\", 3: \"c\" ]);\n"
@@ -9839,7 +9839,7 @@ static void testForeachOverMappingSingleVarIteratesKeysVmExecution() {
 }
 
 static void testForeachOverMappingTwoVarGivesKeyValuePairsVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "int keySum;\n"
         "string cat;\n"
@@ -9858,7 +9858,7 @@ static void testForeachOverMappingTwoVarGivesKeyValuePairsVmExecution() {
 }
 
 static void testBreakAndContinueInsideForeachVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *arr;\n"
         "int sum;\n"
         "arr = ({ 1, 2, 3, 4, 5 });\n"
@@ -9877,7 +9877,7 @@ static void testBreakAndContinueInsideForeachVmExecution() {
 
 static void testNestedForeachLoopsDoNotCollideVmExecution() {
     // Exercises foreachCounter_'s per-statement unique hidden-slot naming.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *outer, *inner;\n"
         "int total;\n"
         "outer = ({ 1, 2 });\n"
@@ -9909,7 +9909,7 @@ static void testNestedForeachLoopsDoNotCollideVmExecution() {
 // enclosing function scope instead of being cleaned up when its own
 // loop ended.
 static void testSiblingForeachLoopsReusingTheSameLoopVariableNameVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *first, *second;\n"
         "int total;\n"
         "first = ({ 1, 2, 3 });\n"
@@ -9936,7 +9936,7 @@ static void testSiblingForeachLoopsReusingTheSameLoopVariableNameVmExecution() {
 // evidence for the for-loop half specifically until this same session's
 // investigation found and fixed both together.
 static void testSiblingForLoopsReusingTheSameInitDeclaredVariableNameVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int total;\n"
         "total = 0;\n"
         "for (int i = 0; i < 3; i = i + 1) {\n"
@@ -9964,7 +9964,7 @@ static void testForeachLoopVariableIsUnresolvableAfterTheLoopEnds() {
             "foreach (int element in arr) {\n"
             "}\n"
             "return element;\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -9980,8 +9980,8 @@ static void testArrayUsableAsParameterNameNotReservedAsType() {
         "mixed *exclude_array(mixed *array, int from, int to) {\n"
         "    return array;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -10002,8 +10002,8 @@ static void testArrayUsableAsParameterNameNotReservedAsType() {
 static void testTrailingVarargsEllipsisParsesAndSetsIsVarargs() {
     // Mirrors secure/SimulEfun/misc.c's own "int true(mixed args...)".
     std::string src = "int true(mixed args...) { return 1; }\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     assert(program->functions.size() == 1);
@@ -10017,7 +10017,7 @@ static void testTrailingVarargsEllipsisParsesAndSetsIsVarargs() {
 static void testOpenEndedRangeIndexVmExecution() {
     // Mirrors secure/SimulEfun/misc.c's own
     // "str[strsrch(str, \"\\n\")+1..]" shape.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string s;\n"
         "s = \"hello world\";\n"
         "return s[6..];\n");
@@ -10032,7 +10032,7 @@ static void testForLoopCommaExprChainInInitAndUpdateVmExecution() {
     // "for(i = 0, s = sizeof(stack1); i < s; i++)" shape (two
     // comma-separated expressions in the init clause here; the update
     // clause tests the same chain shape independently).
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i, j, sum;\n"
         "sum = 0;\n"
         "for (i = 0, j = 10; i < 3; i = i + 1, j = j - 1) {\n"
@@ -10064,7 +10064,7 @@ static void testForLoopCommaExprChainInInitAndUpdateVmExecution() {
 // and a general expression statement (a bare call) chained with an
 // assignment.
 static void testStatementLevelCommaChainAfterIndexedAndPlainAssignmentVmExecution() {
-    amlp::Value indexed = runProbe(
+    aemlpc::Value indexed = runProbe(
         "int *arr;\n"
         "int side;\n"
         "arr = ({ 1, 2, 3 });\n"
@@ -10073,14 +10073,14 @@ static void testStatementLevelCommaChainAfterIndexedAndPlainAssignmentVmExecutio
     assert(std::holds_alternative<int64_t>(indexed.data));
     assert(std::get<int64_t>(indexed.data) == 11099); // arr[0] == 11, side == 99
 
-    amlp::Value plainAssign = runProbe(
+    aemlpc::Value plainAssign = runProbe(
         "int a, b;\n"
         "a = 1, b = 2;\n"
         "return a * 10 + b;\n");
     assert(std::holds_alternative<int64_t>(plainAssign.data));
     assert(std::get<int64_t>(plainAssign.data) == 12);
 
-    amlp::Value exprStmt = runProbe(
+    aemlpc::Value exprStmt = runProbe(
         "int n;\n"
         // A bare call, discarded, chained with an assignment. exercises
         // the general expression-statement fallback path specifically
@@ -10111,18 +10111,18 @@ static void testSwitchParsesToSwitchStmtWithInterleavedLabels() {
         "            write(\"other\");\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* sw = dynamic_cast<amlp::SwitchStmt*>(body[0].get());
+    auto* sw = dynamic_cast<aemlpc::SwitchStmt*>(body[0].get());
     assert(sw != nullptr);
     // [case 1, write("one"), case 2, write("two"), break, default, write("other")]
     assert(sw->body.size() == 7);
-    auto* case1 = dynamic_cast<amlp::CaseLabel*>(sw->body[0].get());
+    auto* case1 = dynamic_cast<aemlpc::CaseLabel*>(sw->body[0].get());
     assert(case1 != nullptr && case1->value != nullptr);
-    auto* defaultLabel = dynamic_cast<amlp::CaseLabel*>(sw->body[5].get());
+    auto* defaultLabel = dynamic_cast<aemlpc::CaseLabel*>(sw->body[5].get());
     assert(defaultLabel != nullptr && defaultLabel->value == nullptr);
 
     std::cout << "testSwitchParsesToSwitchStmtWithInterleavedLabels OK\n";
@@ -10136,14 +10136,14 @@ static void testSwitchRangeCaseLabelParsesWithRangeEndSet() {
         "            break;\n"
         "    }\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* switchStmt = dynamic_cast<amlp::SwitchStmt*>(body[0].get());
+    auto* switchStmt = dynamic_cast<aemlpc::SwitchStmt*>(body[0].get());
     assert(switchStmt != nullptr);
-    auto* label = dynamic_cast<amlp::CaseLabel*>(switchStmt->body[0].get());
+    auto* label = dynamic_cast<aemlpc::CaseLabel*>(switchStmt->body[0].get());
     assert(label != nullptr);
     assert(label->value != nullptr);
     assert(label->rangeEnd != nullptr);
@@ -10173,23 +10173,23 @@ static void testSwitchRangeCaseLabelVmExecution() {
             "return -2;\n");
     };
 
-    amlp::Value low = runWith(2);
+    aemlpc::Value low = runWith(2);
     assert(std::holds_alternative<int64_t>(low.data));
     assert(std::get<int64_t>(low.data) == 100); // low end of the range, inclusive
 
-    amlp::Value high = runWith(3);
+    aemlpc::Value high = runWith(3);
     assert(std::holds_alternative<int64_t>(high.data));
     assert(std::get<int64_t>(high.data) == 100); // high end of the range, inclusive
 
-    amlp::Value mid = runWith(5);
+    aemlpc::Value mid = runWith(5);
     assert(std::holds_alternative<int64_t>(mid.data));
     assert(std::get<int64_t>(mid.data) == 200); // second range, unaffected by the first
 
-    amlp::Value plain = runWith(7);
+    aemlpc::Value plain = runWith(7);
     assert(std::holds_alternative<int64_t>(plain.data));
     assert(std::get<int64_t>(plain.data) == 300); // ordinary single-value case still works
 
-    amlp::Value miss = runWith(10);
+    aemlpc::Value miss = runWith(10);
     assert(std::holds_alternative<int64_t>(miss.data));
     assert(std::get<int64_t>(miss.data) == -1); // outside every range, falls to default
 
@@ -10199,7 +10199,7 @@ static void testSwitchRangeCaseLabelVmExecution() {
 static void testSwitchMatchingCaseVmExecution() {
     // Mirrors secure/SimulEfun/alignment.c's own shape, including a
     // string subject and each case returning immediately.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string cls;\n"
         "cls = \"cleric\";\n"
         "switch (cls) {\n"
@@ -10215,7 +10215,7 @@ static void testSwitchMatchingCaseVmExecution() {
 }
 
 static void testSwitchDefaultCaseVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string cls;\n"
         "cls = \"barbarian\";\n"
         "switch (cls) {\n"
@@ -10231,7 +10231,7 @@ static void testSwitchDefaultCaseVmExecution() {
 }
 
 static void testSwitchFallthroughWithoutBreakVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int x, sum;\n"
         "x = 1;\n"
         "sum = 0;\n"
@@ -10254,7 +10254,7 @@ static void testSwitchFallthroughWithoutBreakVmExecution() {
 static void testContinueInsideSwitchInsideLoopTargetsLoopVmExecution() {
     // "continue" inside a switch must skip the switch and continue the
     // enclosing loop, not be treated as (invalid) switch-continue.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i, sum;\n"
         "sum = 0;\n"
         "for (i = 0; i < 5; i++) {\n"
@@ -10299,7 +10299,7 @@ static void testContinueInsideSwitchInsideLoopTargetsLoopVmExecution() {
 // val's *old* (string) value, relying on real LPC's implicit
 // string-call_other coercion, not a fresh (val = load_object(val)).
 static void testEmbeddedAssignmentInsideLogicalAndBindsToImmediateVariable() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int val, sideEffect;\n"
         "val = 0;\n"
         "sideEffect = 5 && (val = 9) && val == 9;\n"
@@ -10312,7 +10312,7 @@ static void testEmbeddedAssignmentInsideLogicalAndBindsToImmediateVariable() {
     // precedence): "val=5 && val==5" parses as "val = (5 && (val==5))",
     // and at the moment "val==5" evaluates, val is still its *old* value
     // (0), so the assignment's own right-hand side is 0, not 1.
-    amlp::Value real = runProbe(
+    aemlpc::Value real = runProbe(
         "int val;\n"
         "int ok;\n"
         "val = 0;\n"
@@ -10350,12 +10350,12 @@ static void testInputToRegistersPendingHandlerWithExtraArgsAndTargetObject() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
 
-    amlp::OutputContext::set(&conn);
-    amlp::Value regResult = harness.vm.callFunction(loginObj, "start", {});
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Value regResult = harness.vm.callFunction(loginObj, "start", {});
     (void)regResult;
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     assert(conn.hasPendingInputTo());
     auto pending = conn.takePendingInputTo();
@@ -10387,11 +10387,11 @@ static void testInputToNumericFlagArgumentIsSkippedNotTreatedAsExtraArg() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(loginObj, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     auto pending = conn.takePendingInputTo();
     assert(pending.has_value());
@@ -10416,8 +10416,8 @@ static void testInputToReturnsZeroWithNoActiveConnection() {
 
     // No OutputContext set at all. Matches simulate.c's input_to():
     // "if (!command_giver || ...) return 0".
-    amlp::OutputContext::set(nullptr);
-    amlp::Value result = harness.vm.callFunction(loginObj, "start", {});
+    aemlpc::OutputContext::set(nullptr);
+    aemlpc::Value result = harness.vm.callFunction(loginObj, "start", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -10439,28 +10439,28 @@ static void testDispatchLinePrefersPendingInputToHandlerOverProcessInput() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(loginObj, "start", {}); // registers input_to("get_name")
     assert(conn.hasPendingInputTo());
 
     // comm.c's process_user_command(): call_function_interactive() (the
     // pending input_to handler) is checked and consumed first; only when
     // it was NOT pending does process_input() run for that line.
-    amlp::Server::dispatchLine(harness.vm, conn, "Bob");
+    aemlpc::Server::dispatchLine(harness.vm, conn, "Bob");
     assert(!conn.hasPendingInputTo());
 
-    amlp::Value called = harness.vm.callFunction(loginObj, "query_last_called", {});
+    aemlpc::Value called = harness.vm.callFunction(loginObj, "query_last_called", {});
     assert(std::get<std::string>(called.data) == "get_name");
-    amlp::Value lineVal = harness.vm.callFunction(loginObj, "query_last_line", {});
+    aemlpc::Value lineVal = harness.vm.callFunction(loginObj, "query_last_line", {});
     assert(std::get<std::string>(lineVal.data) == "Bob");
 
     // Second line: nothing pending this time, falls back to
     // process_input().
-    amlp::Server::dispatchLine(harness.vm, conn, "look");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "look");
+    aemlpc::OutputContext::set(nullptr);
 
     called = harness.vm.callFunction(loginObj, "query_last_called", {});
     assert(std::get<std::string>(called.data) == "process_input");
@@ -10502,26 +10502,26 @@ static void testInputToWithClosureFormFiresThroughRealDispatch() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(loginObj, "start", {}); // registers input_to((: get_name :))
     assert(conn.hasPendingInputTo());
     // The registered handler is a real closure, not a string.
     auto peeked = conn.takePendingInputTo();
     assert(peeked.has_value());
-    assert(std::holds_alternative<std::shared_ptr<amlp::Closure>>(peeked->function.data));
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Closure>>(peeked->function.data));
     conn.setPendingInputTo(loginObj, peeked->function, peeked->extraArgs); // put it back
 
-    amlp::Server::dispatchLine(harness.vm, conn, "Bob");
+    aemlpc::Server::dispatchLine(harness.vm, conn, "Bob");
     assert(!conn.hasPendingInputTo());
 
-    amlp::Value called = harness.vm.callFunction(loginObj, "query_last_called", {});
+    aemlpc::Value called = harness.vm.callFunction(loginObj, "query_last_called", {});
     assert(std::get<std::string>(called.data) == "get_name");
-    amlp::Value lineVal = harness.vm.callFunction(loginObj, "query_last_line", {});
+    aemlpc::Value lineVal = harness.vm.callFunction(loginObj, "query_last_line", {});
     assert(std::get<std::string>(lineVal.data) == "Bob");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     ::close(fds[1]);
     std::cout << "testInputToWithClosureFormFiresThroughRealDispatch OK\n";
@@ -10540,13 +10540,13 @@ static void testInputToCanReRegisterFromWithinDispatchedHandler() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(loginObj, "start", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "bob");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "bob");
+    aemlpc::OutputContext::set(nullptr);
 
     // get_name() called input_to("get_password") from inside its own
     // dispatched invocation. comm.c's own comment on why input_to's
@@ -10557,7 +10557,7 @@ static void testInputToCanReRegisterFromWithinDispatchedHandler() {
     auto pending = conn.takePendingInputTo();
     assert(functionNameIs(pending->function, "get_password"));
 
-    amlp::Value step = harness.vm.callFunction(loginObj, "query_step", {});
+    aemlpc::Value step = harness.vm.callFunction(loginObj, "query_step", {});
     assert(std::get<std::string>(step.data) == "name:bob");
 
     ::close(fds[1]);
@@ -10578,14 +10578,14 @@ static void testLogonSendsBannerAndRegistersInputToPrompt() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
     // Mirrors Server::onNewConnection()'s own logon() call: zero
     // arguments, OutputContext set to the connection for the duration.
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(loginObj, "logon", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     assert(conn.hasPendingInputTo());
     auto pending = conn.takePendingInputTo();
@@ -10625,7 +10625,7 @@ static void testFireNetDeadIfLinkDeadCallsApplyWhenPeerClosesConnection() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
 
     ::close(fds[1]); // peer goes away. Real link death
@@ -10634,9 +10634,9 @@ static void testFireNetDeadIfLinkDeadCallsApplyWhenPeerClosesConnection() {
     assert(conn.closed());
     assert(conn.boundObject() == target); // close() itself hasn't run yet
 
-    amlp::Server::fireNetDeadIfLinkDead(harness.vm, conn);
+    aemlpc::Server::fireNetDeadIfLinkDead(harness.vm, conn);
 
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 1);
 
@@ -10653,13 +10653,13 @@ static void testFireNetDeadIfLinkDeadIsNoOpWhileConnectionStillOpen() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
 
     assert(!conn.closed());
-    amlp::Server::fireNetDeadIfLinkDead(harness.vm, conn);
+    aemlpc::Server::fireNetDeadIfLinkDead(harness.vm, conn);
 
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::get<int64_t>(ranVal.data) == 0); // never fired
 
     ::close(fds[1]);
@@ -10681,16 +10681,16 @@ static void testFireNetDeadIfLinkDeadSkipsAfterExplicitConnectionClose() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
 
     conn.close(); // same effect as destruct()'s own conn->close() call
     assert(conn.closed());
     assert(conn.boundObject() == nullptr);
 
-    amlp::Server::fireNetDeadIfLinkDead(harness.vm, conn);
+    aemlpc::Server::fireNetDeadIfLinkDead(harness.vm, conn);
 
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::get<int64_t>(ranVal.data) == 0); // net_dead() never ran
 
     ::close(fds[1]);
@@ -10730,7 +10730,7 @@ static void testFireNetDeadFiresForAnyMarkClosedConnectionWithValidBoundObject()
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
 
     // Registers boom(string) as the pending input_to handler directly at
@@ -10740,7 +10740,7 @@ static void testFireNetDeadFiresForAnyMarkClosedConnectionWithValidBoundObject()
     // purpose.
     conn.setPendingInputTo(target, "boom", {});
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     // dispatchLine() throwing is just a convenient way to get a real
     // uncaught exception here; the point under test is markClosed() +
     // fireNetDeadIfLinkDead() below, not dispatchLine() itself. the
@@ -10750,20 +10750,20 @@ static void testFireNetDeadFiresForAnyMarkClosedConnectionWithValidBoundObject()
     // siblings just below.
     bool caught = false;
     try {
-        amlp::Server::dispatchLine(harness.vm, conn, "anything");
+        aemlpc::Server::dispatchLine(harness.vm, conn, "anything");
     } catch (const std::exception&) {
         caught = true;
         conn.markClosed();
     }
     assert(caught); // boom()'s own undefined-efun call really did throw uncaught
-    amlp::Server::fireNetDeadIfLinkDead(harness.vm, conn);
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::fireNetDeadIfLinkDead(harness.vm, conn);
+    aemlpc::OutputContext::set(nullptr);
 
     // net_dead() fires because boundObject() was still valid when
     // fireNetDeadIfLinkDead() ran, unlike
     // testFireNetDeadIfLinkDeadSkipsAfterExplicitConnectionClose's own
     // (correct, unchanged) explicit-close case just above.
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 1);
     assert(conn.closed());
@@ -10800,21 +10800,21 @@ static void testDispatchErrorInOneCommandDoesNotCloseTheConnection() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
     conn.setPendingInputTo(target, "boom", {});
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     bool caught = false;
     try {
-        amlp::Server::dispatchLine(harness.vm, conn, "anything");
+        aemlpc::Server::dispatchLine(harness.vm, conn, "anything");
     } catch (const std::exception&) {
         caught = true;
         // Real handleConnection()'s own current catch: report to the
         // player, no markClosed(), continue to the next buffered line.
-        amlp::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
+        aemlpc::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
     }
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     assert(caught); // boom()'s own undefined-efun call really did throw uncaught
     assert(!conn.closed()); // the real fix: the connection stays open
@@ -10832,17 +10832,17 @@ static void testDispatchErrorInOneCommandReportsAGenericMessageToThePlayer() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
     conn.setPendingInputTo(target, "boom", {});
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     try {
-        amlp::Server::dispatchLine(harness.vm, conn, "anything");
+        aemlpc::Server::dispatchLine(harness.vm, conn, "anything");
     } catch (const std::exception&) {
-        amlp::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
+        aemlpc::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
     }
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     // Player-facing message is generic, not the raw internal exception
     // text. Matching real DEFAULT_ERROR_MESSAGE's own intent of not
@@ -10870,7 +10870,7 @@ static void testCommandAfterADispatchErrorStillRunsNormallyProvingVmStateNotCorr
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(target);
 
     // Reproduces handleConnection()'s own real per-line loop over two
@@ -10880,20 +10880,20 @@ static void testCommandAfterADispatchErrorStillRunsNormallyProvingVmStateNotCorr
     // guards throughout VM.cpp/VM.cpp's run(), see Server.cpp's own
     // dispatch-error catch comment for the full citation) needs no
     // separate reset step the way real FluffOS's restore_context() does.
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     for (const std::string& line : {std::string("first"), std::string("second")}) {
         conn.setPendingInputTo(target, line == "first" ? "boom" : "ok", {});
         try {
-            amlp::Server::dispatchLine(harness.vm, conn, "anything");
+            aemlpc::Server::dispatchLine(harness.vm, conn, "anything");
         } catch (const std::exception&) {
-            amlp::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
+            aemlpc::deliverToConnection(harness.vm, &conn, "Error while processing your command.\n");
             continue;
         }
     }
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     assert(!conn.closed());
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 1); // ok() ran normally after boom() threw
 
@@ -10930,23 +10930,23 @@ static void testDestructEfunClosesTargetObjectsOwnConnectionNotCallersConnection
     int fdsTarget[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsActor) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsTarget) == 0);
-    amlp::Connection connActor(fdsActor[0]);
-    amlp::Connection connTarget(fdsTarget[0]);
+    aemlpc::Connection connActor(fdsActor[0]);
+    aemlpc::Connection connTarget(fdsTarget[0]);
     connActor.attach(actor);
     connTarget.attach(target);
 
     // The admin's own connection is "current". Not the target's, the
     // exact condition that broke this live (an admin "boot" command
     // driving the call from their own, still-open connection).
-    amlp::OutputContext::set(&connActor);
-    harness.vm.callFunction(actor, "boot", {amlp::Value(target)});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&connActor);
+    harness.vm.callFunction(actor, "boot", {aemlpc::Value(target)});
+    aemlpc::OutputContext::set(nullptr);
 
     // Target's own connection is genuinely closed now, not just removed
     // from InteractiveRegistry.
     assert(!connTarget.isOpen());
     assert(connTarget.boundObject() == nullptr);
-    assert(amlp::InteractiveRegistry::find(target) == nullptr);
+    assert(aemlpc::InteractiveRegistry::find(target) == nullptr);
 
     // The admin's own connection (the caller, "current" throughout) is
     // completely untouched.
@@ -10971,16 +10971,16 @@ static void testDestructEfunStillClosesOwnConnectionWhenSelfDestructing() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(self);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(self, "quit", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     assert(!conn.isOpen());
     assert(conn.boundObject() == nullptr);
-    assert(amlp::InteractiveRegistry::find(self) == nullptr);
+    assert(aemlpc::InteractiveRegistry::find(self) == nullptr);
 
     ::close(fds[1]);
     std::cout << "testDestructEfunStillClosesOwnConnectionWhenSelfDestructing OK\n";
@@ -11002,12 +11002,12 @@ static void testDestructEfunOnNonInteractiveObjectDoesNotTouchAnyConnection() {
 
     int fdsActor[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsActor) == 0);
-    amlp::Connection connActor(fdsActor[0]);
+    aemlpc::Connection connActor(fdsActor[0]);
     connActor.attach(actor);
 
-    amlp::OutputContext::set(&connActor);
-    harness.vm.callFunction(actor, "boot", {amlp::Value(item)});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&connActor);
+    harness.vm.callFunction(actor, "boot", {aemlpc::Value(item)});
+    aemlpc::OutputContext::set(nullptr);
 
     assert(connActor.isOpen());
     assert(connActor.boundObject() == actor);
@@ -11035,12 +11035,12 @@ static void testUserpAndInteractiveBothTrueWhileConnectionIsLive() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
-    amlp::Value userpResult = harness.vm.callFunction(probe, "check_userp", {amlp::Value(probe)});
+    aemlpc::Value userpResult = harness.vm.callFunction(probe, "check_userp", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(userpResult.data) == 1);
-    amlp::Value interactiveResult = harness.vm.callFunction(probe, "check_interactive", {amlp::Value(probe)});
+    aemlpc::Value interactiveResult = harness.vm.callFunction(probe, "check_interactive", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(interactiveResult.data) == 1);
 
     ::close(fds[1]);
@@ -11057,13 +11057,13 @@ static void testUserpStaysTrueAfterDisconnectWhileInteractiveGoesFalse() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
     conn.close(); // real link death / quit. Probe stays in the world
 
-    amlp::Value userpResult = harness.vm.callFunction(probe, "check_userp", {amlp::Value(probe)});
+    aemlpc::Value userpResult = harness.vm.callFunction(probe, "check_userp", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(userpResult.data) == 1);
-    amlp::Value interactiveResult = harness.vm.callFunction(probe, "check_interactive", {amlp::Value(probe)});
+    aemlpc::Value interactiveResult = harness.vm.callFunction(probe, "check_interactive", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(interactiveResult.data) == 0);
 
     ::close(fds[1]);
@@ -11080,7 +11080,7 @@ static void testUserpReturnsFalseForObjectNeverBoundToAnyConnection() {
     auto item = harness.objects.cloneObject("/plain_item2");
     assert(item != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(probe, "check_userp", {amlp::Value(item)});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check_userp", {aemlpc::Value(item)});
     assert(std::get<int64_t>(result.data) == 0);
 
     std::cout << "testUserpReturnsFalseForObjectNeverBoundToAnyConnection OK\n";
@@ -11104,10 +11104,10 @@ static void testQueryIdleIsZeroImmediatelyAfterConnectionEstablished() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
-    amlp::Value result = harness.vm.callFunction(probe, "check_idle", {amlp::Value(probe)});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check_idle", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(result.data) == 0);
 
     ::close(fds[1]);
@@ -11128,17 +11128,17 @@ static void testQueryIdleReflectsMostRecentDispatchedLineNotJustConnectionTime()
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
-    amlp::Value beforeDispatch = harness.vm.callFunction(probe, "check_idle", {amlp::Value(probe)});
+    aemlpc::Value beforeDispatch = harness.vm.callFunction(probe, "check_idle", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(beforeDispatch.data) >= 1);
 
-    amlp::Server::dispatchLine(harness.vm, conn, "anything");
+    aemlpc::Server::dispatchLine(harness.vm, conn, "anything");
 
-    amlp::Value afterDispatch = harness.vm.callFunction(probe, "check_idle", {amlp::Value(probe)});
+    aemlpc::Value afterDispatch = harness.vm.callFunction(probe, "check_idle", {aemlpc::Value(probe)});
     assert(std::get<int64_t>(afterDispatch.data) == 0);
 
     ::close(fds[1]);
@@ -11160,8 +11160,8 @@ static void testQueryIdleThrowsForObjectNeverBoundToAnyConnection() {
 
     bool threw = false;
     try {
-        harness.vm.callFunction(probe, "check_idle", {amlp::Value(item)});
-    } catch (const amlp::LpcRuntimeError& e) {
+        harness.vm.callFunction(probe, "check_idle", {aemlpc::Value(item)});
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("query_idle") != std::string::npos);
@@ -11190,13 +11190,13 @@ static void testFindPlayerFindsCurrentlyConnectedObjectByLivingName() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
     harness.vm.callFunction(probe, "setup", {});
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(result.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(result.data) == probe);
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(result.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(result.data) == probe);
 
     ::close(fds[1]);
     std::cout << "testFindPlayerFindsCurrentlyConnectedObjectByLivingName OK\n";
@@ -11215,14 +11215,14 @@ static void testFindPlayerStillFindsObjectAfterDisconnectViaOnceInteractive() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
     harness.vm.callFunction(probe, "setup", {});
     conn.close(); // real link death. Probe stays in the world
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(result.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(result.data) == probe);
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(result.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(result.data) == probe);
 
     ::close(fds[1]);
     std::cout << "testFindPlayerStillFindsObjectAfterDisconnectViaOnceInteractive OK\n";
@@ -11238,7 +11238,7 @@ static void testFindPlayerDoesNotMatchAnObjectThatWasNeverInteractive() {
 
     harness.vm.callFunction(probe, "setup", {}); // never bound to any connection
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(result.isVoid());
 
     std::cout << "testFindPlayerDoesNotMatchAnObjectThatWasNeverInteractive OK\n";
@@ -11254,9 +11254,9 @@ static void testFindLivingMatchesAnNpcThatWasNeverInteractive() {
 
     harness.vm.callFunction(probe, "setup", {});
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(result.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(result.data) == probe);
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(result.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(result.data) == probe);
 
     std::cout << "testFindLivingMatchesAnNpcThatWasNeverInteractive OK\n";
 }
@@ -11271,7 +11271,7 @@ static void testFindLivingReturnsNullWithoutEnableCommands() {
 
     harness.vm.callFunction(probe, "setup", {});
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(result.isVoid());
 
     std::cout << "testFindLivingReturnsNullWithoutEnableCommands OK\n";
@@ -11284,7 +11284,7 @@ static void testFindLivingReturnsNullForUnknownName() {
     auto probe = harness.objects.cloneObject("/lnr_probe4");
     assert(probe != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(result.isVoid());
 
     std::cout << "testFindLivingReturnsNullForUnknownName OK\n";
@@ -11303,7 +11303,7 @@ static void testFindLivingDoesNotMatchADestructedObjectsFormerLivingName() {
     harness.vm.callFunction(npc, "setup", {});
     harness.vm.destructObject(npc); // npc stays alive via this local
 
-    amlp::Value result = harness.vm.callFunction(finder, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(finder, "check", {});
     assert(result.isVoid());
 
     std::cout << "testFindLivingDoesNotMatchADestructedObjectsFormerLivingName OK\n";
@@ -11339,8 +11339,8 @@ static void testMessageRoutesToTargetObjectsOwnConnectionNotCurrentOne() {
     int fdsB[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsA) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsB) == 0);
-    amlp::Connection connA(fdsA[0]);
-    amlp::Connection connB(fdsB[0]);
+    aemlpc::Connection connA(fdsA[0]);
+    aemlpc::Connection connB(fdsB[0]);
     connA.attach(targetA);
     connB.attach(targetB);
 
@@ -11349,9 +11349,9 @@ static void testMessageRoutesToTargetObjectsOwnConnectionNotCurrentOne() {
     // B by target, not by whatever OutputContext::current() happens to
     // hold (here, deliberately left null, the exact condition that broke
     // this live).
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     harness.vm.callFunction(sender, "tell",
-        {amlp::Value(targetB), amlp::Value(std::string("hello B\n"))});
+        {aemlpc::Value(targetB), aemlpc::Value(std::string("hello B\n"))});
 
     char buf[256];
     ssize_t nB = ::recv(fdsB[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -11363,10 +11363,10 @@ static void testMessageRoutesToTargetObjectsOwnConnectionNotCurrentOne() {
 
     // Also confirmed the other direction: A being "current" must not
     // redirect a message actually targeted at B.
-    amlp::OutputContext::set(&connA);
+    aemlpc::OutputContext::set(&connA);
     harness.vm.callFunction(sender, "tell",
-        {amlp::Value(targetB), amlp::Value(std::string("hello B again\n"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(targetB), aemlpc::Value(std::string("hello B again\n"))});
+    aemlpc::OutputContext::set(nullptr);
 
     ssize_t nB2 = ::recv(fdsB[1], buf, sizeof(buf), MSG_DONTWAIT);
     assert(nB2 > 0);
@@ -11386,14 +11386,14 @@ static void testMessageRoutesToTargetObjectsOwnConnectionNotCurrentOne() {
 // area's coverage now).
 static void testCallOutAcceptsRealArgumentShapeAndReturnsHandle() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/callout_probe.c",
         "int probe() { return call_out(\"idle\", 180); }\n"
         "void idle() {}\n");
     auto obj = harness.objects.cloneObject("/callout_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     // First handle ever issued by a fresh Scheduler is 1 (see
     // Scheduler::newCallOutHandle()'s own comment on the monotonic
@@ -11416,14 +11416,14 @@ static void testCallOutAcceptsRealArgumentShapeAndReturnsHandle() {
 
 static void testCallOutWalltimeAcceptsRealArgumentShapeAndReturnsHandle() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/callout_wt_probe.c",
         "int probe() { return call_out_walltime(\"idle\", 180); }\n"
         "void idle() {}\n");
     auto obj = harness.objects.cloneObject("/callout_wt_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     std::cout << "testCallOutWalltimeAcceptsRealArgumentShapeAndReturnsHandle OK\n";
@@ -11431,7 +11431,7 @@ static void testCallOutWalltimeAcceptsRealArgumentShapeAndReturnsHandle() {
 
 static void testCallOutWalltimeActuallyFiresViaTheSameSchedulerAsCallOut() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/callout_wt_fire.c",
         "int fired;\n"
@@ -11443,7 +11443,7 @@ static void testCallOutWalltimeActuallyFiresViaTheSameSchedulerAsCallOut() {
     harness.vm.callFunction(obj, "probe", {});
     scheduler.tickCallOuts();
 
-    amlp::Value fired = harness.vm.callFunction(obj, "query_fired", {});
+    aemlpc::Value fired = harness.vm.callFunction(obj, "query_fired", {});
     assert(std::get<int64_t>(fired.data) == 42);
 
     std::cout << "testCallOutWalltimeActuallyFiresViaTheSameSchedulerAsCallOut OK\n";
@@ -11457,14 +11457,14 @@ static void testCallOutWalltimeActuallyFiresViaTheSameSchedulerAsCallOut() {
 // pending" side of this efun.
 static void testRemoveCallOutReturnsMinusOneWhenNothingPendingUnderThatName() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/rco_probe.c",
         "int probe() { return remove_call_out(\"idle\"); }\n"
         "void idle() {}\n");
     auto obj = harness.objects.cloneObject("/rco_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == -1);
     std::cout << "testRemoveCallOutReturnsMinusOneWhenNothingPendingUnderThatName OK\n";
@@ -11481,7 +11481,7 @@ static void testCallOtherWithStringTargetResolvesAlreadyLoadedObject() {
     auto caller = harness.objects.cloneObject("/caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
     std::cout << "testCallOtherWithStringTargetResolvesAlreadyLoadedObject OK\n";
@@ -11506,7 +11506,7 @@ static void testCallOtherWithStringTargetAutoCompilesAndLoadsOnFirstUse() {
 
     // Nothing has loaded /daemon_b yet. probe()'s own call_other() is
     // what should compile and load it, on demand.
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 7);
     std::cout << "testCallOtherWithStringTargetAutoCompilesAndLoadsOnFirstUse OK\n";
@@ -11522,7 +11522,7 @@ static void testCallOtherWithStringTargetToNonexistentFileThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(caller, "probe", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("couldn't find object") != std::string::npos);
@@ -11548,7 +11548,7 @@ static void testConvertNameMudlibFunctionWorksWithNewLowerCaseAndReplaceStringEf
         "string probe() { return convert_name(\"O'Brien Smith-Jones\"); }\n");
     auto obj = harness.objects.cloneObject("/convert_name_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "obriensmithjones");
     std::cout << "testConvertNameMudlibFunctionWorksWithNewLowerCaseAndReplaceStringEfuns OK\n";
@@ -11561,7 +11561,7 @@ static void testConvertNameMudlibFunctionWorksWithNewLowerCaseAndReplaceStringEf
 // cmds/mortal/_setenv.c, cmds/adm/_repairchar.c, daemon/guild_d.c).
 
 static void testUpperCaseFoldsLowercaseLettersAndLeavesEverythingElseUnchanged() {
-    amlp::Value result = runProbe("return upper_case(\"Hello, World! 123\");");
+    aemlpc::Value result = runProbe("return upper_case(\"Hello, World! 123\");");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "HELLO, WORLD! 123");
     std::cout << "testUpperCaseFoldsLowercaseLettersAndLeavesEverythingElseUnchanged OK\n";
@@ -11581,7 +11581,7 @@ static void testUpperCaseMatchesRealGuildTagUppercasingShape() {
         "}\n");
     auto obj = harness.objects.cloneObject("/guild_tag_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "THIEF");
     std::cout << "testUpperCaseMatchesRealGuildTagUppercasingShape OK\n";
@@ -11596,7 +11596,7 @@ static void testUpperCaseThrowsOnNonStringArgument() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("upper_case") != std::string::npos);
@@ -11624,8 +11624,8 @@ static void testTrimStripsDefaultWhitespaceFromBothEnds() {
     auto ob = harness.objects.cloneObject("/trim_probe");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string(" \t\nhello world\r\n "))});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string(" \t\nhello world\r\n "))});
     assert(std::holds_alternative<std::string>(r.data));
     assert(std::get<std::string>(r.data) == "hello world");
 
@@ -11640,13 +11640,13 @@ static void testLtrimAndRtrimOnlyStripTheirOwnEnd() {
     auto ob = harness.objects.cloneObject("/ltrim_probe");
     assert(ob != nullptr);
 
-    amlp::Value l = harness.vm.callFunction(ob, "lprobe", {amlp::Value(std::string("  hi  "))});
-    amlp::Value r = harness.vm.callFunction(ob, "rprobe", {amlp::Value(std::string("  hi  "))});
+    aemlpc::Value l = harness.vm.callFunction(ob, "lprobe", {aemlpc::Value(std::string("  hi  "))});
+    aemlpc::Value r = harness.vm.callFunction(ob, "rprobe", {aemlpc::Value(std::string("  hi  "))});
     assert(std::get<std::string>(l.data) == "hi  ");
     assert(std::get<std::string>(r.data) == "  hi");
 
     // trim(s) == rtrim(ltrim(s)). A real identity, not assumed.
-    amlp::Value both = harness.vm.callFunction(ob, "rprobe", {l});
+    aemlpc::Value both = harness.vm.callFunction(ob, "rprobe", {l});
     assert(std::get<std::string>(both.data) == "hi");
 
     std::cout << "testLtrimAndRtrimOnlyStripTheirOwnEnd OK\n";
@@ -11663,13 +11663,13 @@ static void testTrimWithCustomCharsetStripsOnlyThoseCharacters() {
     // whitespace set entirely. So a string with real whitespace inside
     // the custom charset's own reach is stripped too, and whitespace
     // outside it is left alone.
-    amlp::Value r = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("xxhelloxx")), amlp::Value(std::string("x"))});
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("xxhelloxx")), aemlpc::Value(std::string("x"))});
     assert(std::get<std::string>(r.data) == "hello");
 
     // Whitespace is NOT stripped once a custom charset is given.
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("xx hello xx")), amlp::Value(std::string("x"))});
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("xx hello xx")), aemlpc::Value(std::string("x"))});
     assert(std::get<std::string>(r2.data) == " hello ");
 
     std::cout << "testTrimWithCustomCharsetStripsOnlyThoseCharacters OK\n";
@@ -11681,8 +11681,8 @@ static void testTrimIsIdempotentOnAnAlreadyTrimmedString() {
     auto ob = harness.objects.cloneObject("/trim_idem");
     assert(ob != nullptr);
 
-    amlp::Value once = harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("  hello  "))});
-    amlp::Value twice = harness.vm.callFunction(ob, "probe", {once});
+    aemlpc::Value once = harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("  hello  "))});
+    aemlpc::Value twice = harness.vm.callFunction(ob, "probe", {once});
     assert(std::get<std::string>(once.data) == "hello");
     assert(std::get<std::string>(twice.data) == std::get<std::string>(once.data));
 
@@ -11711,9 +11711,9 @@ static void testExplodeReversiblePreservesEmptyFieldsMatchingRealDocExample() {
 
     // Real doc's own worked example: explode_reversible("a,,b,", ",")
     // == ({ "a", "", "b", "" }).
-    amlp::Value r = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("a,,b,")), amlp::Value(std::string(","))});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(r.data);
+    aemlpc::Value r = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("a,,b,")), aemlpc::Value(std::string(","))});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
     assert(arr && arr->items.size() == 4);
     assert(std::get<std::string>(arr->items[0].data) == "a");
     assert(std::get<std::string>(arr->items[1].data) == "");
@@ -11737,8 +11737,8 @@ static void testExplodeReversibleRoundTripsThroughImplodeForVariousInputs() {
     // delimiter (real explode_string()'s own "issue #968" edge case).
     std::vector<std::string> cases = {"a,,b,", ",a,b", "a,b,", "no-delimiter-here", ",,,", ""};
     for (const auto& s : cases) {
-        amlp::Value r = harness.vm.callFunction(ob, "roundtrip",
-            {amlp::Value(s), amlp::Value(std::string(","))});
+        aemlpc::Value r = harness.vm.callFunction(ob, "roundtrip",
+            {aemlpc::Value(s), aemlpc::Value(std::string(","))});
         assert(std::holds_alternative<std::string>(r.data));
         assert(std::get<std::string>(r.data) == s);
     }
@@ -11755,8 +11755,8 @@ static void testExplodeReversibleThrowsOnEmptyDelimiter() {
 
     bool threw = false;
     try {
-        harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("abc"))});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("abc"))});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -11829,16 +11829,16 @@ static void testCryptWithExplicitSaltIsDeterministicAndSaltIsThePrefix() {
     auto ob = harness.objects.cloneObject("/crypt_probe");
     assert(ob != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("hunter2")), amlp::Value(std::string("ab"))});
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("hunter2")), amlp::Value(std::string("ab"))});
+    aemlpc::Value r1 = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("hunter2")), aemlpc::Value(std::string("ab"))});
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("hunter2")), aemlpc::Value(std::string("ab"))});
     const std::string& hash1 = std::get<std::string>(r1.data);
     const std::string& hash2 = std::get<std::string>(r2.data);
     assert(hash1 == hash2);
     assert(hash1.rfind("ab", 0) == 0);
 
-    amlp::Value r3 = harness.vm.callFunction(ob, "probe_no_salt", {amlp::Value(std::string("hunter2"))});
+    aemlpc::Value r3 = harness.vm.callFunction(ob, "probe_no_salt", {aemlpc::Value(std::string("hunter2"))});
     assert(std::holds_alternative<std::string>(r3.data));
     assert(!std::get<std::string>(r3.data).empty());
 
@@ -11878,7 +11878,7 @@ static void testBareParentCallInvokesInheritedFunctionNotLocalOverride() {
     // definition ran, not an infinite/self recursion into child1's own
     // create() (which real LPC's "::" syntax exists specifically to
     // avoid).
-    amlp::Value result = harness.vm.callFunction(obj, "query_tag", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "query_tag", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "parent");
     std::cout << "testBareParentCallInvokesInheritedFunctionNotLocalOverride OK\n";
@@ -11901,7 +11901,7 @@ static void testQualifiedParentCallMatchesInheritPathBasename() {
     // the one whose own inherit path's basename is "daemon", not
     // whichever happens to be searched first (real
     // secure/daemon/banish.c's own "daemon::create();" shape).
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "daemon");
     std::cout << "testQualifiedParentCallMatchesInheritPathBasename OK\n";
@@ -11922,7 +11922,7 @@ static void testTypeKeywordQualifiedParentCallResolvesTheKeywordNamedParentAmong
     auto obj = harness.objects.cloneObject("/child3");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "run", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "run", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "object");
     std::cout << "testTypeKeywordQualifiedParentCallResolvesTheKeywordNamedParentAmongMultipleInherits OK\n";
@@ -11949,7 +11949,7 @@ static void testRealAutosaveSetupPatternFromInteractiveCEndToEnd() {
     assert(obj != nullptr);
     harness.vm.callFunction(obj, "Setup", {});
 
-    amlp::Value result = harness.vm.callFunction(obj, "query_tag", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "query_tag", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "autosave-setup-ran");
     std::cout << "testRealAutosaveSetupPatternFromInteractiveCEndToEnd OK\n";
@@ -11980,17 +11980,17 @@ static void testClosureLiteralParsesToClosureLiteralExprBareForm() {
         "void probe() {\n"
         "    unguarded((: file_size :));\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* call = dynamic_cast<amlp::CallExpr*>(exprStmt->expr.get());
+    auto* call = dynamic_cast<aemlpc::CallExpr*>(exprStmt->expr.get());
     assert(call != nullptr);
     assert(call->args.size() == 1);
-    auto* closure = dynamic_cast<amlp::ClosureLiteralExpr*>(call->args[0].get());
+    auto* closure = dynamic_cast<aemlpc::ClosureLiteralExpr*>(call->args[0].get());
     assert(closure != nullptr);
     assert(closure->functionName == "file_size");
     assert(closure->boundArgs.empty());
@@ -12003,20 +12003,20 @@ static void testClosureLiteralParsesToClosureLiteralExprWithBoundArgs() {
         "void probe(string p) {\n"
         "    unguarded((: file_size, p, \"extra\" :));\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
-    auto* call = dynamic_cast<amlp::CallExpr*>(exprStmt->expr.get());
-    auto* closure = dynamic_cast<amlp::ClosureLiteralExpr*>(call->args[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
+    auto* call = dynamic_cast<aemlpc::CallExpr*>(exprStmt->expr.get());
+    auto* closure = dynamic_cast<aemlpc::ClosureLiteralExpr*>(call->args[0].get());
     assert(closure != nullptr);
     assert(closure->functionName == "file_size");
     assert(closure->boundArgs.size() == 2);
-    auto* firstArg = dynamic_cast<amlp::VarRefExpr*>(closure->boundArgs[0].get());
+    auto* firstArg = dynamic_cast<aemlpc::VarRefExpr*>(closure->boundArgs[0].get());
     assert(firstArg != nullptr && firstArg->name == "p");
-    auto* secondArg = dynamic_cast<amlp::StringLiteral*>(closure->boundArgs[1].get());
+    auto* secondArg = dynamic_cast<aemlpc::StringLiteral*>(closure->boundArgs[1].get());
     assert(secondArg != nullptr && secondArg->value == "extra");
 
     std::cout << "testClosureLiteralParsesToClosureLiteralExprWithBoundArgs OK\n";
@@ -12029,12 +12029,12 @@ static void testClosureLiteralVmExecutionProducesClosureValueWithOwnerAndBoundAr
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "make_closure", {amlp::Value(std::string("/some/path"))});
-    auto* closurePtr = std::get_if<std::shared_ptr<amlp::Closure>>(&result.data);
+    aemlpc::Value result = vm.callFunction(obj, "make_closure", {aemlpc::Value(std::string("/some/path"))});
+    auto* closurePtr = std::get_if<std::shared_ptr<aemlpc::Closure>>(&result.data);
     assert(closurePtr != nullptr && *closurePtr != nullptr);
     assert((*closurePtr)->functionName == "file_size");
     assert((*closurePtr)->boundArgs.size() == 1);
@@ -12061,11 +12061,11 @@ static void testEvaluateInvokesEfunBoundClosureWithBoundArgsBeforeExtraArgs() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "hello there");
 
@@ -12079,11 +12079,11 @@ static void testFuncallIsAnAliasOfEvaluate() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "abc");
 
@@ -12099,11 +12099,11 @@ static void testEvaluateOnNonFunctionValueIsSilentNoOp() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(result.isVoid());
 
     std::cout << "testEvaluateOnNonFunctionValueIsSilentNoOp OK\n";
@@ -12119,11 +12119,11 @@ static void testEvaluateInvokesLocalFunctionBoundClosure() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -12137,8 +12137,8 @@ static void testEvaluateThrowsWhenClosureOwnerDestructed() {
     auto owner = harness.objects.cloneObject("/owner_dies");
     assert(owner != nullptr);
 
-    amlp::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
-    auto closurePtr = std::get<std::shared_ptr<amlp::Closure>>(closureVal.data);
+    aemlpc::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
+    auto closurePtr = std::get<std::shared_ptr<aemlpc::Closure>>(closureVal.data);
     assert(closurePtr != nullptr);
 
     owner.reset(); // only the weak_ptr in the closure should be left
@@ -12146,7 +12146,7 @@ static void testEvaluateThrowsWhenClosureOwnerDestructed() {
     bool threw = false;
     try {
         harness.vm.callClosure(closurePtr, {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("destructed") != std::string::npos);
@@ -12203,10 +12203,10 @@ static void testCallOtherOnDestructedObjectIsSilentNoOp() {
 
     harness.vm.destructObject(target); // target stays alive via this local
 
-    amlp::Value result = harness.vm.callFunction(target, "mark", {});
+    aemlpc::Value result = harness.vm.callFunction(target, "mark", {});
     assert(result.isVoid()); // real apply(): destructed target, no call made
 
-    amlp::Value ranVal = target->variables()[0];
+    aemlpc::Value ranVal = target->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 0); // mark() body never ran
 
@@ -12220,8 +12220,8 @@ static void testCallClosureThrowsForDestructedOwnerEvenWhenStillReferenced() {
     auto owner = harness.objects.cloneObject("/dg_owner");
     assert(owner != nullptr);
 
-    amlp::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
-    auto closurePtr = std::get<std::shared_ptr<amlp::Closure>>(closureVal.data);
+    aemlpc::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
+    auto closurePtr = std::get<std::shared_ptr<aemlpc::Closure>>(closureVal.data);
     assert(closurePtr != nullptr);
 
     harness.vm.destructObject(owner); // owner stays alive via this local
@@ -12229,7 +12229,7 @@ static void testCallClosureThrowsForDestructedOwnerEvenWhenStillReferenced() {
     bool threw = false;
     try {
         harness.vm.callClosure(closurePtr, {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("destructed") != std::string::npos);
@@ -12247,7 +12247,7 @@ static void testDispatchCommandSkipsActionFromDestructedOwnerEvenWhenStillRefere
     auto actor = harness.objects.cloneObject("/dg_actor");
     assert(actor != nullptr);
     actor->setCommandsEnabled(true);
-    amlp::LpcObject::ActionEntry entry;
+    aemlpc::LpcObject::ActionEntry entry;
     entry.verb = "poke";
     entry.functionName = "cmd_poke";
     entry.owner = actor;
@@ -12258,7 +12258,7 @@ static void testDispatchCommandSkipsActionFromDestructedOwnerEvenWhenStillRefere
     bool handled = harness.vm.dispatchCommand(actor, "poke");
     assert(!handled);
 
-    amlp::Value ranVal = actor->variables()[0];
+    aemlpc::Value ranVal = actor->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 0); // cmd_poke() body never ran
 
@@ -12267,7 +12267,7 @@ static void testDispatchCommandSkipsActionFromDestructedOwnerEvenWhenStillRefere
 
 static void testCallOutSkipsDestructedTargetEvenWhenStillReferenced() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/dg_co_target.c",
         "int ran;\n"
@@ -12275,7 +12275,7 @@ static void testCallOutSkipsDestructedTargetEvenWhenStillReferenced() {
     auto obj = harness.objects.cloneObject("/dg_co_target");
     assert(obj != nullptr);
 
-    amlp::CallOutEntry entry;
+    aemlpc::CallOutEntry entry;
     entry.target = obj; // weak_ptr
     entry.function = "tick";
     entry.dueAt = std::chrono::steady_clock::now() - std::chrono::seconds(1);
@@ -12285,7 +12285,7 @@ static void testCallOutSkipsDestructedTargetEvenWhenStillReferenced() {
 
     scheduler.tickCallOuts();
 
-    amlp::Value ranVal = obj->variables()[0];
+    aemlpc::Value ranVal = obj->variables()[0];
     assert(std::holds_alternative<int64_t>(ranVal.data));
     assert(std::get<int64_t>(ranVal.data) == 0); // tick() never actually ran
 
@@ -12318,7 +12318,7 @@ static void testDestructedObjectInLocalVariableReadsBackAsIntZero() {
     auto probe = harness.objects.cloneObject("/drc_probe1");
     assert(probe != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -12339,7 +12339,7 @@ static void testDestructedObjectInObjectVariableReadsBackAsIntZero() {
     assert(probe != nullptr);
 
     harness.vm.callFunction(probe, "set_and_destruct", {});
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -12362,7 +12362,7 @@ static void testDestructedObjectInArrayElementReadsBackAsIntZeroWhenIndexed() {
     assert(probe != nullptr);
 
     harness.vm.callFunction(probe, "set_and_destruct", {});
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -12385,7 +12385,7 @@ static void testDestructedObjectInMappingValueReadsBackAsIntZeroWhenIndexed() {
     assert(probe != nullptr);
 
     harness.vm.callFunction(probe, "set_and_destruct", {});
-    amlp::Value result = harness.vm.callFunction(probe, "check", {});
+    aemlpc::Value result = harness.vm.callFunction(probe, "check", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -12413,26 +12413,26 @@ static void testNonDestructedObjectInVariableAndArrayStillReadsBackAsRealObject(
     assert(probe != nullptr);
 
     harness.vm.callFunction(probe, "set", {});
-    amlp::Value varResult = harness.vm.callFunction(probe, "check_var", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(varResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(varResult.data) != nullptr);
-    amlp::Value arrResult = harness.vm.callFunction(probe, "check_arr", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(arrResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(arrResult.data) != nullptr);
+    aemlpc::Value varResult = harness.vm.callFunction(probe, "check_var", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(varResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(varResult.data) != nullptr);
+    aemlpc::Value arrResult = harness.vm.callFunction(probe, "check_arr", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(arrResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(arrResult.data) != nullptr);
 
     std::cout << "testNonDestructedObjectInVariableAndArrayStillReadsBackAsRealObject OK\n";
 }
 
 static void testCallOutAcceptsClosureAsFirstArgument() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/callout_closure_probe.c",
         "void idle() {}\n"
         "int probe() { return call_out((: idle :), 5); }\n");
     auto obj = harness.objects.cloneObject("/callout_closure_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     std::cout << "testCallOutAcceptsClosureAsFirstArgument OK\n";
@@ -12447,8 +12447,8 @@ static void testPreviousObjectReturnsCallerAcrossCallOther() {
     auto callerObj = harness.objects.cloneObject("/caller");
     assert(callerObj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(callerObj, "run", {});
-    auto* obPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(callerObj, "run", {});
+    auto* obPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&result.data);
     assert(obPtr != nullptr && *obPtr != nullptr);
     assert(*obPtr == callerObj);
 
@@ -12472,8 +12472,8 @@ static void testPreviousObjectDoesNotChangeAcrossSameObjectLocalCall() {
     auto callerObj = harness.objects.cloneObject("/caller2");
     assert(callerObj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(callerObj, "run", {});
-    auto* obPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(callerObj, "run", {});
+    auto* obPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&result.data);
     assert(obPtr != nullptr && *obPtr != nullptr);
     assert(*obPtr == callerObj);
 
@@ -12493,14 +12493,14 @@ static void testPreviousObjectMinusOneReturnsFullChain() {
     auto b = harness.objects.loadObject("/level_b");
     assert(b != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(a, "run", {});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(a, "run", {});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr != nullptr && *arrPtr != nullptr);
     // Nearest first: whoever called level_c's probe() (level_b's own
     // loaded singleton), then whoever called level_b's run() (level_a).
     assert((*arrPtr)->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arrPtr)->items[0].data) == b);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arrPtr)->items[1].data) == a);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arrPtr)->items[0].data) == b);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arrPtr)->items[1].data) == a);
 
     std::cout << "testPreviousObjectMinusOneReturnsFullChain OK\n";
 }
@@ -12532,7 +12532,7 @@ static void testUnguardedClosureRoundTripsThroughSecurityAndMasterShape() {
     auto accountObj = harness.objects.cloneObject("/account_probe");
     assert(accountObj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(accountObj, "probe", {amlp::Value(std::string("/does_not_exist"))});
+    aemlpc::Value result = harness.vm.callFunction(accountObj, "probe", {aemlpc::Value(std::string("/does_not_exist"))});
     assert(std::holds_alternative<int64_t>(result.data));
     // file_size() on a nonexistent path: -1, proving the closure really
     // did get invoked (not just "wrong caller" or a thrown error).
@@ -12571,34 +12571,34 @@ static void testSaveObjectRestoreObjectRoundTripsNestedMappingsAndArrays() {
     auto obj = harness.objects.cloneObject("/save_probe");
     assert(obj != nullptr);
 
-    amlp::Value saveResult = harness.vm.callFunction(obj, "save", {});
+    aemlpc::Value saveResult = harness.vm.callFunction(obj, "save", {});
     assert(std::holds_alternative<int64_t>(saveResult.data));
     assert(std::get<int64_t>(saveResult.data) == 1);
 
     harness.vm.callFunction(obj, "clear", {});
-    amlp::Value nAfterClear = harness.vm.callFunction(obj, "query_n", {});
+    aemlpc::Value nAfterClear = harness.vm.callFunction(obj, "query_n", {});
     assert(std::holds_alternative<int64_t>(nAfterClear.data));
     assert(std::get<int64_t>(nAfterClear.data) == 0);
 
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::holds_alternative<int64_t>(loadResult.data));
     assert(std::get<int64_t>(loadResult.data) == 1);
 
-    amlp::Value n = harness.vm.callFunction(obj, "query_n", {});
+    aemlpc::Value n = harness.vm.callFunction(obj, "query_n", {});
     assert(std::get<int64_t>(n.data) == 42);
-    amlp::Value s = harness.vm.callFunction(obj, "query_s", {});
+    aemlpc::Value s = harness.vm.callFunction(obj, "query_s", {});
     assert(std::get<std::string>(s.data) == "hello");
-    amlp::Value mA = harness.vm.callFunction(obj, "query_m_a", {});
+    aemlpc::Value mA = harness.vm.callFunction(obj, "query_m_a", {});
     assert(std::get<int64_t>(mA.data) == 1);
-    amlp::Value mB1 = harness.vm.callFunction(obj, "query_m_b_1", {});
+    aemlpc::Value mB1 = harness.vm.callFunction(obj, "query_m_b_1", {});
     assert(std::get<std::string>(mB1.data) == "y");
-    amlp::Value nested = harness.vm.callFunction(obj, "query_nested", {});
-    auto* nestedArr = std::get_if<std::shared_ptr<amlp::Array>>(&nested.data);
+    aemlpc::Value nested = harness.vm.callFunction(obj, "query_nested", {});
+    auto* nestedArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&nested.data);
     assert(nestedArr != nullptr && *nestedArr != nullptr);
     assert((*nestedArr)->items.size() == 3);
     assert(std::get<int64_t>((*nestedArr)->items[0].data) == 1);
     assert(std::get<std::string>((*nestedArr)->items[1].data) == "two");
-    auto* innerArr = std::get_if<std::shared_ptr<amlp::Array>>(&(*nestedArr)->items[2].data);
+    auto* innerArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*nestedArr)->items[2].data);
     assert(innerArr != nullptr && *innerArr != nullptr);
     assert((*innerArr)->items.size() == 2);
     assert(std::get<int64_t>((*innerArr)->items[0].data) == 3);
@@ -12642,14 +12642,14 @@ static void testRestoreObjectRestoresANulledObjectSlotAsRealIntegerZero() {
     // The object variable holds a real live self-reference at save time
     // (an object cannot be serialized, so the round trip must still
     // produce a real 0 regardless of what the live value was).
-    amlp::Value saveResult = harness.vm.callFunction(obj, "save", {});
+    aemlpc::Value saveResult = harness.vm.callFunction(obj, "save", {});
     assert(std::get<int64_t>(saveResult.data) == 1);
 
     harness.vm.callFunction(obj, "clear", {});
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::get<int64_t>(loadResult.data) == 1);
 
-    amlp::Value isZero = harness.vm.callFunction(obj, "first_is_zero", {});
+    aemlpc::Value isZero = harness.vm.callFunction(obj, "first_is_zero", {});
     assert(std::get<int64_t>(isZero.data) == 1);
 
     std::cout << "testRestoreObjectRestoresANulledObjectSlotAsRealIntegerZero OK\n";
@@ -12681,7 +12681,7 @@ static void testSaveObjectThrowsClearErrorForWidthGreaterThanOneMappingInsteadOf
     bool threw = false;
     try {
         harness.vm.callFunction(obj, "save", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("save_object") != std::string::npos);
@@ -12712,11 +12712,11 @@ static void testSaveObjectRestoreObjectStillRoundTripsAWidthOneMappingAfterTheWi
     auto obj = harness.objects.cloneObject("/save_width1_probe");
     assert(obj != nullptr);
 
-    amlp::Value saveResult = harness.vm.callFunction(obj, "save", {});
+    aemlpc::Value saveResult = harness.vm.callFunction(obj, "save", {});
     assert(std::get<int64_t>(saveResult.data) == 1);
 
     harness.vm.callFunction(obj, "clear", {});
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::get<int64_t>(loadResult.data) == 1);
 
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "query_a", {}).data) == 1);
@@ -12761,26 +12761,26 @@ static void testRestoreObjectParsesRealFluffosOnDiskFormatScalarsAndNesting() {
     auto obj = harness.objects.cloneObject("/real_probe");
     assert(obj != nullptr);
 
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::holds_alternative<int64_t>(loadResult.data));
     assert(std::get<int64_t>(loadResult.data) == 1);
 
-    amlp::Value n = harness.vm.callFunction(obj, "query_n", {});
+    aemlpc::Value n = harness.vm.callFunction(obj, "query_n", {});
     assert(std::get<int64_t>(n.data) == 42);
-    amlp::Value neg = harness.vm.callFunction(obj, "query_neg", {});
+    aemlpc::Value neg = harness.vm.callFunction(obj, "query_neg", {});
     assert(std::get<int64_t>(neg.data) == -7);
-    amlp::Value f = harness.vm.callFunction(obj, "query_f", {});
+    aemlpc::Value f = harness.vm.callFunction(obj, "query_f", {});
     assert(std::get<double>(f.data) == 3.5);
-    amlp::Value s = harness.vm.callFunction(obj, "query_s", {});
+    aemlpc::Value s = harness.vm.callFunction(obj, "query_s", {});
     assert(std::get<std::string>(s.data) == "hello");
 
-    amlp::Value data = harness.vm.callFunction(obj, "query_data", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&data.data);
+    aemlpc::Value data = harness.vm.callFunction(obj, "query_data", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&data.data);
     assert(arr != nullptr && *arr != nullptr);
     assert((*arr)->items.size() == 3);
     assert(std::get<int64_t>((*arr)->items[0].data) == 1);
     assert(std::get<std::string>((*arr)->items[1].data) == "two");
-    auto* map = std::get_if<std::shared_ptr<amlp::Mapping>>(&(*arr)->items[2].data);
+    auto* map = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&(*arr)->items[2].data);
     assert(map != nullptr && *map != nullptr);
     assert((*map)->entries.size() == 1);
     assert(std::get<std::string>((*map)->entries[0].first.data) == "k");
@@ -12810,13 +12810,13 @@ static void testRestoreObjectSkipsRealFormatCommentHeaderLineAndParsesEmptyConta
     auto obj = harness.objects.cloneObject("/banish_probe");
     assert(obj != nullptr);
 
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::holds_alternative<int64_t>(loadResult.data));
     assert(std::get<int64_t>(loadResult.data) == 1);
 
-    amlp::Value namesSize = harness.vm.callFunction(obj, "query_names_size", {});
+    aemlpc::Value namesSize = harness.vm.callFunction(obj, "query_names_size", {});
     assert(std::get<int64_t>(namesSize.data) == 0);
-    amlp::Value tmpBanishSize = harness.vm.callFunction(obj, "query_tmpbanish_size", {});
+    aemlpc::Value tmpBanishSize = harness.vm.callFunction(obj, "query_tmpbanish_size", {});
     assert(std::get<int64_t>(tmpBanishSize.data) == 0);
 
     std::cout << "testRestoreObjectSkipsRealFormatCommentHeaderLineAndParsesEmptyContainers OK\n";
@@ -12841,11 +12841,11 @@ static void testRestoreObjectRealFormatStringEscapesAndEmbeddedNewline() {
     auto obj = harness.objects.cloneObject("/escape_probe");
     assert(obj != nullptr);
 
-    amlp::Value loadResult = harness.vm.callFunction(obj, "load", {});
+    aemlpc::Value loadResult = harness.vm.callFunction(obj, "load", {});
     assert(std::holds_alternative<int64_t>(loadResult.data));
     assert(std::get<int64_t>(loadResult.data) == 1);
 
-    amlp::Value s = harness.vm.callFunction(obj, "query_s", {});
+    aemlpc::Value s = harness.vm.callFunction(obj, "query_s", {});
     assert(std::get<std::string>(s.data) == "she said \"hi\" then a\\b then a\nnewline");
 
     std::cout << "testRestoreObjectRealFormatStringEscapesAndEmbeddedNewline OK\n";
@@ -12880,13 +12880,13 @@ static void testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity() {
     auto itemB = harness1.objects.cloneObject("/ss_item_b");
     assert(room != nullptr && itemA != nullptr && itemB != nullptr);
 
-    harness1.vm.callFunction(itemA, "go", {amlp::Value(room)});
-    harness1.vm.callFunction(itemB, "go", {amlp::Value(room)});
-    harness1.vm.callFunction(itemA, "set_home", {amlp::Value(room)});
+    harness1.vm.callFunction(itemA, "go", {aemlpc::Value(room)});
+    harness1.vm.callFunction(itemB, "go", {aemlpc::Value(room)});
+    harness1.vm.callFunction(itemA, "set_home", {aemlpc::Value(room)});
     assert(room->inventory().size() == 2);
 
     std::string dumpPath = harness1.tempDir + "/state.dump";
-    amlp::StateSerializer dumper(harness1.objects);
+    aemlpc::StateSerializer dumper(harness1.objects);
     assert(dumper.dumpState(dumpPath));
 
     ObjectVarHarness harness2;
@@ -12894,15 +12894,15 @@ static void testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity() {
     harness2.writeFile("/ss_item_a.c", itemASrc);
     harness2.writeFile("/ss_item_b.c", itemBSrc);
 
-    amlp::StateSerializer restorer(harness2.objects);
+    aemlpc::StateSerializer restorer(harness2.objects);
     assert(restorer.restoreState(dumpPath));
 
     // Find harness2's own reconstructed objects by filename, explicitly
     // excluding harness1's own still-live originals. Both harnesses'
     // objects share the one process-wide LiveObjectRegistry, so this is
     // the only unambiguous way to tell them apart.
-    std::shared_ptr<amlp::LpcObject> restoredRoom, restoredItemA, restoredItemB;
-    for (auto& obj : amlp::LiveObjectRegistry::all()) {
+    std::shared_ptr<aemlpc::LpcObject> restoredRoom, restoredItemA, restoredItemB;
+    for (auto& obj : aemlpc::LiveObjectRegistry::all()) {
         if (obj == room || obj == itemA || obj == itemB) continue;
         if (obj->filename() == "/ss_room") restoredRoom = obj;
         else if (obj->filename() == "/ss_item_a") restoredItemA = obj;
@@ -12924,8 +12924,8 @@ static void testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity() {
     // the exact same restored room instance the environment/inventory
     // placement above already resolved to, not a second, independent
     // reload of the same file.
-    amlp::Value home = harness2.vm.callFunction(restoredItemA, "get_home", {});
-    auto* homePtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&home.data);
+    aemlpc::Value home = harness2.vm.callFunction(restoredItemA, "get_home", {});
+    auto* homePtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&home.data);
     assert(homePtr != nullptr && *homePtr == restoredRoom);
     assert(*homePtr != room); // genuinely reconstructed, not the original
 
@@ -12944,9 +12944,9 @@ static void testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity() {
     // discipline STATUS.md's live-verification sessions already use for
     // on-disk test accounts.
     room->inventory().clear();
-    itemA->variables()[0] = amlp::Value{};
+    itemA->variables()[0] = aemlpc::Value{};
     restoredRoom->inventory().clear();
-    restoredItemA->variables()[0] = amlp::Value{};
+    restoredItemA->variables()[0] = aemlpc::Value{};
 
     std::cout << "testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity OK\n";
 }
@@ -12961,7 +12961,7 @@ static void testRestoreStateRejectsAFileWithoutTheMagicHeader() {
     f << "not a real statedump file\n";
     f.close();
 
-    amlp::StateSerializer serializer(harness.objects);
+    aemlpc::StateSerializer serializer(harness.objects);
     assert(serializer.restoreState(path) == false);
 
     std::cout << "testRestoreStateRejectsAFileWithoutTheMagicHeader OK\n";
@@ -13005,19 +13005,19 @@ static void testDumpStateAndRestoreStateEfunsRoundTripAnObjectVariable() {
     auto obj = harness.objects.cloneObject("/se_probe");
     assert(room != nullptr && obj != nullptr);
 
-    harness.vm.callFunction(obj, "go", {amlp::Value(room)});
-    harness.vm.callFunction(obj, "set_n", {amlp::Value(int64_t{99})});
+    harness.vm.callFunction(obj, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(obj, "set_n", {aemlpc::Value(int64_t{99})});
 
-    amlp::Value dumpResult = harness.vm.callFunction(obj, "dump", {amlp::Value(std::string("/se.state"))});
+    aemlpc::Value dumpResult = harness.vm.callFunction(obj, "dump", {aemlpc::Value(std::string("/se.state"))});
     assert(std::holds_alternative<int64_t>(dumpResult.data));
     assert(std::get<int64_t>(dumpResult.data) == 1);
 
-    amlp::Value restoreResult = harness.vm.callFunction(obj, "restore", {amlp::Value(std::string("/se.state"))});
+    aemlpc::Value restoreResult = harness.vm.callFunction(obj, "restore", {aemlpc::Value(std::string("/se.state"))});
     assert(std::holds_alternative<int64_t>(restoreResult.data));
     assert(std::get<int64_t>(restoreResult.data) == 1);
 
-    std::shared_ptr<amlp::LpcObject> restoredRoom, restored;
-    for (auto& live : amlp::LiveObjectRegistry::all()) {
+    std::shared_ptr<aemlpc::LpcObject> restoredRoom, restored;
+    for (auto& live : aemlpc::LiveObjectRegistry::all()) {
         if (live == room || live == obj) continue;
         if (live->filename() == "/se_room") restoredRoom = live;
         else if (live->filename() == "/se_probe") restored = live;
@@ -13025,7 +13025,7 @@ static void testDumpStateAndRestoreStateEfunsRoundTripAnObjectVariable() {
     assert(restoredRoom != nullptr && restored != nullptr);
     assert(restored->environment().lock() == restoredRoom);
 
-    amlp::Value n = harness.vm.callFunction(restored, "get_n", {});
+    aemlpc::Value n = harness.vm.callFunction(restored, "get_n", {});
     assert(std::get<int64_t>(n.data) == 99);
 
     std::cout << "testDumpStateAndRestoreStateEfunsRoundTripAnObjectVariable OK\n";
@@ -13070,29 +13070,29 @@ static void testDumpStateWorldSnapshotAndSaveObjectCharacterFileCoexistWithoutCo
 
     // The character's own save_object() file is written first, at n=1/
     // s="a". The values a real load_character() should restore.
-    harness1.vm.callFunction(obj, "set_vars", {amlp::Value(int64_t{1}), amlp::Value(std::string("a"))});
+    harness1.vm.callFunction(obj, "set_vars", {aemlpc::Value(int64_t{1}), aemlpc::Value(std::string("a"))});
     std::string charPath = harness1.tempDir + "/dp_char.o";
-    amlp::Value saveResult = harness1.vm.callFunction(obj, "save_char", {amlp::Value(std::string("/dp_char.o"))});
+    aemlpc::Value saveResult = harness1.vm.callFunction(obj, "save_char", {aemlpc::Value(std::string("/dp_char.o"))});
     assert(std::get<int64_t>(saveResult.data) == 1);
 
     // The live object is then mutated further (n=2/s="b") before the
     // world snapshot runs. dump_state() must only ever see this live,
     // in-memory value, never the stale n=1/s="a" already sitting in the
     // character file on disk.
-    harness1.vm.callFunction(obj, "set_vars", {amlp::Value(int64_t{2}), amlp::Value(std::string("b"))});
+    harness1.vm.callFunction(obj, "set_vars", {aemlpc::Value(int64_t{2}), aemlpc::Value(std::string("b"))});
     std::string worldPath = harness1.tempDir + "/dp_world.dump";
-    amlp::Value dumpResult = harness1.vm.callFunction(obj, "dump_world", {amlp::Value(std::string("/dp_world.dump"))});
+    aemlpc::Value dumpResult = harness1.vm.callFunction(obj, "dump_world", {aemlpc::Value(std::string("/dp_world.dump"))});
     assert(std::get<int64_t>(dumpResult.data) == 1);
 
     // Restore the world snapshot into a completely separate
     // ObjectManager/VM, matching the row 2.1 regression precedent.
     ObjectVarHarness harness2;
     harness2.writeFile("/dp_probe.c", probeSrc);
-    amlp::StateSerializer restorer(harness2.objects);
+    aemlpc::StateSerializer restorer(harness2.objects);
     assert(restorer.restoreState(worldPath));
 
-    std::shared_ptr<amlp::LpcObject> restored;
-    for (auto& live : amlp::LiveObjectRegistry::all()) {
+    std::shared_ptr<aemlpc::LpcObject> restored;
+    for (auto& live : aemlpc::LiveObjectRegistry::all()) {
         if (live == obj) continue;
         if (live->filename() == "/dp_probe") restored = live;
     }
@@ -13101,8 +13101,8 @@ static void testDumpStateWorldSnapshotAndSaveObjectCharacterFileCoexistWithoutCo
     // World-restored state is exactly the live value at dump time (2/"b"),
     // not the character file's stale (1/"a"). dump_state() never read
     // that file at all.
-    amlp::Value worldN = harness2.vm.callFunction(restored, "get_n", {});
-    amlp::Value worldS = harness2.vm.callFunction(restored, "get_s", {});
+    aemlpc::Value worldN = harness2.vm.callFunction(restored, "get_n", {});
+    aemlpc::Value worldS = harness2.vm.callFunction(restored, "get_s", {});
     assert(std::get<int64_t>(worldN.data) == 2);
     assert(std::get<std::string>(worldS.data) == "b");
 
@@ -13122,7 +13122,7 @@ static void testDumpStateWorldSnapshotAndSaveObjectCharacterFileCoexistWithoutCo
     charBuf << charIn.rdbuf();
     harness2.writeFile("/dp_char.o", charBuf.str());
 
-    amlp::Value restoreCharResult = harness2.vm.callFunction(restored, "restore_char", {amlp::Value(std::string("/dp_char.o"))});
+    aemlpc::Value restoreCharResult = harness2.vm.callFunction(restored, "restore_char", {aemlpc::Value(std::string("/dp_char.o"))});
     assert(std::get<int64_t>(restoreCharResult.data) == 1);
 
     // The character file's own values (1/"a") now win, cleanly
@@ -13130,8 +13130,8 @@ static void testDumpStateWorldSnapshotAndSaveObjectCharacterFileCoexistWithoutCo
     // real load_character() call does to a freshly cloned object today,
     // proving a world-restored object is not distinguishable from an
     // ordinary one as far as restore_object() is concerned.
-    amlp::Value charN = harness2.vm.callFunction(restored, "get_n", {});
-    amlp::Value charS = harness2.vm.callFunction(restored, "get_s", {});
+    aemlpc::Value charN = harness2.vm.callFunction(restored, "get_n", {});
+    aemlpc::Value charS = harness2.vm.callFunction(restored, "get_s", {});
     assert(std::get<int64_t>(charN.data) == 1);
     assert(std::get<std::string>(charS.data) == "a");
 
@@ -13172,14 +13172,14 @@ static void testEvaluateOfEfunBoundClosureSetsCurrentObjectToClosureOwnerNotCall
     auto middleman = harness.objects.cloneObject("/middleman_probe");
     assert(middleman != nullptr);
 
-    amlp::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
-    auto closurePtr = std::get<std::shared_ptr<amlp::Closure>>(closureVal.data);
+    aemlpc::Value closureVal = harness.vm.callFunction(owner, "make_closure", {});
+    auto closurePtr = std::get<std::shared_ptr<aemlpc::Closure>>(closureVal.data);
     assert(closurePtr != nullptr);
 
     // middleman calls evaluate() on a closure it did not build.
     // vm.currentObject() during save_object()'s own execution must
     // still be "owner", not "middleman".
-    amlp::Value saveResult = harness.vm.callFunction(middleman, "run", {closureVal});
+    aemlpc::Value saveResult = harness.vm.callFunction(middleman, "run", {closureVal});
     assert(std::holds_alternative<int64_t>(saveResult.data));
     assert(std::get<int64_t>(saveResult.data) == 1);
 
@@ -13194,10 +13194,10 @@ static void testEvaluateOfEfunBoundClosureSetsCurrentObjectToClosureOwnerNotCall
         "int query_marker() { return marker; }\n");
     auto restoreObj = harness.objects.cloneObject("/restore_probe");
     assert(restoreObj != nullptr);
-    amlp::Value loaded = harness.vm.callFunction(restoreObj, "load", {});
+    aemlpc::Value loaded = harness.vm.callFunction(restoreObj, "load", {});
     assert(std::holds_alternative<int64_t>(loaded.data));
     assert(std::get<int64_t>(loaded.data) == 1);
-    amlp::Value marker = harness.vm.callFunction(restoreObj, "query_marker", {});
+    aemlpc::Value marker = harness.vm.callFunction(restoreObj, "query_marker", {});
     assert(std::holds_alternative<int64_t>(marker.data));
     assert(std::get<int64_t>(marker.data) == 99);
 
@@ -13233,7 +13233,7 @@ static void testLoadObjectFallsBackToCompileObjectOnMissingSourceFile() {
     auto ob = harness.objects.loadObject("/secure/save/users/t/testchar");
     assert(ob != nullptr);
 
-    amlp::Value marker = harness.vm.callFunction(ob, "query_marker", {});
+    aemlpc::Value marker = harness.vm.callFunction(ob, "query_marker", {});
     assert(std::holds_alternative<int64_t>(marker.data));
     assert(std::get<int64_t>(marker.data) == 7);
 
@@ -13277,7 +13277,7 @@ static void testLoadObjectCachesVirtualObjectAcrossRepeatedCalls() {
     assert(second != nullptr);
     assert(first == second); // same cached object, not a fresh compile_object() call
 
-    amlp::Value calls = harness.vm.callFunction(master, "query_calls", {});
+    aemlpc::Value calls = harness.vm.callFunction(master, "query_calls", {});
     assert(std::holds_alternative<int64_t>(calls.data));
     assert(std::get<int64_t>(calls.data) == 1);
 
@@ -13319,13 +13319,13 @@ static void testLoadObjectAndCloneObjectAutoPopulatePrivsFromMasterPrivsFile() {
 
     auto loaded = harness.objects.loadObject("/priv_item");
     assert(loaded != nullptr);
-    amlp::Value loadedPrivs = harness.vm.callFunction(loaded, "probe", {});
+    aemlpc::Value loadedPrivs = harness.vm.callFunction(loaded, "probe", {});
     auto* loadedStr = std::get_if<std::string>(&loadedPrivs.data);
     assert(loadedStr != nullptr && *loadedStr == "TestPriv");
 
     auto cloned = harness.objects.cloneObject("/priv_item");
     assert(cloned != nullptr);
-    amlp::Value clonedPrivs = harness.vm.callFunction(cloned, "probe", {});
+    aemlpc::Value clonedPrivs = harness.vm.callFunction(cloned, "probe", {});
     auto* clonedStr = std::get_if<std::string>(&clonedPrivs.data);
     assert(clonedStr != nullptr && *clonedStr == "TestPriv");
 
@@ -13351,33 +13351,33 @@ static void testExplodeStripsAllLeadingSeparatorsAndNeverEmitsTrailingEmpty() {
     assert(ob != nullptr);
 
     // Leading "/" stripped entirely. Path[0] must be "domains", not "".
-    amlp::Value leading = harness.vm.callFunction(ob, "leading",
-        {amlp::Value(std::string("/domains/Praxis/rift_survivor"))});
-    auto* leadingArr = std::get_if<std::shared_ptr<amlp::Array>>(&leading.data);
+    aemlpc::Value leading = harness.vm.callFunction(ob, "leading",
+        {aemlpc::Value(std::string("/domains/Praxis/rift_survivor"))});
+    auto* leadingArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&leading.data);
     assert(leadingArr != nullptr && (*leadingArr)->items.size() == 3);
     assert(std::get<std::string>((*leadingArr)->items[0].data) == "domains");
     assert(std::get<std::string>((*leadingArr)->items[1].data) == "Praxis");
     assert(std::get<std::string>((*leadingArr)->items[2].data) == "rift_survivor");
 
     // Trailing separator: no spurious trailing "" element.
-    amlp::Value trailing = harness.vm.callFunction(ob, "trailing",
-        {amlp::Value(std::string("line one\nline two\n"))});
-    auto* trailingArr = std::get_if<std::shared_ptr<amlp::Array>>(&trailing.data);
+    aemlpc::Value trailing = harness.vm.callFunction(ob, "trailing",
+        {aemlpc::Value(std::string("line one\nline two\n"))});
+    auto* trailingArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&trailing.data);
     assert(trailingArr != nullptr && (*trailingArr)->items.size() == 2);
     assert(std::get<std::string>((*trailingArr)->items[1].data) == "line two");
 
     // A separator in the middle still produces an empty element there.
     // Only LEADING runs are collapsed, nothing in the middle is special.
-    amlp::Value middle = harness.vm.callFunction(ob, "middle",
-        {amlp::Value(std::string("a//b"))});
-    auto* middleArr = std::get_if<std::shared_ptr<amlp::Array>>(&middle.data);
+    aemlpc::Value middle = harness.vm.callFunction(ob, "middle",
+        {aemlpc::Value(std::string("a//b"))});
+    auto* middleArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&middle.data);
     assert(middleArr != nullptr && (*middleArr)->items.size() == 3);
     assert(std::get<std::string>((*middleArr)->items[1].data) == "");
 
     // A string made entirely of the separator explodes to an empty array.
-    amlp::Value allSeps = harness.vm.callFunction(ob, "all_seps",
-        {amlp::Value(std::string("///"))});
-    auto* allSepsArr = std::get_if<std::shared_ptr<amlp::Array>>(&allSeps.data);
+    aemlpc::Value allSeps = harness.vm.callFunction(ob, "all_seps",
+        {aemlpc::Value(std::string("///"))});
+    auto* allSepsArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&allSeps.data);
     assert(allSepsArr != nullptr && (*allSepsArr)->items.empty());
 
     std::cout << "testExplodeStripsAllLeadingSeparatorsAndNeverEmitsTrailingEmpty OK\n";
@@ -13406,11 +13406,11 @@ static void testNewEfunIsAnAliasOfCloneObject() {
     auto caller = harness.objects.cloneObject("/new_probe");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* obPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* obPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&result.data);
     assert(obPtr != nullptr && *obPtr != nullptr);
 
-    amlp::Value marker = harness.vm.callFunction(*obPtr, "query_marker", {});
+    aemlpc::Value marker = harness.vm.callFunction(*obPtr, "query_marker", {});
     assert(std::holds_alternative<int64_t>(marker.data));
     assert(std::get<int64_t>(marker.data) == 55);
 
@@ -13435,12 +13435,12 @@ static void testStatusTypeKeywordParsesAsPlainIntSynonym() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "set_it", {});
-    amlp::Value result = vm.callFunction(obj, "get_it", {});
+    aemlpc::Value result = vm.callFunction(obj, "get_it", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 2);
 
@@ -13462,11 +13462,11 @@ static void testFunctionDeclWithOnlyModifiersAndNoTypeParses() {
         "int call_it() { return probe(); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "call_it", {});
+    aemlpc::Value result = vm.callFunction(obj, "call_it", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 5);
 
@@ -13494,11 +13494,11 @@ static void testBareBlockStatementScopesLocalsAndExecutesInline() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -13513,14 +13513,14 @@ static void testBareBlockStatementScopesLocalsAndExecutesInline() {
 // ---------------------------------------------------------------------
 
 static void testFromEndSingleIndexOnStringAndArray() {
-    amlp::Value strResult = runProbe(
+    aemlpc::Value strResult = runProbe(
         "string s;\n"
         "s = \"hello\";\n"
         "return s[<1];\n"); // last char: 'o' (111)
     assert(std::holds_alternative<int64_t>(strResult.data));
     assert(std::get<int64_t>(strResult.data) == 'o');
 
-    amlp::Value arrResult = runProbe(
+    aemlpc::Value arrResult = runProbe(
         "mixed *items;\n"
         "items = ({ 10, 20, 30 });\n"
         "return items[<2];\n"); // second-to-last: 20
@@ -13533,7 +13533,7 @@ static void testFromEndSingleIndexOnStringAndArray() {
 static void testFromEndOpenRangeMatchesRealUserCShape() {
     // Mirrors std/user.c's own "files[j][<2..] != \".o\"" shape exactly:
     // the last 2 characters of a string.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string name;\n"
         "name = \"testchar.o\";\n"
         "return name[<2..];\n");
@@ -13545,11 +13545,11 @@ static void testFromEndOpenRangeMatchesRealUserCShape() {
 
 static void testFromEndBothBoundsOnRangeIndex() {
     // "arr[<a..<b]". Both bounds counted from the end.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *items;\n"
         "items = ({ 1, 2, 3, 4, 5 });\n"
         "return items[<4..<2];\n"); // indices 1..3 -> ({2,3,4})
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr != nullptr);
     assert((*arr)->items.size() == 3);
     assert(std::get<int64_t>((*arr)->items[0].data) == 2);
@@ -13565,7 +13565,7 @@ static void testFromEndStartBeyondLengthClampsToZeroInsteadOfThrowing() {
     // legitimate outcome when N is at least the target's length, not a
     // caller mistake the way a bare negative literal (no "<") is
     // (see testStringRangeIndexNegativeStartThrows, unaffected by this).
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string s;\n"
         "s = \"hi\";\n"
         "return s[<10..];\n");
@@ -13584,7 +13584,7 @@ static void testFromEndStartBeyondLengthClampsToZeroInsteadOfThrowing() {
 // ---------------------------------------------------------------------
 
 static void testCompoundIndexAssignOnSingleLevelMapping() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([ \"a\": 10 ]);\n"
         "m[\"a\"] += 5;\n"
@@ -13598,7 +13598,7 @@ static void testCompoundIndexAssignOnSingleLevelMapping() {
 static void testCompoundIndexAssignOnChainedNestedMappingMatchesRealUserCShape() {
     // Mirrors std/user.c's own "player_data[\"general\"][\"quest
     // points\"] += ..." exactly: a nested mapping-of-mappings target.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping player_data;\n"
         "player_data = ([ \"general\": ([ \"quest points\": 3 ]) ]);\n"
         "player_data[\"general\"][\"quest points\"] += 7;\n"
@@ -13610,7 +13610,7 @@ static void testCompoundIndexAssignOnChainedNestedMappingMatchesRealUserCShape()
 }
 
 static void testCompoundIndexAssignOnArrayElement() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *items;\n"
         "items = ({ 1, 2, 3 });\n"
         "items[1] *= 10;\n"
@@ -13635,21 +13635,21 @@ static void testIndexAssignAsSubExpressionParsesToIndexAssignExpr() {
         "    mapping m;\n"
         "    if(!(m[\"class\"] = cl)) m[\"class\"] = \"info\";\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* ifStmt = dynamic_cast<amlp::IfStmt*>(body[1].get());
+    auto* ifStmt = dynamic_cast<aemlpc::IfStmt*>(body[1].get());
     assert(ifStmt != nullptr);
-    auto* notExpr = dynamic_cast<amlp::UnaryExpr*>(ifStmt->condition.get());
-    assert(notExpr != nullptr && notExpr->op == amlp::UnaryOp::Not);
-    auto* idxAssign = dynamic_cast<amlp::IndexAssignExpr*>(notExpr->operand.get());
+    auto* notExpr = dynamic_cast<aemlpc::UnaryExpr*>(ifStmt->condition.get());
+    assert(notExpr != nullptr && notExpr->op == aemlpc::UnaryOp::Not);
+    auto* idxAssign = dynamic_cast<aemlpc::IndexAssignExpr*>(notExpr->operand.get());
     assert(idxAssign != nullptr);
     assert(idxAssign->isCompound == false);
-    auto* target = dynamic_cast<amlp::VarRefExpr*>(idxAssign->target.get());
+    auto* target = dynamic_cast<aemlpc::VarRefExpr*>(idxAssign->target.get());
     assert(target != nullptr && target->name == "m");
-    auto* key = dynamic_cast<amlp::StringLiteral*>(idxAssign->index.get());
+    auto* key = dynamic_cast<aemlpc::StringLiteral*>(idxAssign->index.get());
     assert(key != nullptr && key->value == "class");
 
     std::cout << "testIndexAssignAsSubExpressionParsesToIndexAssignExpr OK\n";
@@ -13660,7 +13660,7 @@ static void testIndexAssignAsSubExpressionVmExecutionMatchesMoreCShape() {
     // "if(!(__More[\"class\"] = cl)) __More[\"class\"] = \"info\";"
     // exactly: a non-empty cl leaves the assigned value in place, and
     // the assignment's own value (not 0/1) is what the "!" tests.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([]);\n"
         "string cl;\n"
@@ -13677,7 +13677,7 @@ static void testIndexAssignAsSubExpressionFallsThroughOnEmptyString() {
     // An empty string is falsy in LPC, so "!(m[\"class\"] = cl)" is true
     // and the fallback assignment runs, exactly like more.c's own
     // "__More[\"class\"] = \"info\"" default when no class was passed.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([]);\n"
         "string cl;\n"
@@ -13704,19 +13704,19 @@ static void testInlineLambdaWithCallExpressionFirstOperandParsesAsInlineLambdaEx
         "    mixed f;\n"
         "    f = (: previous_object(), \"abort\" :);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assignStmt = dynamic_cast<amlp::AssignStmt*>(body[1].get());
+    auto* assignStmt = dynamic_cast<aemlpc::AssignStmt*>(body[1].get());
     assert(assignStmt != nullptr);
-    auto* lambda = dynamic_cast<amlp::InlineLambdaExpr*>(assignStmt->value.get());
+    auto* lambda = dynamic_cast<aemlpc::InlineLambdaExpr*>(assignStmt->value.get());
     assert(lambda != nullptr);
     assert(lambda->bodyExprs.size() == 2);
-    auto* firstCall = dynamic_cast<amlp::CallExpr*>(lambda->bodyExprs[0].get());
+    auto* firstCall = dynamic_cast<aemlpc::CallExpr*>(lambda->bodyExprs[0].get());
     assert(firstCall != nullptr && firstCall->callee == "previous_object");
-    auto* secondStr = dynamic_cast<amlp::StringLiteral*>(lambda->bodyExprs[1].get());
+    auto* secondStr = dynamic_cast<aemlpc::StringLiteral*>(lambda->bodyExprs[1].get());
     assert(secondStr != nullptr && secondStr->value == "abort");
 
     std::cout << "testInlineLambdaWithCallExpressionFirstOperandParsesAsInlineLambdaExpr OK\n";
@@ -13728,17 +13728,17 @@ static void testInlineLambdaBareStringConstantParsesAsInlineLambdaExpr() {
         "    mixed f;\n"
         "    f = (: \"return_to_edit\" :);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* assignStmt = dynamic_cast<amlp::AssignStmt*>(body[1].get());
+    auto* assignStmt = dynamic_cast<aemlpc::AssignStmt*>(body[1].get());
     assert(assignStmt != nullptr);
-    auto* lambda = dynamic_cast<amlp::InlineLambdaExpr*>(assignStmt->value.get());
+    auto* lambda = dynamic_cast<aemlpc::InlineLambdaExpr*>(assignStmt->value.get());
     assert(lambda != nullptr);
     assert(lambda->bodyExprs.size() == 1);
-    auto* str = dynamic_cast<amlp::StringLiteral*>(lambda->bodyExprs[0].get());
+    auto* str = dynamic_cast<aemlpc::StringLiteral*>(lambda->bodyExprs[0].get());
     assert(str != nullptr && str->value == "return_to_edit");
 
     std::cout << "testInlineLambdaBareStringConstantParsesAsInlineLambdaExpr OK\n";
@@ -13784,7 +13784,7 @@ static void testInlineLambdaVmExecutionEvaluatesBodyAtCallTimeNotConstructionTim
         "}\n");
     auto obj = harness.objects.cloneObject("/lambda_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     // before == 0 (not yet run), side_effect == 1 (ran once evaluate()
     // called it), called == "abort" (the string, not a method call).
@@ -13807,7 +13807,7 @@ static void testInlineLambdaVmExecutionEvaluatesBodyAtCallTimeNotConstructionTim
 // halves of what distinguishes this form from the existing closure
 // literal, not just that the syntax parses.
 static void testAnonFunctionExprWithNamedParamAndRealBlockBodyVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed f;\n"
         "f = function(int n) {\n"
         "    if (n < 0) {\n"
@@ -13828,7 +13828,7 @@ static void testAnonFunctionExprWithNamedParamAndRealBlockBodyVmExecution() {
 // first, and called by the *callee* (filter_array's own real per-
 // element invocation), not by the constructing code itself.
 static void testAnonFunctionExprAsFilterArrayPredicateVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *nums;\n"
         "nums = filter(({ 1, 2, 3, 4, 5, 6 }), function(int x) {\n"
         "    return x % 2 == 0;\n"
@@ -13861,7 +13861,7 @@ static void testAnonFunctionExprReadsAndWritesOwningObjectsOwnObjectVariableVmEx
         "}\n");
     auto obj = harness.objects.cloneObject("/anonfn_objvar_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 12);
 
@@ -13880,7 +13880,7 @@ static void testAnonFunctionExprReadsAndWritesOwningObjectsOwnObjectVariableVmEx
 // mechanism a real call_out() would use to thread "prev" through also
 // works for this closure kind with zero further driver changes.
 static void testAnonFunctionExprReceivesEnclosingStateOnlyViaExplicitCallArgumentVmExecution() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int prev;\n"
         "prev = 77;\n"
         "mixed f;\n"
@@ -13914,7 +13914,7 @@ static void testAnonFunctionExprCannotReferenceEnclosingFunctionsOwnLocal() {
             "mixed f;\n"
             "f = function() { return n; };\n"
             "return funcall(f);\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -13930,7 +13930,7 @@ static void testAnonFunctionExprCannotReferenceEnclosingFunctionsOwnLocal() {
 // can itself queue the *other* kind, which a single non-alternating
 // pass over each list would miss entirely.
 static void testAnonFunctionExprAndInlineLambdaNestInsideEachOtherVmExecution() {
-    amlp::Value outerAnonInnerLambda = runProbe(
+    aemlpc::Value outerAnonInnerLambda = runProbe(
         "mixed f;\n"
         "f = function(int x) {\n"
         "    mixed g;\n"
@@ -13941,7 +13941,7 @@ static void testAnonFunctionExprAndInlineLambdaNestInsideEachOtherVmExecution() 
     assert(std::holds_alternative<int64_t>(outerAnonInnerLambda.data));
     assert(std::get<int64_t>(outerAnonInnerLambda.data) == 50); // (4+1)*10
 
-    amlp::Value outerLambdaInnerAnon = runProbe(
+    aemlpc::Value outerLambdaInnerAnon = runProbe(
         "mixed g;\n"
         "g = (: funcall(function(int y) { return y * 2; }, $1) :);\n"
         "return funcall(g, 6);\n");
@@ -13961,7 +13961,7 @@ static void testAnonFunctionExprAndInlineLambdaNestInsideEachOtherVmExecution() 
 // simul_efun in secure/SimulEfun/time.c and light.c that depends on it.
 
 static void testDollarLambdaParamBindsClosuresOwnFirstCallTimeArgument() {
-    amlp::Value result = runProbe("return funcall((: $1 + 1 :), 41);");
+    aemlpc::Value result = runProbe("return funcall((: $1 + 1 :), 41);");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
     std::cout << "testDollarLambdaParamBindsClosuresOwnFirstCallTimeArgument OK\n";
@@ -13972,7 +13972,7 @@ static void testDollarLambdaParamMultipleParametersBindPositionally() {
     // closure. Real lex.c: num_parameters tracks the *highest* digit
     // seen, not a count of distinct ones used. Confirmed by also
     // exercising $1 out of order (referenced second) in the same body.
-    amlp::Value result = runProbe("return funcall((: $2 * 10 + $1 :), 2, 4);");
+    aemlpc::Value result = runProbe("return funcall((: $2 * 10 + $1 :), 2, 4);");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
     std::cout << "testDollarLambdaParamMultipleParametersBindPositionally OK\n";
@@ -14001,12 +14001,12 @@ static void testDollarLambdaParamFilterMatchesRealEventsDShape() {
     assert(room != nullptr && placed != nullptr && homeless != nullptr && probe != nullptr);
     harness.vm.moveObject(placed, room);
 
-    amlp::Value result = harness.vm.callFunction(
-        probe, "probe", {amlp::Value(placed), amlp::Value(homeless)});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(
+        probe, "probe", {aemlpc::Value(placed), aemlpc::Value(homeless)});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr != nullptr && *arrPtr != nullptr);
     assert((*arrPtr)->items.size() == 1);
-    auto* keptPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&(*arrPtr)->items[0].data);
+    auto* keptPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&(*arrPtr)->items[0].data);
     assert(keptPtr != nullptr && *keptPtr == placed);
 
     std::cout << "testDollarLambdaParamFilterMatchesRealEventsDShape OK\n";
@@ -14019,10 +14019,10 @@ static void testDollarParamOutsideLambdaBodyThrowsParseError() {
     std::string src = "int probe() {\n    return $1;\n}\n";
     bool threw = false;
     try {
-        amlp::Lexer lexer(src);
-        amlp::Parser parser(lexer.tokenize());
+        aemlpc::Lexer lexer(src);
+        aemlpc::Parser parser(lexer.tokenize());
         parser.parseProgram();
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("illegal outside of function pointer") != std::string::npos);
@@ -14041,10 +14041,10 @@ static void testDollarParenOutsideLambdaBodyThrowsParseError() {
     std::string src = "int probe() {\n    int x;\n    return $(x);\n}\n";
     bool threw = false;
     try {
-        amlp::Lexer lexer(src);
-        amlp::Parser parser(lexer.tokenize());
+        aemlpc::Lexer lexer(src);
+        aemlpc::Parser parser(lexer.tokenize());
         parser.parseProgram();
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("illegal outside of function pointer") != std::string::npos);
@@ -14079,7 +14079,7 @@ static void testDollarParenBoundValueCapturesEnclosingScopeAtConstructionTimeVmE
         "}\n");
     auto obj = harness.objects.cloneObject("/dollarparen_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     // evaluate(f, 5): captured target (5, at construction time) == 5 -> 1.
     // evaluate(f, 99): captured target (still 5, not the later 99) == 99 -> 0.
@@ -14105,7 +14105,7 @@ static void testDollarParenMultipleBoundValuesAssignedSequentialSlotsInEncounter
         "}\n");
     auto obj = harness.objects.cloneObject("/dollarparen_multi_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 703);
 
@@ -14134,7 +14134,7 @@ static void testDollarParenBoundValueCapturesEnclosingFunctionsOwnLocalUsedAsFil
         "}\n");
     auto obj = harness.objects.cloneObject("/dollarparen_filter_probe");
     assert(obj != nullptr);
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 4);
 
@@ -14155,21 +14155,21 @@ static void testFunctionPointerCallThroughParsesToForcedEvaluateCall() {
         "void probe(function cb, mixed args) {\n"
         "    (*cb)(args);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
     assert(exprStmt != nullptr);
-    auto* call = dynamic_cast<amlp::CallExpr*>(exprStmt->expr.get());
+    auto* call = dynamic_cast<aemlpc::CallExpr*>(exprStmt->expr.get());
     assert(call != nullptr);
     assert(call->callee == "evaluate");
     assert(call->forceEfun == true);
     assert(call->args.size() == 2);
-    auto* fpArg = dynamic_cast<amlp::VarRefExpr*>(call->args[0].get());
+    auto* fpArg = dynamic_cast<aemlpc::VarRefExpr*>(call->args[0].get());
     assert(fpArg != nullptr && fpArg->name == "cb");
-    auto* argsArg = dynamic_cast<amlp::VarRefExpr*>(call->args[1].get());
+    auto* argsArg = dynamic_cast<aemlpc::VarRefExpr*>(call->args[1].get());
     assert(argsArg != nullptr && argsArg->name == "args");
 
     std::cout << "testFunctionPointerCallThroughParsesToForcedEvaluateCall OK\n";
@@ -14182,16 +14182,16 @@ static void testFunctionPointerCallThroughOnIndexedTargetParses() {
         "void probe(mapping m) {\n"
         "    (*m[\"endfun\"])(m[\"args\"]);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* exprStmt = dynamic_cast<amlp::ExprStmt*>(body[0].get());
-    auto* call = dynamic_cast<amlp::CallExpr*>(exprStmt->expr.get());
+    auto* exprStmt = dynamic_cast<aemlpc::ExprStmt*>(body[0].get());
+    auto* call = dynamic_cast<aemlpc::CallExpr*>(exprStmt->expr.get());
     assert(call != nullptr && call->forceEfun && call->callee == "evaluate");
     assert(call->args.size() == 2);
-    auto* fpArg = dynamic_cast<amlp::IndexExpr*>(call->args[0].get());
+    auto* fpArg = dynamic_cast<aemlpc::IndexExpr*>(call->args[0].get());
     assert(fpArg != nullptr);
 
     std::cout << "testFunctionPointerCallThroughOnIndexedTargetParses OK\n";
@@ -14203,7 +14203,7 @@ static void testFunctionPointerCallThroughVmExecutionCallsClosure() {
     // names), so a correct array-length result here confirms the
     // "(*f)(...)" desugaring genuinely reached
     // evaluate()->VM::callClosure(), not just that it parsed.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed f;\n"
         "f = (: sizeof :);\n"
         "return (*f)(({ 1, 2, 3, 4 }));\n");
@@ -14219,14 +14219,14 @@ static void testFunctionPointerCallThroughVmExecutionCallsClosure() {
 // ---------------------------------------------------------------------
 
 static void testToIntPassesThroughAnInt() {
-    amlp::Value result = runProbe("return to_int(42);\n");
+    aemlpc::Value result = runProbe("return to_int(42);\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
     std::cout << "testToIntPassesThroughAnInt OK\n";
 }
 
 static void testToIntTruncatesAFloatTowardZero() {
-    amlp::Value result = runProbe("return to_int(5.9) * 100 + to_int(-5.9);\n");
+    aemlpc::Value result = runProbe("return to_int(5.9) * 100 + to_int(-5.9);\n");
     assert(std::holds_alternative<int64_t>(result.data));
     // f__to_int()'s real "(long) sp->u.real" cast truncates toward
     // zero, not round-to-nearest or floor: 5.9 -> 5, -5.9 -> -5.
@@ -14235,7 +14235,7 @@ static void testToIntTruncatesAFloatTowardZero() {
 }
 
 static void testToIntParsesALeadingIntegerFromAStringIgnoringTrailingGarbage() {
-    amlp::Value result = runProbe("return to_int(\"10x\");\n");
+    aemlpc::Value result = runProbe("return to_int(\"10x\");\n");
     assert(std::holds_alternative<int64_t>(result.data));
     // Real f__to_int()'s own documented behavior: "to_int(\"10x\") == 10".
     assert(std::get<int64_t>(result.data) == 10);
@@ -14243,7 +14243,7 @@ static void testToIntParsesALeadingIntegerFromAStringIgnoringTrailingGarbage() {
 }
 
 static void testToIntReturnsZeroForAStringWithNoLeadingNumber() {
-    amlp::Value result = runProbe("return to_int(\"nothing here\");\n");
+    aemlpc::Value result = runProbe("return to_int(\"nothing here\");\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
     std::cout << "testToIntReturnsZeroForAStringWithNoLeadingNumber OK\n";
@@ -14284,11 +14284,11 @@ static void testPrivateObjectVariableDoesNotCollideWithChildsOwnSameNamedVariabl
     // the parent's own inherited function), and the child's separate
     // "tag" is 2 (set by the child's own create(), reachable only
     // through the child's own function).
-    amlp::Value parentResult = harness.vm.callFunction(obj, "query_parent_tag", {});
+    aemlpc::Value parentResult = harness.vm.callFunction(obj, "query_parent_tag", {});
     assert(std::holds_alternative<int64_t>(parentResult.data));
     assert(std::get<int64_t>(parentResult.data) == 1);
 
-    amlp::Value childResult = harness.vm.callFunction(obj, "query_child_tag", {});
+    aemlpc::Value childResult = harness.vm.callFunction(obj, "query_child_tag", {});
     assert(std::holds_alternative<int64_t>(childResult.data));
     assert(std::get<int64_t>(childResult.data) == 2);
 
@@ -14347,13 +14347,13 @@ static void testSiblingLeafObjectVariablesDoNotAliasEachOther() {
     auto obj = harness.objects.cloneObject("/multi_sibling_child");
     assert(obj != nullptr);
 
-    amlp::Value a1 = harness.vm.callFunction(obj, "query_a1", {});
-    amlp::Value a2 = harness.vm.callFunction(obj, "query_a2", {});
-    amlp::Value a3 = harness.vm.callFunction(obj, "query_a3", {});
-    amlp::Value b1 = harness.vm.callFunction(obj, "query_b1", {});
-    amlp::Value b2 = harness.vm.callFunction(obj, "query_b2", {});
-    amlp::Value b3 = harness.vm.callFunction(obj, "query_b3", {});
-    amlp::Value b4 = harness.vm.callFunction(obj, "query_b4", {});
+    aemlpc::Value a1 = harness.vm.callFunction(obj, "query_a1", {});
+    aemlpc::Value a2 = harness.vm.callFunction(obj, "query_a2", {});
+    aemlpc::Value a3 = harness.vm.callFunction(obj, "query_a3", {});
+    aemlpc::Value b1 = harness.vm.callFunction(obj, "query_b1", {});
+    aemlpc::Value b2 = harness.vm.callFunction(obj, "query_b2", {});
+    aemlpc::Value b3 = harness.vm.callFunction(obj, "query_b3", {});
+    aemlpc::Value b4 = harness.vm.callFunction(obj, "query_b4", {});
 
     assert(std::get<int64_t>(a1.data) == 10);
     assert(std::get<int64_t>(a2.data) == 11);
@@ -14407,11 +14407,11 @@ static void testObjectVariableOffsetsComposeAcrossMultiLevelInheritChain() {
     auto obj = harness.objects.cloneObject("/deep_leaf");
     assert(obj != nullptr);
 
-    amlp::Value rootVal = harness.vm.callFunction(obj, "query_root_val", {});
-    amlp::Value midVal = harness.vm.callFunction(obj, "query_mid_val", {});
-    amlp::Value sib1 = harness.vm.callFunction(obj, "query_sib1", {});
-    amlp::Value sib2 = harness.vm.callFunction(obj, "query_sib2", {});
-    amlp::Value leafVal = harness.vm.callFunction(obj, "query_leaf_val", {});
+    aemlpc::Value rootVal = harness.vm.callFunction(obj, "query_root_val", {});
+    aemlpc::Value midVal = harness.vm.callFunction(obj, "query_mid_val", {});
+    aemlpc::Value sib1 = harness.vm.callFunction(obj, "query_sib1", {});
+    aemlpc::Value sib2 = harness.vm.callFunction(obj, "query_sib2", {});
+    aemlpc::Value leafVal = harness.vm.callFunction(obj, "query_leaf_val", {});
 
     assert(std::get<int64_t>(rootVal.data) == 100);
     assert(std::get<int64_t>(midVal.data) == 200);
@@ -14465,11 +14465,11 @@ static void testObjectVariableRedeclarationOverInheritedNameIsLegalShadowing() {
     harness.vm.callFunction(obj, "ancestor_set_alias", {});
     harness.vm.callFunction(obj, "leaf_set_alias", {});
 
-    amlp::Value ancAlias = harness.vm.callFunction(obj, "ancestor_query_alias", {});
-    amlp::Value leafAlias = harness.vm.callFunction(obj, "leaf_query_alias", {});
+    aemlpc::Value ancAlias = harness.vm.callFunction(obj, "ancestor_query_alias", {});
+    aemlpc::Value leafAlias = harness.vm.callFunction(obj, "leaf_query_alias", {});
 
-    auto* ancMap = std::get_if<std::shared_ptr<amlp::Mapping>>(&ancAlias.data);
-    auto* leafMap = std::get_if<std::shared_ptr<amlp::Mapping>>(&leafAlias.data);
+    auto* ancMap = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&ancAlias.data);
+    auto* leafMap = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&leafAlias.data);
     assert(ancMap != nullptr && *ancMap != nullptr);
     assert(leafMap != nullptr && *leafMap != nullptr);
     assert((*ancMap)->entries.size() == 1);
@@ -14493,7 +14493,7 @@ static void testEnvironmentDefaultsToNullBeforeAnyMove() {
     harness.writeFile("/env_lone.c", "object probe() { return environment(this_object()); }\n");
     auto ob = harness.objects.cloneObject("/env_lone");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::monostate>(result.data));
     std::cout << "testEnvironmentDefaultsToNullBeforeAnyMove OK\n";
 }
@@ -14509,10 +14509,10 @@ static void testMoveObjectUpdatesEnvironmentAndInventory() {
     auto item = harness.objects.cloneObject("/mo_item");
     assert(room != nullptr && item != nullptr);
 
-    harness.vm.callFunction(item, "go", {amlp::Value(room)});
+    harness.vm.callFunction(item, "go", {aemlpc::Value(room)});
 
-    amlp::Value env = harness.vm.callFunction(item, "probe_env", {});
-    auto* envPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&env.data);
+    aemlpc::Value env = harness.vm.callFunction(item, "probe_env", {});
+    auto* envPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&env.data);
     assert(envPtr != nullptr && *envPtr == room);
     assert(room->inventory().size() == 1);
     assert(room->inventory()[0] == item);
@@ -14537,13 +14537,13 @@ static void testEnableCommandsGatesWhetherMoveObjectRegistersDestinationActions(
     auto room1 = harness.objects.cloneObject("/ea_room");
     auto silent = harness.objects.cloneObject("/ea_silent_mover");
     assert(room1 != nullptr && silent != nullptr);
-    harness.vm.callFunction(silent, "go", {amlp::Value(room1)});
+    harness.vm.callFunction(silent, "go", {aemlpc::Value(room1)});
     assert(harness.vm.dispatchCommand(silent, "look") == false);
 
     auto room2 = harness.objects.cloneObject("/ea_room");
     auto enabled = harness.objects.cloneObject("/ea_enabled_mover");
     assert(room2 != nullptr && enabled != nullptr);
-    harness.vm.callFunction(enabled, "go", {amlp::Value(room2)});
+    harness.vm.callFunction(enabled, "go", {aemlpc::Value(room2)});
     assert(harness.vm.dispatchCommand(enabled, "look") == true);
 
     std::cout << "testEnableCommandsGatesWhetherMoveObjectRegistersDestinationActions OK\n";
@@ -14570,22 +14570,22 @@ static void testAllInventoryReturnsDirectChildrenOnlyNotGrandchildren() {
     auto inner = harness.objects.cloneObject("/ai_item");
     assert(room != nullptr && outer != nullptr && inner != nullptr);
 
-    harness.vm.callFunction(outer, "go", {amlp::Value(room)});
-    harness.vm.callFunction(inner, "go", {amlp::Value(outer)});
+    harness.vm.callFunction(outer, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(inner, "go", {aemlpc::Value(outer)});
 
-    amlp::Value result = harness.vm.callFunction(room, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(room, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
-    auto* childOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&(*arr)->items[0].data);
+    auto* childOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&(*arr)->items[0].data);
     assert(childOb != nullptr && *childOb == outer);
 
     // Default-argument form (this_object() when no argument given).
     harness.writeFile("/ai_default_probe.c",
         "object *probe() { return all_inventory(); }\n");
     auto defaultProbe = harness.objects.cloneObject("/ai_default_probe");
-    harness.vm.callFunction(outer, "go", {amlp::Value(defaultProbe)});
-    amlp::Value defResult = harness.vm.callFunction(defaultProbe, "probe", {});
-    auto* defArr = std::get_if<std::shared_ptr<amlp::Array>>(&defResult.data);
+    harness.vm.callFunction(outer, "go", {aemlpc::Value(defaultProbe)});
+    aemlpc::Value defResult = harness.vm.callFunction(defaultProbe, "probe", {});
+    auto* defArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&defResult.data);
     assert(defArr != nullptr && (*defArr)->items.size() == 1);
 
     std::cout << "testAllInventoryReturnsDirectChildrenOnlyNotGrandchildren OK\n";
@@ -14605,14 +14605,14 @@ static void testDeepInventoryRecursesThroughNestedChildren() {
     auto inner = harness.objects.cloneObject("/di_item");
     assert(room != nullptr && outer != nullptr && inner != nullptr);
 
-    harness.vm.callFunction(outer, "go", {amlp::Value(room)});
-    harness.vm.callFunction(inner, "go", {amlp::Value(outer)});
+    harness.vm.callFunction(outer, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(inner, "go", {aemlpc::Value(outer)});
 
-    amlp::Value result = harness.vm.callFunction(room, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(room, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 2);
-    auto* first = std::get_if<std::shared_ptr<amlp::LpcObject>>(&(*arr)->items[0].data);
-    auto* second = std::get_if<std::shared_ptr<amlp::LpcObject>>(&(*arr)->items[1].data);
+    auto* first = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&(*arr)->items[0].data);
+    auto* second = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&(*arr)->items[1].data);
     assert(first != nullptr && *first == outer);
     assert(second != nullptr && *second == inner);
 
@@ -14644,44 +14644,44 @@ static void testFirstInventoryAndNextInventoryWalkChildrenInMoveOrder() {
     auto itemC = harness.objects.cloneObject("/fi_item");
     assert(room != nullptr && itemA != nullptr && itemB != nullptr && itemC != nullptr);
 
-    harness.vm.callFunction(itemA, "go", {amlp::Value(room)});
-    harness.vm.callFunction(itemB, "go", {amlp::Value(room)});
-    harness.vm.callFunction(itemC, "go", {amlp::Value(room)});
+    harness.vm.callFunction(itemA, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(itemB, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(itemC, "go", {aemlpc::Value(room)});
 
     // first_inventory(room). Oldest occupant (itemA), not real
     // FluffOS's own newest-occupant answer, per this driver's own
     // append-order divergence noted above.
-    amlp::Value first =
-        harness.vm.callFunction(itemA, "probe_first", {amlp::Value(room)});
-    auto* firstOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&first.data);
+    aemlpc::Value first =
+        harness.vm.callFunction(itemA, "probe_first", {aemlpc::Value(room)});
+    auto* firstOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&first.data);
     assert(firstOb != nullptr && *firstOb == itemA);
 
     // next_inventory() walks siblings, oldest to newest: a -> b -> c -> 0.
-    amlp::Value nextOfA =
-        harness.vm.callFunction(itemA, "probe_next", {amlp::Value(itemA)});
-    auto* nextOfAOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&nextOfA.data);
+    aemlpc::Value nextOfA =
+        harness.vm.callFunction(itemA, "probe_next", {aemlpc::Value(itemA)});
+    auto* nextOfAOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&nextOfA.data);
     assert(nextOfAOb != nullptr && *nextOfAOb == itemB);
 
-    amlp::Value nextOfB =
-        harness.vm.callFunction(itemA, "probe_next", {amlp::Value(itemB)});
-    auto* nextOfBOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&nextOfB.data);
+    aemlpc::Value nextOfB =
+        harness.vm.callFunction(itemA, "probe_next", {aemlpc::Value(itemB)});
+    auto* nextOfBOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&nextOfB.data);
     assert(nextOfBOb != nullptr && *nextOfBOb == itemC);
 
     // itemC is the last sibling. 0, not itemA (no wraparound).
-    amlp::Value nextOfC =
-        harness.vm.callFunction(itemA, "probe_next", {amlp::Value(itemC)});
+    aemlpc::Value nextOfC =
+        harness.vm.callFunction(itemA, "probe_next", {aemlpc::Value(itemC)});
     assert(std::holds_alternative<std::monostate>(nextOfC.data));
 
     // An item with no children of its own. first_inventory() on it
     // returns 0, not an error.
-    amlp::Value emptyFirst =
-        harness.vm.callFunction(itemA, "probe_first", {amlp::Value(itemB)});
+    aemlpc::Value emptyFirst =
+        harness.vm.callFunction(itemA, "probe_first", {aemlpc::Value(itemB)});
     assert(std::holds_alternative<std::monostate>(emptyFirst.data));
 
     // Default-argument form (this_object() when no argument given).
     // Called as itemA's own method, so this_object() is itemA, whose own
     // inventory is empty.
-    amlp::Value defaultResult = harness.vm.callFunction(itemA, "probe_first_default", {});
+    aemlpc::Value defaultResult = harness.vm.callFunction(itemA, "probe_first_default", {});
     assert(std::holds_alternative<std::monostate>(defaultResult.data));
 
     std::cout << "testFirstInventoryAndNextInventoryWalkChildrenInMoveOrder OK\n";
@@ -14710,18 +14710,18 @@ static void testFirstInventoryStringArgumentResolvesOrThrows() {
     auto item = harness.objects.cloneObject("/fis_item");
     auto probe = harness.objects.cloneObject("/fis_probe");
     assert(room != nullptr && item != nullptr && probe != nullptr);
-    harness.vm.callFunction(item, "go", {amlp::Value(room)});
+    harness.vm.callFunction(item, "go", {aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        probe, "probe_path", {amlp::Value(std::string("/fis_room"))});
-    auto* resultOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(
+        probe, "probe_path", {aemlpc::Value(std::string("/fis_room"))});
+    auto* resultOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&result.data);
     assert(resultOb != nullptr && *resultOb == item);
 
     bool threwOnUnresolved = false;
     try {
         harness.vm.callFunction(
-            probe, "probe_path", {amlp::Value(std::string("/does/not/exist"))});
-    } catch (const amlp::LpcRuntimeError&) {
+            probe, "probe_path", {aemlpc::Value(std::string("/does/not/exist"))});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwOnUnresolved = true;
     }
     assert(threwOnUnresolved);
@@ -14729,7 +14729,7 @@ static void testFirstInventoryStringArgumentResolvesOrThrows() {
     bool threwOnBadArgType = false;
     try {
         harness.vm.callFunction(probe, "probe_bad_arg", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwOnBadArgType = true;
     }
     assert(threwOnBadArgType);
@@ -14775,9 +14775,9 @@ static void testFirstInventoryAndNextInventorySkipHiddenSiblingsUnlessPermitted(
     auto hidden = denying.objects.cloneObject("/hd_item");
     auto after = denying.objects.cloneObject("/hd_item");
     assert(room != nullptr && before != nullptr && hidden != nullptr && after != nullptr);
-    denying.vm.callFunction(before, "go", {amlp::Value(room)});
-    denying.vm.callFunction(hidden, "go", {amlp::Value(room)});
-    denying.vm.callFunction(after, "go", {amlp::Value(room)});
+    denying.vm.callFunction(before, "go", {aemlpc::Value(room)});
+    denying.vm.callFunction(hidden, "go", {aemlpc::Value(room)});
+    denying.vm.callFunction(after, "go", {aemlpc::Value(room)});
     // hidden has "wiz" privs. valid_hide(hidden) permits it to hide
     // itself; before/after never get "wiz" privs, so valid_hide() checked
     // with either of them as the *observer* stays denied.
@@ -14788,9 +14788,9 @@ static void testFirstInventoryAndNextInventorySkipHiddenSiblingsUnlessPermitted(
     // Observer is "before" (never hidden itself, no "wiz" privs).
     // first_inventory(room) must skip the hidden occupant entirely and
     // land on "before" itself, the oldest non-hidden occupant.
-    amlp::Value firstSeen =
-        denying.vm.callFunction(before, "probe_first", {amlp::Value(room)});
-    auto* firstSeenOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&firstSeen.data);
+    aemlpc::Value firstSeen =
+        denying.vm.callFunction(before, "probe_first", {aemlpc::Value(room)});
+    auto* firstSeenOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&firstSeen.data);
     assert(firstSeenOb != nullptr && *firstSeenOb == before);
 
     // next_inventory(before) from the same unprivileged observer must
@@ -14798,10 +14798,10 @@ static void testFirstInventoryAndNextInventorySkipHiddenSiblingsUnlessPermitted(
     // Confirms the same skip loop applies to next_inventory(), not just
     // first_inventory(), and that it skips a middle entry, not merely
     // the first one checked.
-    amlp::Value nextAfterBefore =
-        denying.vm.callFunction(before, "probe_next", {amlp::Value(before)});
+    aemlpc::Value nextAfterBefore =
+        denying.vm.callFunction(before, "probe_next", {aemlpc::Value(before)});
     auto* nextAfterBeforeOb =
-        std::get_if<std::shared_ptr<amlp::LpcObject>>(&nextAfterBefore.data);
+        std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&nextAfterBefore.data);
     assert(nextAfterBeforeOb != nullptr && *nextAfterBeforeOb == after);
 
     // Permitting master: the same hidden occupant is now returned.
@@ -14820,14 +14820,14 @@ static void testFirstInventoryAndNextInventorySkipHiddenSiblingsUnlessPermitted(
     auto hidden2 = permitting.objects.cloneObject("/hd2_item");
     auto visible2 = permitting.objects.cloneObject("/hd2_item");
     assert(room2 != nullptr && hidden2 != nullptr && visible2 != nullptr);
-    permitting.vm.callFunction(hidden2, "go", {amlp::Value(room2)});
-    permitting.vm.callFunction(visible2, "go", {amlp::Value(room2)});
+    permitting.vm.callFunction(hidden2, "go", {aemlpc::Value(room2)});
+    permitting.vm.callFunction(visible2, "go", {aemlpc::Value(room2)});
     permitting.vm.callFunction(hidden2, "hide", {});
 
-    amlp::Value firstPermitted =
-        permitting.vm.callFunction(visible2, "probe_first", {amlp::Value(room2)});
+    aemlpc::Value firstPermitted =
+        permitting.vm.callFunction(visible2, "probe_first", {aemlpc::Value(room2)});
     auto* firstPermittedOb =
-        std::get_if<std::shared_ptr<amlp::LpcObject>>(&firstPermitted.data);
+        std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&firstPermitted.data);
     assert(firstPermittedOb != nullptr && *firstPermittedOb == hidden2);
 
     std::cout << "testFirstInventoryAndNextInventorySkipHiddenSiblingsUnlessPermitted OK\n";
@@ -14846,16 +14846,16 @@ static void testStrcmpMatchesRealCComparisonSemantics() {
     auto ob = harness.objects.cloneObject("/sc_probe");
     assert(ob != nullptr);
 
-    amlp::Value eq = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("abc")), amlp::Value(std::string("abc"))});
+    aemlpc::Value eq = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("abc")), aemlpc::Value(std::string("abc"))});
     assert(std::get<int64_t>(eq.data) == 0);
 
-    amlp::Value lt = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("abc")), amlp::Value(std::string("abd"))});
+    aemlpc::Value lt = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("abc")), aemlpc::Value(std::string("abd"))});
     assert(std::get<int64_t>(lt.data) < 0);
 
-    amlp::Value gt = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("abd")), amlp::Value(std::string("abc"))});
+    aemlpc::Value gt = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("abd")), aemlpc::Value(std::string("abc"))});
     assert(std::get<int64_t>(gt.data) > 0);
 
     std::cout << "testStrcmpMatchesRealCComparisonSemantics OK\n";
@@ -14881,21 +14881,21 @@ static void testMapDeleteRemovesKeyInPlaceAndLeavesOthersIntact() {
     auto ob = harness.objects.cloneObject("/md_probe");
     assert(ob != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(ob, "setup", {});
+    aemlpc::Value before = harness.vm.callFunction(ob, "setup", {});
     assert(std::get<int64_t>(before.data) == 3);
 
-    amlp::Value after = harness.vm.callFunction(ob, "after_delete", {});
+    aemlpc::Value after = harness.vm.callFunction(ob, "after_delete", {});
     assert(std::get<int64_t>(after.data) == 2);
 
-    amlp::Value hasB = harness.vm.callFunction(ob, "has_key",
-        {amlp::Value(std::string("b"))});
+    aemlpc::Value hasB = harness.vm.callFunction(ob, "has_key",
+        {aemlpc::Value(std::string("b"))});
     assert(std::get<int64_t>(hasB.data) == 0);
 
-    amlp::Value stillA = harness.vm.callFunction(ob, "still_has",
-        {amlp::Value(std::string("a"))});
+    aemlpc::Value stillA = harness.vm.callFunction(ob, "still_has",
+        {aemlpc::Value(std::string("a"))});
     assert(std::get<int64_t>(stillA.data) == 1);
-    amlp::Value stillC = harness.vm.callFunction(ob, "still_has",
-        {amlp::Value(std::string("c"))});
+    aemlpc::Value stillC = harness.vm.callFunction(ob, "still_has",
+        {aemlpc::Value(std::string("c"))});
     assert(std::get<int64_t>(stillC.data) == 3);
 
     std::cout << "testMapDeleteRemovesKeyInPlaceAndLeavesOthersIntact OK\n";
@@ -14919,7 +14919,7 @@ static void testCloneObjectAcceptsPathWithTrailingDotCWithoutDoublingExtension()
 
     auto withExt = harness.objects.cloneObject("/dotc_item.c");
     assert(withExt != nullptr);
-    amlp::Value name = harness.vm.callFunction(withExt, "probe", {});
+    aemlpc::Value name = harness.vm.callFunction(withExt, "probe", {});
     auto* namePtr = std::get_if<std::string>(&name.data);
     assert(namePtr != nullptr);
     assert(namePtr->find(".c.c") == std::string::npos);
@@ -14954,8 +14954,8 @@ static void testGetDirMatchesGlobPatternInFinalPathComponentOnly() {
     auto ob = harness.objects.cloneObject("/probe");
     assert(ob != nullptr);
 
-    amlp::Value globResult = harness.vm.callFunction(ob, "glob", {});
-    auto* globArr = std::get_if<std::shared_ptr<amlp::Array>>(&globResult.data);
+    aemlpc::Value globResult = harness.vm.callFunction(ob, "glob", {});
+    auto* globArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&globResult.data);
     assert(globArr != nullptr);
     std::vector<std::string> names;
     for (auto& item : (*globArr)->items) names.push_back(std::get<std::string>(item.data));
@@ -14969,8 +14969,8 @@ static void testGetDirMatchesGlobPatternInFinalPathComponentOnly() {
 
     // Bare directory path (no wildcard) still lists everything, the
     // pre-existing behavior this fix must not regress.
-    amlp::Value dirResult = harness.vm.callFunction(ob, "plain_dir", {});
-    auto* dirArr = std::get_if<std::shared_ptr<amlp::Array>>(&dirResult.data);
+    aemlpc::Value dirResult = harness.vm.callFunction(ob, "plain_dir", {});
+    auto* dirArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&dirResult.data);
     assert(dirArr != nullptr);
     assert((*dirArr)->items.size() >= 4); // _look.c, _score.c, readme.txt, probe.c
 
@@ -15002,9 +15002,9 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     auto ob = harness.objects.cloneObject("/probe");
     assert(ob != nullptr);
 
-    auto arr = [&](const char* fn) -> std::shared_ptr<amlp::Array> {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
-        auto* a = std::get_if<std::shared_ptr<amlp::Array>>(&r.data);
+    auto arr = [&](const char* fn) -> std::shared_ptr<aemlpc::Array> {
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
+        auto* a = std::get_if<std::shared_ptr<aemlpc::Array>>(&r.data);
         assert(a && *a);
         return *a;
     };
@@ -15013,7 +15013,7 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     auto all = arr("stat_all");
     std::map<std::string, std::pair<int64_t, int64_t>> byName;
     for (const auto& e : all->items) {
-        auto* t = std::get_if<std::shared_ptr<amlp::Array>>(&e.data);
+        auto* t = std::get_if<std::shared_ptr<aemlpc::Array>>(&e.data);
         assert(t && *t && (*t)->items.size() == 3);
         assert(std::holds_alternative<std::string>((*t)->items[0].data));
         assert(std::holds_alternative<int64_t>((*t)->items[1].data));
@@ -15032,7 +15032,7 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     // Entries come back sorted by name (real qsort with parrcmp).
     std::vector<std::string> order;
     for (const auto& e : all->items) {
-        auto& t = std::get<std::shared_ptr<amlp::Array>>(e.data);
+        auto& t = std::get<std::shared_ptr<aemlpc::Array>>(e.data);
         order.push_back(std::get<std::string>(t->items[0].data));
     }
     assert(std::is_sorted(order.begin(), order.end()));
@@ -15041,7 +15041,7 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     auto g = arr("stat_glob");
     assert(g->items.size() == 2);
     for (const auto& e : g->items) {
-        auto* t = std::get_if<std::shared_ptr<amlp::Array>>(&e.data);
+        auto* t = std::get_if<std::shared_ptr<aemlpc::Array>>(&e.data);
         assert(t && *t && (*t)->items.size() == 3);
     }
 
@@ -15049,7 +15049,7 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     auto one = arr("stat_one");
     assert(one->items.size() == 1);
     {
-        auto* t = std::get_if<std::shared_ptr<amlp::Array>>(&one->items[0].data);
+        auto* t = std::get_if<std::shared_ptr<aemlpc::Array>>(&one->items[0].data);
         assert(t && *t && (*t)->items.size() == 3);
         assert(std::get<std::string>((*t)->items[0].data) == "alpha.txt");
         assert(std::get<int64_t>((*t)->items[1].data) == 5);
@@ -15066,8 +15066,8 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     // directory, a pre-existing minor divergence not in this row's
     // scope). Either way it must not throw and must not be populated.
     {
-        amlp::Value r = harness.vm.callFunction(ob, "missing", {});
-        if (auto* a = std::get_if<std::shared_ptr<amlp::Array>>(&r.data)) {
+        aemlpc::Value r = harness.vm.callFunction(ob, "missing", {});
+        if (auto* a = std::get_if<std::shared_ptr<aemlpc::Array>>(&r.data)) {
             assert(!*a || (*a)->items.empty());
         } else {
             assert(std::holds_alternative<int64_t>(r.data) &&
@@ -15078,7 +15078,7 @@ static void testGetDirFlagsFormReturnsStatTriplesOrNames() {
     // A non-int flags argument throws.
     bool threw = false;
     try { harness.vm.callFunction(ob, "bad_flag", {}); }
-    catch (const amlp::LpcRuntimeError&) { threw = true; }
+    catch (const aemlpc::LpcRuntimeError&) { threw = true; }
     assert(threw);
 
     std::cout << "testGetDirFlagsFormReturnsStatTriplesOrNames OK\n";
@@ -15107,7 +15107,7 @@ static void testSprintfColumnModeWordWrap() {
     assert(ob != nullptr);
 
     auto s = [&](const char* fn) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -15143,7 +15143,7 @@ static void testSprintfColumnModeWordWrap() {
     for (const char* fn : {"multi_col", "no_width"}) {
         bool threw = false;
         try { harness.vm.callFunction(ob, fn, {}); }
-        catch (const amlp::LpcRuntimeError&) { threw = true; }
+        catch (const aemlpc::LpcRuntimeError&) { threw = true; }
         assert(threw);
     }
 
@@ -15163,16 +15163,16 @@ static void testIntpTrueOnlyForIntNotStringObjectOrUnsetVariable() {
     auto ob = harness.objects.cloneObject("/intp_probe");
     assert(ob != nullptr);
 
-    amlp::Value isInt = harness.vm.callFunction(ob, "probe_int", {});
+    aemlpc::Value isInt = harness.vm.callFunction(ob, "probe_int", {});
     assert(std::get<int64_t>(isInt.data) == 1);
 
-    amlp::Value isStr = harness.vm.callFunction(ob, "probe_string", {});
+    aemlpc::Value isStr = harness.vm.callFunction(ob, "probe_string", {});
     assert(std::get<int64_t>(isStr.data) == 0);
 
     // An object variable with no explicit initializer defaults to a
     // real int64_t 0 (see STATUS.md's "Root-causing the __HistorySize
     // report"), which IS a real int. intp() on it must be true.
-    amlp::Value unsetVar = harness.vm.callFunction(ob, "probe_unset_var", {});
+    aemlpc::Value unsetVar = harness.vm.callFunction(ob, "probe_unset_var", {});
     assert(std::get<int64_t>(unsetVar.data) == 1);
 
     std::cout << "testIntpTrueOnlyForIntNotStringObjectOrUnsetVariable OK\n";
@@ -15191,13 +15191,13 @@ static void testFloatpTrueOnlyForFloatNotIntOrString() {
     auto ob = harness.objects.cloneObject("/floatp_probe");
     assert(ob != nullptr);
 
-    amlp::Value isFloat = harness.vm.callFunction(ob, "probe_float", {});
+    aemlpc::Value isFloat = harness.vm.callFunction(ob, "probe_float", {});
     assert(std::get<int64_t>(isFloat.data) == 1);
 
-    amlp::Value isInt = harness.vm.callFunction(ob, "probe_int", {});
+    aemlpc::Value isInt = harness.vm.callFunction(ob, "probe_int", {});
     assert(std::get<int64_t>(isInt.data) == 0);
 
-    amlp::Value isStr = harness.vm.callFunction(ob, "probe_string", {});
+    aemlpc::Value isStr = harness.vm.callFunction(ob, "probe_string", {});
     assert(std::get<int64_t>(isStr.data) == 0);
 
     std::cout << "testFloatpTrueOnlyForFloatNotIntOrString OK\n";
@@ -15227,11 +15227,11 @@ static void testArrayFunctionMapObjectPointerPredicatesEachTrueOnlyForOwnKind() 
     assert(ob != nullptr);
     auto& vm = harness.vm;
 
-    amlp::Value arr = vm.callFunction(ob, "get_arr", {});
-    amlp::Value fn = vm.callFunction(ob, "get_fn", {});
-    amlp::Value map = vm.callFunction(ob, "get_map", {});
-    amlp::Value self = vm.callFunction(ob, "get_self", {});
-    amlp::Value number(static_cast<int64_t>(5));
+    aemlpc::Value arr = vm.callFunction(ob, "get_arr", {});
+    aemlpc::Value fn = vm.callFunction(ob, "get_fn", {});
+    aemlpc::Value map = vm.callFunction(ob, "get_map", {});
+    aemlpc::Value self = vm.callFunction(ob, "get_self", {});
+    aemlpc::Value number(static_cast<int64_t>(5));
 
     // arrayp/pointerp: true for the array, false for everything else.
     assert(std::get<int64_t>(vm.callFunction(ob, "is_arr", {arr}).data) == 1);
@@ -15266,16 +15266,16 @@ static void testRepeatStringConcatenatesNTimesAndEmptyForZeroOrNegative() {
     auto ob = harness.objects.cloneObject("/rs_probe");
     assert(ob != nullptr);
 
-    amlp::Value three = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("ab")), amlp::Value(int64_t{3})});
+    aemlpc::Value three = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("ab")), aemlpc::Value(int64_t{3})});
     assert(std::get<std::string>(three.data) == "ababab");
 
-    amlp::Value zero = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("ab")), amlp::Value(int64_t{0})});
+    aemlpc::Value zero = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("ab")), aemlpc::Value(int64_t{0})});
     assert(std::get<std::string>(zero.data) == "");
 
-    amlp::Value negative = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("ab")), amlp::Value(int64_t{-2})});
+    aemlpc::Value negative = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("ab")), aemlpc::Value(int64_t{-2})});
     assert(std::get<std::string>(negative.data) == "");
 
     std::cout << "testRepeatStringConcatenatesNTimesAndEmptyForZeroOrNegative OK\n";
@@ -15302,21 +15302,21 @@ static void testPresentFindsInventoryItemByIdApplyNotByOtherFunctions() {
     auto plain = harness.objects.cloneObject("/pr_no_id");
     assert(room != nullptr && sword != nullptr && plain != nullptr);
 
-    harness.vm.callFunction(sword, "go", {amlp::Value(room)});
-    harness.vm.callFunction(plain, "go", {amlp::Value(room)});
+    harness.vm.callFunction(sword, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(plain, "go", {aemlpc::Value(room)});
 
-    amlp::Value foundExplicit = harness.vm.callFunction(room, "check",
-        {amlp::Value(std::string("sword"))});
+    aemlpc::Value foundExplicit = harness.vm.callFunction(room, "check",
+        {aemlpc::Value(std::string("sword"))});
     assert(std::get<int64_t>(foundExplicit.data) == 1);
 
-    amlp::Value foundDefault = harness.vm.callFunction(room, "check_default",
-        {amlp::Value(std::string("sword"))});
+    aemlpc::Value foundDefault = harness.vm.callFunction(room, "check_default",
+        {aemlpc::Value(std::string("sword"))});
     assert(std::get<int64_t>(foundDefault.data) == 1);
 
     // An object with no id() at all never matches (VM::callFunction()'s
     // missing-function return is a falsy monostate, not a match).
-    amlp::Value notFound = harness.vm.callFunction(room, "check",
-        {amlp::Value(std::string("shield"))});
+    aemlpc::Value notFound = harness.vm.callFunction(room, "check",
+        {aemlpc::Value(std::string("shield"))});
     assert(std::get<int64_t>(notFound.data) == 0);
 
     std::cout << "testPresentFindsInventoryItemByIdApplyNotByOtherFunctions OK\n";
@@ -15341,26 +15341,26 @@ static void testLivingReflectsEnableCommandsStateAndDefaultsToCurrentObject() {
     auto bystander = harness.objects.cloneObject("/lv_bystander");
     assert(probe != nullptr && bystander != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(probe, "before_enable", {});
+    aemlpc::Value before = harness.vm.callFunction(probe, "before_enable", {});
     assert(std::get<int64_t>(before.data) == 0);
 
-    amlp::Value after = harness.vm.callFunction(probe, "after_enable", {});
+    aemlpc::Value after = harness.vm.callFunction(probe, "after_enable", {});
     assert(std::get<int64_t>(after.data) == 1);
 
     // The default (no-argument) form means this_object(), matching
     // func_spec.c's "object default: F__THIS_OBJECT". Probe's own flag
     // is on from after_enable() above, so this must read 1 too.
-    amlp::Value defaultArg = harness.vm.callFunction(probe, "default_arg_after", {});
+    aemlpc::Value defaultArg = harness.vm.callFunction(probe, "default_arg_after", {});
     assert(std::get<int64_t>(defaultArg.data) == 1);
 
     // A second, unrelated object never had enable_commands() called on
     // it, so living() on it must read 0 even while probe's own flag is
     // still on. The flag is per-object, not global.
-    amlp::Value bystanderLiving =
-        harness.vm.callFunction(probe, "living_of", {amlp::Value(bystander)});
+    aemlpc::Value bystanderLiving =
+        harness.vm.callFunction(probe, "living_of", {aemlpc::Value(bystander)});
     assert(std::get<int64_t>(bystanderLiving.data) == 0);
 
-    amlp::Value disabled = harness.vm.callFunction(probe, "after_disable", {});
+    aemlpc::Value disabled = harness.vm.callFunction(probe, "after_disable", {});
     assert(std::get<int64_t>(disabled.data) == 0);
 
     std::cout << "testLivingReflectsEnableCommandsStateAndDefaultsToCurrentObject OK\n";
@@ -15393,8 +15393,8 @@ static void testLivingWithExplicitFalsyNonObjectArgumentDoesNotFallBackToThisObj
     // probe itself has commands enabled, but the argument passed is an
     // explicit non-object (int 0), not an omitted one. Must read 0,
     // not silently fall back to reporting probe's own living() status.
-    amlp::Value result =
-        harness.vm.callFunction(probe, "living_of", {amlp::Value(int64_t{0})});
+    aemlpc::Value result =
+        harness.vm.callFunction(probe, "living_of", {aemlpc::Value(int64_t{0})});
     assert(std::get<int64_t>(result.data) == 0);
 
     std::cout << "testLivingWithExplicitFalsyNonObjectArgumentDoesNotFallBackToThisObject OK\n";
@@ -15468,7 +15468,7 @@ static void testEnableWizardAndDisableWizardToggleTheFlagOnAnInteractiveObject()
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob); // registers ob in InteractiveRegistry, matching
                       // real current_object->interactive being non-null
 
@@ -15493,15 +15493,15 @@ static void testWizardpReadsTheFlagOnAnExplicitObjectArgument() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
 
-    amlp::Value before = harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    aemlpc::Value before = harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(before.data) == 0);
 
     harness.vm.callFunction(ob, "go_wizard", {});
 
-    amlp::Value after = harness.vm.callFunction(ob, "probe", {amlp::Value(ob)});
+    aemlpc::Value after = harness.vm.callFunction(ob, "probe", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(after.data) == 1);
 
     ::close(fds[1]);
@@ -15550,10 +15550,10 @@ static void testAddActionExactVerbMatchDispatchesWithRemainderAsArgumentAndDecli
     auto room = harness.objects.cloneObject("/av_room");
     auto mover = harness.objects.cloneObject("/av_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     assert(harness.vm.dispatchCommand(mover, "look at sign") == true);
-    amlp::Value arg = harness.vm.callFunction(room, "query_last_arg", {});
+    aemlpc::Value arg = harness.vm.callFunction(room, "query_last_arg", {});
     assert(std::holds_alternative<std::string>(arg.data));
     assert(std::get<std::string>(arg.data) == "at sign");
 
@@ -15603,11 +15603,11 @@ static void testAddActionCatchAllShortFlagReceivesRemainderAndQueryVerbReturnsFu
 
     assert(harness.vm.dispatchCommand(mover, "smile warmly") == true);
 
-    amlp::Value verb = harness.vm.callFunction(mover, "query_seen_verb", {});
+    aemlpc::Value verb = harness.vm.callFunction(mover, "query_seen_verb", {});
     assert(std::holds_alternative<std::string>(verb.data));
     assert(std::get<std::string>(verb.data) == "smile");
 
-    amlp::Value arg = harness.vm.callFunction(mover, "query_seen_arg", {});
+    aemlpc::Value arg = harness.vm.callFunction(mover, "query_seen_arg", {});
     assert(std::holds_alternative<std::string>(arg.data));
     assert(std::get<std::string>(arg.data) == "warmly");
 
@@ -15656,13 +15656,13 @@ static void testDispatchCommandPassesUndefinedNotEmptyStringForBareVerbWithNoArg
     auto room = harness.objects.cloneObject("/bv_room");
     auto mover = harness.objects.cloneObject("/bv_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     // Bare verb, nothing after it: must NOT look like a string argument.
     assert(harness.vm.dispatchCommand(mover, "look") == true);
-    amlp::Value sawCall = harness.vm.callFunction(room, "query_saw_call", {});
+    aemlpc::Value sawCall = harness.vm.callFunction(room, "query_saw_call", {});
     assert(std::get<int64_t>(sawCall.data) == 1);
-    amlp::Value sawStringp = harness.vm.callFunction(room, "query_saw_stringp", {});
+    aemlpc::Value sawStringp = harness.vm.callFunction(room, "query_saw_stringp", {});
     assert(std::get<int64_t>(sawStringp.data) == 0);
 
     // Compound form still gets a real string, unaffected by this fix.
@@ -15674,9 +15674,9 @@ static void testDispatchCommandPassesUndefinedNotEmptyStringForBareVerbWithNoArg
     auto room2 = harness.objects.cloneObject("/bv_room2");
     auto mover2 = harness.objects.cloneObject("/bv_mover");
     assert(room2 != nullptr && mover2 != nullptr);
-    harness.vm.callFunction(mover2, "go", {amlp::Value(room2)});
+    harness.vm.callFunction(mover2, "go", {aemlpc::Value(room2)});
     assert(harness.vm.dispatchCommand(mover2, "look at sign") == true);
-    amlp::Value last = harness.vm.callFunction(room2, "query_last", {});
+    aemlpc::Value last = harness.vm.callFunction(room2, "query_last", {});
     assert(std::holds_alternative<std::string>(last.data));
     assert(std::get<std::string>(last.data) == "at sign");
 
@@ -15707,7 +15707,7 @@ static void testDispatchCommandTriesNextMatchWhenFirstHandlerReturnsFalsy() {
     auto room = harness.objects.cloneObject("/dc_room");
     auto mover = harness.objects.cloneObject("/dc_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     // cmd_decline is checked first (most recently added), returns 0;
     // the search must fall through to cmd_accept, not stop there.
@@ -15744,13 +15744,13 @@ static void testNotifyFailMessageShownWhenNoHandlerClaimsCommand() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(player, "setup", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::OutputContext::set(nullptr);
 
     char buf[256];
     ssize_t n = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -15793,13 +15793,13 @@ static void testNotifyFailMessageSuppressedWhenLaterHandlerClaimsCommand() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(player, "setup", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::OutputContext::set(nullptr);
 
     char buf[256];
     ssize_t n = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -15836,12 +15836,12 @@ static void testNotifyFailDoesNotLeakIntoALaterUnrelatedFailedDispatch() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(player, "setup", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
 
     char buf[256];
     ssize_t n1 = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -15851,8 +15851,8 @@ static void testNotifyFailDoesNotLeakIntoALaterUnrelatedFailedDispatch() {
     // A completely different, unrecognized verb: no action matches at
     // all, and cmd_go (the only thing that ever calls notify_fail()) is
     // never reached this time.
-    amlp::Server::dispatchLine(harness.vm, conn, "xyzzy");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "xyzzy");
+    aemlpc::OutputContext::set(nullptr);
 
     ssize_t n2 = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
     assert(n2 <= 0); // nothing sent: no stale leak, no hardcoded default either
@@ -15885,24 +15885,24 @@ static void testNotifyFailFunctionFormShowsOnlyAStringReturn() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
 
     // mode=0: fail_message() returns plain 0, nothing should be shown.
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(player, "setup", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::OutputContext::set(nullptr);
 
     char buf[256];
     ssize_t n1 = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
     assert(n1 <= 0);
 
     // mode=1: fail_message() returns a real string, must be shown.
-    harness.vm.callFunction(player, "set_mode", {amlp::Value(static_cast<int64_t>(1))});
-    amlp::OutputContext::set(&conn);
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
-    amlp::OutputContext::set(nullptr);
+    harness.vm.callFunction(player, "set_mode", {aemlpc::Value(static_cast<int64_t>(1))});
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::OutputContext::set(nullptr);
 
     ssize_t n2 = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
     assert(n2 > 0);
@@ -15922,7 +15922,7 @@ static void testNotifyFailThrowsOnNonStringNonFunctionArgument() {
     bool threw = false;
     try {
         harness.vm.callFunction(probe, "probe", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("notify_fail") != std::string::npos);
@@ -15942,7 +15942,7 @@ static void testThisPlayerReturnsCommandGiverDuringDispatch() {
     auto room = harness.objects.cloneObject("/tp_room");
     auto mover = harness.objects.cloneObject("/tp_mover");
     assert(room != nullptr && mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     // dispatchCommand() itself does not hand back the handler's return
     // value, so stash it on the room object instead, the same pattern
@@ -15955,11 +15955,11 @@ static void testThisPlayerReturnsCommandGiverDuringDispatch() {
     auto room2 = harness.objects.cloneObject("/tp_room2");
     auto mover2 = harness.objects.cloneObject("/tp_mover");
     assert(room2 != nullptr && mover2 != nullptr);
-    harness.vm.callFunction(mover2, "go", {amlp::Value(room2)});
+    harness.vm.callFunction(mover2, "go", {aemlpc::Value(room2)});
 
     assert(harness.vm.dispatchCommand(mover2, "whoami") == true);
-    amlp::Value caller = harness.vm.callFunction(room2, "query_last_caller", {});
-    auto* callerPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&caller.data);
+    aemlpc::Value caller = harness.vm.callFunction(room2, "query_last_caller", {});
+    auto* callerPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&caller.data);
     assert(callerPtr != nullptr && *callerPtr == mover2);
 
     std::cout << "testThisPlayerReturnsCommandGiverDuringDispatch OK\n";
@@ -15970,7 +15970,7 @@ static void testQueryVerbReturnsZeroOutsideOfDispatch() {
     harness.writeFile("/qv_lone.c", "mixed probe() { return query_verb(); }\n");
     auto ob = harness.objects.cloneObject("/qv_lone");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::monostate>(result.data));
     std::cout << "testQueryVerbReturnsZeroOutsideOfDispatch OK\n";
 }
@@ -15985,7 +15985,7 @@ static void testQueryPrivsReturnsZeroWhenNeverSet() {
     harness.writeFile("/priv_lone.c", "mixed probe() { return query_privs(this_object()); }\n");
     auto ob = harness.objects.cloneObject("/priv_lone");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::monostate>(result.data));
     std::cout << "testQueryPrivsReturnsZeroWhenNeverSet OK\n";
 }
@@ -15999,13 +15999,13 @@ static void testSetPrivsThenQueryPrivsRoundTripsAndClearsOnNonStringArgument() {
     auto ob = harness.objects.cloneObject("/priv_set");
     assert(ob != nullptr);
 
-    harness.vm.callFunction(ob, "set_it", {amlp::Value(std::string("wizards:thurtea"))});
-    amlp::Value set = harness.vm.callFunction(ob, "probe", {});
+    harness.vm.callFunction(ob, "set_it", {aemlpc::Value(std::string("wizards:thurtea"))});
+    aemlpc::Value set = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::string>(set.data));
     assert(std::get<std::string>(set.data) == "wizards:thurtea");
 
     harness.vm.callFunction(ob, "clear_it", {});
-    amlp::Value cleared = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value cleared = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::monostate>(cleared.data));
 
     std::cout << "testSetPrivsThenQueryPrivsRoundTripsAndClearsOnNonStringArgument OK\n";
@@ -16116,7 +16116,7 @@ static void testSeteuidGeteuidExportUidSemantics() {
     auto target = harness.objects.cloneObject("/wiz_target");
     assert(target != nullptr && *target->uid() == "wiz" && !target->euid().has_value());
     assert(std::get<int64_t>(
-        harness.vm.callFunction(giver, "give", {amlp::Value(target)}).data) == 1);
+        harness.vm.callFunction(giver, "give", {aemlpc::Value(target)}).data) == 1);
     assert(*target->uid() == "root");  // owner uid overwritten by the export
 
     // export_uid onto a target that already has an euid returns 0
@@ -16127,14 +16127,14 @@ static void testSeteuidGeteuidExportUidSemantics() {
     auto already = harness.objects.cloneObject("/wiz_has_euid");
     assert(already != nullptr && already->euid().has_value());
     assert(std::get<int64_t>(
-        harness.vm.callFunction(giver, "give", {amlp::Value(already)}).data) == 0);
+        harness.vm.callFunction(giver, "give", {aemlpc::Value(already)}).data) == 0);
 
     // A caller whose own euid is 0 cannot export at all: real errors
     // "Illegal to export uid 0".
     giver->setEuid(std::nullopt);
     bool threw = false;
     try {
-        harness.vm.callFunction(giver, "give", {amlp::Value(target)});
+        harness.vm.callFunction(giver, "give", {aemlpc::Value(target)});
     } catch (const std::exception&) {
         threw = true;
     }
@@ -16212,7 +16212,7 @@ static void testCloneObjectRequiresCallerEuidUnderActiveUidModel() {
     bool threw = false;
     try {
         harness.vm.callFunction(cloner, "make", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("seteuid() prior to calling clone_object") != std::string::npos);
@@ -16223,9 +16223,9 @@ static void testCloneObjectRequiresCallerEuidUnderActiveUidModel() {
     // "wiz" and the same clone_object() call now succeeds.
     harness.vm.callFunction(cloner, "su", {});
     assert(cloner->euid().has_value() && *cloner->euid() == "wiz");
-    amlp::Value made = harness.vm.callFunction(cloner, "make", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(made.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(made.data) != nullptr);
+    aemlpc::Value made = harness.vm.callFunction(cloner, "make", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(made.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(made.data) != nullptr);
 
     // Model inactive (master defines no get_root_uid()): real's #ifdef
     // PACKAGE_UIDS is not compiled in, so a caller with no euid clones
@@ -16239,9 +16239,9 @@ static void testCloneObjectRequiresCallerEuidUnderActiveUidModel() {
         "object make() { return clone_object(\"/plain_leaf\"); }\n");
     auto plainCloner = plain.objects.cloneObject("/plain_cloner");
     assert(plainCloner != nullptr && !plainCloner->euid().has_value());
-    amlp::Value plainMade = plain.vm.callFunction(plainCloner, "make", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(plainMade.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(plainMade.data) != nullptr);
+    aemlpc::Value plainMade = plain.vm.callFunction(plainCloner, "make", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(plainMade.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(plainMade.data) != nullptr);
 
     std::cout << "testCloneObjectRequiresCallerEuidUnderActiveUidModel OK\n";
 }
@@ -16284,7 +16284,7 @@ static void testValidWriteUidArgumentIsEuidUnderActiveUidModel() {
         // euid still 0: real pushes push_number(0), so the master sees no
         // string here.
         harness.vm.callFunction(writer, "probe", {});
-        amlp::Value uid0 = harness.vm.callFunction(master, "query_captured_uid", {});
+        aemlpc::Value uid0 = harness.vm.callFunction(master, "query_captured_uid", {});
         assert(!std::holds_alternative<std::string>(uid0.data));
 
         // After self-su euid is "wiz"; that, not "DifferentPriv", is the
@@ -16292,7 +16292,7 @@ static void testValidWriteUidArgumentIsEuidUnderActiveUidModel() {
         harness.vm.callFunction(writer, "su", {});
         assert(writer->euid().has_value() && *writer->euid() == "wiz");
         harness.vm.callFunction(writer, "probe", {});
-        amlp::Value uidWiz = harness.vm.callFunction(master, "query_captured_uid", {});
+        aemlpc::Value uidWiz = harness.vm.callFunction(master, "query_captured_uid", {});
         assert(std::holds_alternative<std::string>(uidWiz.data));
         assert(std::get<std::string>(uidWiz.data) == "wiz");
     }
@@ -16321,7 +16321,7 @@ static void testValidWriteUidArgumentIsEuidUnderActiveUidModel() {
         harness.vm.callFunction(caller, "probe", {});
 
         auto master = harness.objects.masterObject();
-        amlp::Value uid = harness.vm.callFunction(master, "query_captured_uid", {});
+        aemlpc::Value uid = harness.vm.callFunction(master, "query_captured_uid", {});
         assert(std::holds_alternative<std::string>(uid.data));
         assert(std::get<std::string>(uid.data) == "FallbackPriv");
     }
@@ -16341,8 +16341,8 @@ static void testValidWriteUidArgumentIsEuidUnderActiveUidModel() {
 // (src/security/UidModel.cpp) is the pure distillation this exercises
 // directly, then once more end to end through the config key.
 static void testAutoTrustBackboneResolveBranch() {
-    using amlp::resolveObjectUids;
-    using amlp::UidModel;
+    using aemlpc::resolveObjectUids;
+    using aemlpc::UidModel;
 
     UidModel m;
     m.rootUid = "root";
@@ -16433,8 +16433,8 @@ static void testAutoTrustBackboneEndToEndViaConfigKey() {
         assert(loader != nullptr && loader->euid().has_value() &&
                *loader->euid() == "wiz");
 
-        amlp::Value made = on.vm.callFunction(loader, "load_bb", {});
-        auto bb = std::get<std::shared_ptr<amlp::LpcObject>>(made.data);
+        aemlpc::Value made = on.vm.callFunction(loader, "load_bb", {});
+        auto bb = std::get<std::shared_ptr<aemlpc::LpcObject>>(made.data);
         assert(bb != nullptr);
         assert(bb->uid().has_value() && *bb->uid() == "wiz");
         assert(bb->euid().has_value() && *bb->euid() == "wiz");
@@ -16456,8 +16456,8 @@ static void testAutoTrustBackboneEndToEndViaConfigKey() {
 
         auto loader = off.objects.cloneObject("/wiz_loader");
         assert(loader != nullptr);
-        amlp::Value made = off.vm.callFunction(loader, "load_bb", {});
-        auto bb = std::get<std::shared_ptr<amlp::LpcObject>>(made.data);
+        aemlpc::Value made = off.vm.callFunction(loader, "load_bb", {});
+        auto bb = std::get<std::shared_ptr<aemlpc::LpcObject>>(made.data);
         assert(bb != nullptr);
         assert(bb->uid().has_value() && *bb->uid() == "backbone");
         assert(!bb->euid().has_value());
@@ -16483,13 +16483,13 @@ static void testObjectVarInitializerRunsBeforeCreate() {
     auto ob = harness.objects.cloneObject("/vi_lone");
     assert(ob != nullptr);
 
-    amlp::Value x = harness.vm.callFunction(ob, "query_x", {});
+    aemlpc::Value x = harness.vm.callFunction(ob, "query_x", {});
     assert(std::holds_alternative<int64_t>(x.data));
     assert(std::get<int64_t>(x.data) == 5);
 
     // create() read the already-initialized value, not 0/void. proves
     // ordering, not just that the initializer eventually ran at all.
-    amlp::Value seen = harness.vm.callFunction(ob, "query_seen_at_create", {});
+    aemlpc::Value seen = harness.vm.callFunction(ob, "query_seen_at_create", {});
     assert(std::holds_alternative<int64_t>(seen.data));
     assert(std::get<int64_t>(seen.data) == 5);
 
@@ -16505,7 +16505,7 @@ static void testObjectVarInitializerRunsOnFileWithNoCreateAtAll() {
         "int query_count() { return sizeof(tools); }\n");
     auto ob = harness.objects.cloneObject("/vi_no_create");
     assert(ob != nullptr);
-    amlp::Value count = harness.vm.callFunction(ob, "query_count", {});
+    aemlpc::Value count = harness.vm.callFunction(ob, "query_count", {});
     assert(std::holds_alternative<int64_t>(count.data));
     assert(std::get<int64_t>(count.data) == 3);
 
@@ -16523,13 +16523,13 @@ static void testObjectVarInitializerParentRunsBeforeChild() {
     auto ob = harness.objects.cloneObject("/vi_child");
     assert(ob != nullptr);
 
-    amlp::Value tag = harness.vm.callFunction(ob, "query_tag", {});
+    aemlpc::Value tag = harness.vm.callFunction(ob, "query_tag", {});
     assert(std::holds_alternative<std::string>(tag.data));
     assert(std::get<std::string>(tag.data) == "parent");
 
     // child_tag's own initializer read the parent's already-initialized
     // "tag". Proves the parent's own "$objvarinit" ran first.
-    amlp::Value childTag = harness.vm.callFunction(ob, "query_child_tag", {});
+    aemlpc::Value childTag = harness.vm.callFunction(ob, "query_child_tag", {});
     assert(std::holds_alternative<std::string>(childTag.data));
     assert(std::get<std::string>(childTag.data) == "parent-child");
 
@@ -16545,7 +16545,7 @@ static void testUndefinedpTrueOnlyForVoidNotZeroOrOtherTypes() {
     // one for that case specifically). environment() on an object
     // with no environment set is a genuine, reliable source of
     // monostate to test undefinedp()/nullp() against instead.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed never_set;\n"
         "never_set = environment(this_object());\n"
         "return undefinedp(never_set) * 1000 + nullp(never_set) * 100 +\n"
@@ -16579,7 +16579,7 @@ static void testParentCallToFunctionOnlyChildDefinesResolvesAtRuntime() {
     auto obj = harness.objects.cloneObject("/pc_child");
     assert(obj != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "from child");
 
@@ -16621,7 +16621,7 @@ static void testBareCallFromParentReachesChildsOverrideNotItsOwnLexicalDefinitio
     // call to helper() must resolve to the child's override. The same
     // result a direct "obj->helper()" call_other would reach. Not the
     // parent's own lexically-local definition.
-    amlp::Value result = harness.vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "child helper");
 
@@ -16636,7 +16636,7 @@ static void testBareCallFromParentReachesChildsOverrideNotItsOwnLexicalDefinitio
 // ---------------------------------------------------------------------
 
 static void testArraySubtractionRemovesEveryMatchingElementPreservingOrder() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *a;\n"
         "mixed *b;\n"
         "mixed *r;\n"
@@ -16652,7 +16652,7 @@ static void testArraySubtractionRemovesEveryMatchingElementPreservingOrder() {
 }
 
 static void testArraySubtractionOnEmptyRightOperandLeavesLeftUnchanged() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *a;\n"
         "a = ({ 1, 2, 3 }) - ({});\n"
         "return sizeof(a) * 100 + a[0] * 10 + a[2];\n");
@@ -16668,7 +16668,7 @@ static void testMonostateParticipatesInArithmeticAsRealZero() {
     // nullp(). Confirmed live: std/living.c's own query_stats() doing
     // "stats[stat] + x" where stats[stat] is a missing key for any stat
     // never rolled yet.
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping stats;\n"
         "int x;\n"
         "stats = ([]);\n"
@@ -16697,14 +16697,14 @@ static void testMonostateParticipatesInArithmeticAsRealZero() {
 // ---------------------------------------------------------------------
 
 static void testStringPlusIntAppendsDecimalDigits() {
-    amlp::Value result = runProbe("return \"count:\" + 42;\n");
+    aemlpc::Value result = runProbe("return \"count:\" + 42;\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "count:42");
     std::cout << "testStringPlusIntAppendsDecimalDigits OK\n";
 }
 
 static void testIntPlusStringPrependsDecimalDigits() {
-    amlp::Value result = runProbe("return 42 + \":count\";\n");
+    aemlpc::Value result = runProbe("return 42 + \":count\";\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "42:count");
     std::cout << "testIntPlusStringPrependsDecimalDigits OK\n";
@@ -16718,7 +16718,7 @@ static void testIntPlusStringPrependsDecimalDigits() {
 // concatenated by std/user.c's own setup() ("... + query_money(
 // \"platinum\") + \" pl, \" + ...").
 static void testStringPlusMissingMappingKeyFormatsAsZero() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m;\n"
         "m = ([]);\n"
         "return \"pl:\" + m[\"platinum\"];\n");
@@ -16733,7 +16733,7 @@ static void testObjectPlusStringPrependsItsFilename() {
         "string probe() { return this_object() + \"::tail\"; }\n");
     auto ob = harness.objects.cloneObject("/obj_add_test");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "/obj_add_test::tail");
     std::cout << "testObjectPlusStringPrependsItsFilename OK\n";
@@ -16744,14 +16744,14 @@ static void testObjectPlusStringPrependsItsFilename() {
 // in [0, n). Surfaced live: domains/Praxis/setter.c's own roll_d6()
 // (Palladium 3d6 attribute rolling).
 static void testRandomOfNonPositiveArgumentIsZero() {
-    amlp::Value result = runProbe("return random(0) + random(-5);\n");
+    aemlpc::Value result = runProbe("return random(0) + random(-5);\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
     std::cout << "testRandomOfNonPositiveArgumentIsZero OK\n";
 }
 
 static void testRandomStaysWithinZeroToNExclusiveAcrossManyDraws() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int bad;\n"
         "for(i = 0; i < 200; i++) {\n"
@@ -16781,14 +16781,14 @@ static void testRandomStaysWithinZeroToNExclusiveAcrossManyDraws() {
 // secure randomness has no fixed expected output by design.
 
 static void testSecureRandomOfNonPositiveArgumentIsZero() {
-    amlp::Value result = runProbe("return secure_random(0) + secure_random(-5);\n");
+    aemlpc::Value result = runProbe("return secure_random(0) + secure_random(-5);\n");
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
     std::cout << "testSecureRandomOfNonPositiveArgumentIsZero OK\n";
 }
 
 static void testSecureRandomStaysWithinZeroToNExclusiveAcrossManyDraws() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int bad;\n"
         "for(i = 0; i < 200; i++) {\n"
@@ -16812,14 +16812,14 @@ static void testSecureRandomStaysWithinZeroToNExclusiveAcrossManyDraws() {
 // /dev/urandom itself (out of this driver's own control and not this
 // test's job). Just a coarse, deterministic-regression tripwire.
 static void testSecureRandomProducesVariedOutputNotAFixedSeedPattern() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "int i;\n"
         "int *draws = allocate(50);\n"
         "for (i = 0; i < 50; i++) {\n"
         "    draws[i] = secure_random(1000000);\n"
         "}\n"
         "return draws;\n");
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr && arr->items.size() == 50);
 
     std::set<int64_t> distinct;
@@ -16848,17 +16848,17 @@ static void testSetHeartBeatThenQueryHeartBeatRoundTrips() {
     auto ob = harness.objects.cloneObject("/hb_lone");
     assert(ob != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value before = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(before.data));
     assert(std::get<int64_t>(before.data) == 0);
 
     harness.vm.callFunction(ob, "enable_it", {});
-    amlp::Value after = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value after = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(after.data));
     assert(std::get<int64_t>(after.data) == 1);
 
     harness.vm.callFunction(ob, "disable_it", {});
-    amlp::Value cleared = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value cleared = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<int64_t>(cleared.data));
     assert(std::get<int64_t>(cleared.data) == 0);
 
@@ -16878,7 +16878,7 @@ static void testSetHeartBeatThenQueryHeartBeatRoundTrips() {
 
 static void testCallOutFiresOnceDueTimeArrivesWithExtraArgsInOrder() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_fire.c",
         "int fired;\n"
@@ -16888,28 +16888,28 @@ static void testCallOutFiresOnceDueTimeArrivesWithExtraArgsInOrder() {
     auto obj = harness.objects.cloneObject("/co_fire");
     assert(obj != nullptr);
 
-    amlp::CallOutEntry entry;
+    aemlpc::CallOutEntry entry;
     entry.target = obj;
     entry.function = "tick";
-    entry.args = {amlp::Value(int64_t{7}), amlp::Value(int64_t{9})};
+    entry.args = {aemlpc::Value(int64_t{7}), aemlpc::Value(int64_t{9})};
     entry.dueAt = std::chrono::steady_clock::now() - std::chrono::seconds(1); // already due
     scheduler.addCallOut(std::move(entry));
 
     // Not due yet -> tickCallOuts() must not fire it early. Re-check with
     // a still-pending, not-yet-due entry for the negative case.
-    amlp::CallOutEntry notDue;
+    aemlpc::CallOutEntry notDue;
     notDue.target = obj;
     notDue.function = "tick";
-    notDue.args = {amlp::Value(int64_t{0}), amlp::Value(int64_t{0})};
+    notDue.args = {aemlpc::Value(int64_t{0}), aemlpc::Value(int64_t{0})};
     notDue.dueAt = std::chrono::steady_clock::now() + std::chrono::hours(1);
     scheduler.addCallOut(std::move(notDue));
 
     scheduler.tickCallOuts();
 
-    amlp::Value fired = harness.vm.callFunction(obj, "query_fired", {});
+    aemlpc::Value fired = harness.vm.callFunction(obj, "query_fired", {});
     assert(std::get<int64_t>(fired.data) == 1); // only the due one fired
 
-    amlp::Value aVal = harness.vm.callFunction(obj, "query_fired", {}); // sanity: object still alive
+    aemlpc::Value aVal = harness.vm.callFunction(obj, "query_fired", {}); // sanity: object still alive
     (void)aVal;
 
     std::cout << "testCallOutFiresOnceDueTimeArrivesWithExtraArgsInOrder OK\n";
@@ -16923,7 +16923,7 @@ static void testCallOutSelfReschedulingSurvivesTickIteration() {
     // corrupt whatever is being iterated. This exercises exactly that
     // shape end to end through the real call_out() efun.
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_resched.c",
         "int ticks;\n"
@@ -16936,7 +16936,7 @@ static void testCallOutSelfReschedulingSurvivesTickIteration() {
     scheduler.tickCallOuts(); // fires the rescheduled one, which reschedules again
     scheduler.tickCallOuts();
 
-    amlp::Value ticks = harness.vm.callFunction(obj, "query_ticks", {});
+    aemlpc::Value ticks = harness.vm.callFunction(obj, "query_ticks", {});
     assert(std::get<int64_t>(ticks.data) == 3);
 
     std::cout << "testCallOutSelfReschedulingSurvivesTickIteration OK\n";
@@ -16944,7 +16944,7 @@ static void testCallOutSelfReschedulingSurvivesTickIteration() {
 
 static void testCallOutClosureFormFiresViaCallClosureNotCallFunction() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     // daemon/services.c's own "call_out((: eventCompactUcache :), 3600)"
     // shape: a bare-name closure, no bound args.
@@ -16959,7 +16959,7 @@ static void testCallOutClosureFormFiresViaCallClosureNotCallFunction() {
     harness.vm.callFunction(obj, "go", {});
     scheduler.tickCallOuts();
 
-    amlp::Value fired = harness.vm.callFunction(obj, "query_fired", {});
+    aemlpc::Value fired = harness.vm.callFunction(obj, "query_fired", {});
     assert(std::get<int64_t>(fired.data) == 1);
 
     std::cout << "testCallOutClosureFormFiresViaCallClosureNotCallFunction OK\n";
@@ -16967,7 +16967,7 @@ static void testCallOutClosureFormFiresViaCallClosureNotCallFunction() {
 
 static void testRemoveCallOutByHandlePreventsFiringAndReturnsRemainingSeconds() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_rm_handle.c",
         "int fired;\n"
@@ -16977,7 +16977,7 @@ static void testRemoveCallOutByHandlePreventsFiringAndReturnsRemainingSeconds() 
     auto obj = harness.objects.cloneObject("/co_rm_handle");
     assert(obj != nullptr);
 
-    amlp::Value handle = harness.vm.callFunction(obj, "schedule", {});
+    aemlpc::Value handle = harness.vm.callFunction(obj, "schedule", {});
     int64_t h = std::get<int64_t>(handle.data);
 
     int64_t remaining = scheduler.removeCallOutByHandle(h);
@@ -16985,7 +16985,7 @@ static void testRemoveCallOutByHandlePreventsFiringAndReturnsRemainingSeconds() 
     assert(scheduler.removeCallOutByHandle(h) == -1); // already gone, second removal finds nothing
 
     scheduler.tickCallOuts(); // nothing due, and the removed one can't fire regardless
-    amlp::Value fired = harness.vm.callFunction(obj, "query_fired", {});
+    aemlpc::Value fired = harness.vm.callFunction(obj, "query_fired", {});
     assert(std::get<int64_t>(fired.data) == 0);
 
     std::cout << "testRemoveCallOutByHandlePreventsFiringAndReturnsRemainingSeconds OK\n";
@@ -16993,7 +16993,7 @@ static void testRemoveCallOutByHandlePreventsFiringAndReturnsRemainingSeconds() 
 
 static void testRemoveCallOutByNameIsScopedToCallingObjectAndSkipsClosures() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     // Two distinct objects each with their own pending "tick", plus a
     // closure-bound entry under the same function name on the first
@@ -17019,10 +17019,10 @@ static void testRemoveCallOutByNameIsScopedToCallingObjectAndSkipsClosures() {
 
     // Removing "tick" from a only removes a's own string-form entry.
     // Not b's, and not a's own closure-bound entry either.
-    amlp::Value removed = harness.vm.callFunction(a, "remove_it", {});
+    aemlpc::Value removed = harness.vm.callFunction(a, "remove_it", {});
     assert(std::get<int64_t>(removed.data) != -1);
     // A second removal on a finds nothing left under the string form.
-    amlp::Value removedAgain = harness.vm.callFunction(a, "remove_it", {});
+    aemlpc::Value removedAgain = harness.vm.callFunction(a, "remove_it", {});
     assert(std::get<int64_t>(removedAgain.data) == -1);
     // b's own entry is untouched.
     assert(scheduler.findCallOutByName(b, "tick") != -1);
@@ -17032,7 +17032,7 @@ static void testRemoveCallOutByNameIsScopedToCallingObjectAndSkipsClosures() {
 
 static void testFindCallOutReturnsRemainingSecondsOrMinusOneWithoutRemoving() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_find.c",
         "void tick() {}\n"
@@ -17041,15 +17041,15 @@ static void testFindCallOutReturnsRemainingSecondsOrMinusOneWithoutRemoving() {
     auto obj = harness.objects.cloneObject("/co_find");
     assert(obj != nullptr);
 
-    amlp::Value beforeSchedule = harness.vm.callFunction(obj, "check", {});
+    aemlpc::Value beforeSchedule = harness.vm.callFunction(obj, "check", {});
     assert(std::get<int64_t>(beforeSchedule.data) == -1);
 
     harness.vm.callFunction(obj, "schedule", {});
-    amlp::Value afterSchedule = harness.vm.callFunction(obj, "check", {});
+    aemlpc::Value afterSchedule = harness.vm.callFunction(obj, "check", {});
     assert(std::get<int64_t>(afterSchedule.data) != -1);
 
     // find does not remove. Checking again still finds it.
-    amlp::Value stillThere = harness.vm.callFunction(obj, "check", {});
+    aemlpc::Value stillThere = harness.vm.callFunction(obj, "check", {});
     assert(std::get<int64_t>(stillThere.data) != -1);
 
     std::cout << "testFindCallOutReturnsRemainingSecondsOrMinusOneWithoutRemoving OK\n";
@@ -17061,7 +17061,7 @@ static void testCallOutRuntimeErrorIsIsolatedFromOtherPendingCallOuts() {
     // error-isolation convention: one call_out throwing must not stop
     // the rest of that same tick's due entries from firing.
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_throw.c",
         "void boom() { destructed_only_function_that_does_not_exist(); }\n");
@@ -17074,13 +17074,13 @@ static void testCallOutRuntimeErrorIsIsolatedFromOtherPendingCallOuts() {
     assert(thrower != nullptr && ok != nullptr);
 
     auto due = std::chrono::steady_clock::now() - std::chrono::seconds(1);
-    amlp::CallOutEntry boom;
+    aemlpc::CallOutEntry boom;
     boom.target = thrower;
     boom.function = "boom";
     boom.dueAt = due;
     scheduler.addCallOut(std::move(boom));
 
-    amlp::CallOutEntry good;
+    aemlpc::CallOutEntry good;
     good.target = ok;
     good.function = "tick";
     good.dueAt = due;
@@ -17088,7 +17088,7 @@ static void testCallOutRuntimeErrorIsIsolatedFromOtherPendingCallOuts() {
 
     scheduler.tickCallOuts(); // must not throw out of this call
 
-    amlp::Value fired = harness.vm.callFunction(ok, "query_fired", {});
+    aemlpc::Value fired = harness.vm.callFunction(ok, "query_fired", {});
     assert(std::get<int64_t>(fired.data) == 1);
 
     std::cout << "testCallOutRuntimeErrorIsIsolatedFromOtherPendingCallOuts OK\n";
@@ -17096,13 +17096,13 @@ static void testCallOutRuntimeErrorIsIsolatedFromOtherPendingCallOuts() {
 
 static void testCallOutSkipsDestructedTargetSilently() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/co_destruct_target.c", "void tick() {}\n");
     auto obj = harness.objects.cloneObject("/co_destruct_target");
     assert(obj != nullptr);
 
-    amlp::CallOutEntry entry;
+    aemlpc::CallOutEntry entry;
     entry.target = obj; // weak_ptr
     entry.function = "tick";
     entry.dueAt = std::chrono::steady_clock::now() - std::chrono::seconds(1);
@@ -17124,7 +17124,7 @@ static void testSetHeartBeatIntervalFiresOnceEveryNCyclesNotEveryCycle() {
     // Scheduler::run(), see its own comment) so each call deterministically
     // represents exactly one cycle.
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_interval.c",
         "int beats;\n"
@@ -17136,21 +17136,21 @@ static void testSetHeartBeatIntervalFiresOnceEveryNCyclesNotEveryCycle() {
     assert(obj != nullptr);
 
     harness.vm.callFunction(obj, "enable", {});
-    amlp::Value interval = harness.vm.callFunction(obj, "query_interval", {});
+    aemlpc::Value interval = harness.vm.callFunction(obj, "query_interval", {});
     assert(std::get<int64_t>(interval.data) == 3); // the real configured value, not a bare 1
 
     scheduler.tickHeartbeats(); // cycle 1 of 3
     scheduler.tickHeartbeats(); // cycle 2 of 3
-    amlp::Value beforeThird = harness.vm.callFunction(obj, "query_beats", {});
+    aemlpc::Value beforeThird = harness.vm.callFunction(obj, "query_beats", {});
     assert(std::get<int64_t>(beforeThird.data) == 0); // not yet. Only 2 of 3 cycles elapsed
 
     scheduler.tickHeartbeats(); // cycle 3 of 3. fires
-    amlp::Value afterThird = harness.vm.callFunction(obj, "query_beats", {});
+    aemlpc::Value afterThird = harness.vm.callFunction(obj, "query_beats", {});
     assert(std::get<int64_t>(afterThird.data) == 1);
 
     scheduler.tickHeartbeats(); // cycle 1 of the next period
     scheduler.tickHeartbeats(); // cycle 2
-    amlp::Value stillOne = harness.vm.callFunction(obj, "query_beats", {});
+    aemlpc::Value stillOne = harness.vm.callFunction(obj, "query_beats", {});
     assert(std::get<int64_t>(stillOne.data) == 1); // countdown correctly reset to 3, not left at 0
 
     std::cout << "testSetHeartBeatIntervalFiresOnceEveryNCyclesNotEveryCycle OK\n";
@@ -17158,7 +17158,7 @@ static void testSetHeartBeatIntervalFiresOnceEveryNCyclesNotEveryCycle() {
 
 static void testSetHeartBeatZeroDisablesAndStopsFutureFiring() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_disable.c",
         "int beats;\n"
@@ -17171,13 +17171,13 @@ static void testSetHeartBeatZeroDisablesAndStopsFutureFiring() {
 
     harness.vm.callFunction(obj, "enable", {});
     scheduler.tickHeartbeats();
-    amlp::Value once = harness.vm.callFunction(obj, "query_beats", {});
+    aemlpc::Value once = harness.vm.callFunction(obj, "query_beats", {});
     assert(std::get<int64_t>(once.data) == 1);
 
     harness.vm.callFunction(obj, "disable", {});
     scheduler.tickHeartbeats();
     scheduler.tickHeartbeats();
-    amlp::Value stillOnce = harness.vm.callFunction(obj, "query_beats", {});
+    aemlpc::Value stillOnce = harness.vm.callFunction(obj, "query_beats", {});
     assert(std::get<int64_t>(stillOnce.data) == 1); // disabled. No further firing
 
     std::cout << "testSetHeartBeatZeroDisablesAndStopsFutureFiring OK\n";
@@ -17185,7 +17185,7 @@ static void testSetHeartBeatZeroDisablesAndStopsFutureFiring() {
 
 static void testHeartbeatRuntimeErrorIsolatedFromOtherHeartbeatEnabledObjects() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_throw.c",
         "void enable() { set_heart_beat(1); }\n"
@@ -17204,7 +17204,7 @@ static void testHeartbeatRuntimeErrorIsolatedFromOtherHeartbeatEnabledObjects() 
 
     scheduler.tickHeartbeats(); // must not throw out of this call
 
-    amlp::Value beats = harness.vm.callFunction(ok, "query_beats", {});
+    aemlpc::Value beats = harness.vm.callFunction(ok, "query_beats", {});
     assert(std::get<int64_t>(beats.data) == 1);
 
     std::cout << "testHeartbeatRuntimeErrorIsolatedFromOtherHeartbeatEnabledObjects OK\n";
@@ -17212,7 +17212,7 @@ static void testHeartbeatRuntimeErrorIsolatedFromOtherHeartbeatEnabledObjects() 
 
 static void testHeartbeatPrunesDestructedObjectSilently() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_destruct.c",
         "void enable() { set_heart_beat(1); }\n"
@@ -17243,7 +17243,7 @@ static void testHeartbeatPrunesDestructedObjectSilently() {
 // pending object earlier in the same cycle's snapshot.
 static void testHeartbeatCallingSetHeartBeatOnItselfDoesNotCorruptIteration() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_reentrant.c",
         "int beats;\n"
@@ -17264,16 +17264,16 @@ static void testHeartbeatCallingSetHeartBeatOnItselfDoesNotCorruptIteration() {
 
     scheduler.tickHeartbeats(); // must not crash: reentrant's own heart_beat() disables itself mid-cycle
 
-    amlp::Value reentrantBeats = harness.vm.callFunction(reentrant, "query_beats", {});
+    aemlpc::Value reentrantBeats = harness.vm.callFunction(reentrant, "query_beats", {});
     assert(std::get<int64_t>(reentrantBeats.data) == 1);
-    amlp::Value bystanderBeats = harness.vm.callFunction(bystander, "query_beats", {});
+    aemlpc::Value bystanderBeats = harness.vm.callFunction(bystander, "query_beats", {});
     assert(std::get<int64_t>(bystanderBeats.data) == 1); // unaffected by reentrant's own disable
 
     // reentrant is now disabled; a further cycle only fires bystander.
     scheduler.tickHeartbeats();
-    amlp::Value reentrantAfter = harness.vm.callFunction(reentrant, "query_beats", {});
+    aemlpc::Value reentrantAfter = harness.vm.callFunction(reentrant, "query_beats", {});
     assert(std::get<int64_t>(reentrantAfter.data) == 1); // unchanged
-    amlp::Value bystanderAfter = harness.vm.callFunction(bystander, "query_beats", {});
+    aemlpc::Value bystanderAfter = harness.vm.callFunction(bystander, "query_beats", {});
     assert(std::get<int64_t>(bystanderAfter.data) == 2);
 
     std::cout << "testHeartbeatCallingSetHeartBeatOnItselfDoesNotCorruptIteration OK\n";
@@ -17297,7 +17297,7 @@ static void testHeartbeatCallingSetHeartBeatOnItselfDoesNotCorruptIteration() {
 // exactly like real backend.c's own "new_command_giver = 0" branch.
 static void testHeartbeatSetsThisPlayerToTheHeartBeatingObjectWhenCommandsEnabled() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_enabled.c",
         "object seen;\n"
@@ -17323,15 +17323,15 @@ static void testHeartbeatSetsThisPlayerToTheHeartBeatingObjectWhenCommandsEnable
 
     scheduler.tickHeartbeats();
 
-    amlp::Value enabledCalled = harness.vm.callFunction(enabled, "query_called", {});
+    aemlpc::Value enabledCalled = harness.vm.callFunction(enabled, "query_called", {});
     assert(std::get<int64_t>(enabledCalled.data) == 1);
-    amlp::Value seen = harness.vm.callFunction(enabled, "query_seen", {});
-    auto* seenPtr = std::get_if<std::shared_ptr<amlp::LpcObject>>(&seen.data);
+    aemlpc::Value seen = harness.vm.callFunction(enabled, "query_seen", {});
+    auto* seenPtr = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&seen.data);
     assert(seenPtr != nullptr && *seenPtr == enabled);
 
-    amlp::Value disabledCalled = harness.vm.callFunction(disabled, "query_called", {});
+    aemlpc::Value disabledCalled = harness.vm.callFunction(disabled, "query_called", {});
     assert(std::get<int64_t>(disabledCalled.data) == 1);
-    amlp::Value sawZero = harness.vm.callFunction(disabled, "query_saw_zero", {});
+    aemlpc::Value sawZero = harness.vm.callFunction(disabled, "query_saw_zero", {});
     assert(std::get<int64_t>(sawZero.data) == 1);
 
     // The command giver stack is popped back to empty afterward, not left
@@ -17360,8 +17360,8 @@ static void testMapArrayWithStringFunctionNameCallsMethodOnTargetForEachElement(
     auto caller = harness.objects.cloneObject("/ma_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr != nullptr && *arrPtr != nullptr);
     assert((*arrPtr)->items.size() == 3);
     assert(std::get<std::string>((*arrPtr)->items[0].data) == "a!");
@@ -17383,8 +17383,8 @@ static void testFilterArrayWithStringFunctionNameKeepsOnlyTruthyElements() {
     auto caller = harness.objects.cloneObject("/fa_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr != nullptr && *arrPtr != nullptr);
     assert((*arrPtr)->items.size() == 3);
     assert(std::get<int64_t>((*arrPtr)->items[0].data) == 2);
@@ -17413,8 +17413,8 @@ static void testSortArrayWithStringFunctionNameOrdersByComparatorResult() {
     auto caller = harness.objects.cloneObject("/sa_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr != nullptr && *arrPtr != nullptr);
     assert((*arrPtr)->items.size() == 5);
     // Descending, per cmp()'s own convention (a > b returns -1, a sorts first).
@@ -17430,7 +17430,7 @@ static void testSortArrayWithStringFunctionNameOrdersByComparatorResult() {
 // implode(). Surfaced live: std/user/nmsh.c's own do_alias()/
 // do_nickname() joining word arrays back into a line with " ".
 static void testImplodeJoinsStringArrayWithSeparator() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string *words;\n"
         "words = ({ \"go\", \"north\" });\n"
         "return implode(words, \" \");\n");
@@ -17440,7 +17440,7 @@ static void testImplodeJoinsStringArrayWithSeparator() {
 }
 
 static void testImplodeOnEmptyArrayReturnsEmptyString() {
-    amlp::Value result = runProbe("return implode(({}), \" \");\n");
+    aemlpc::Value result = runProbe("return implode(({}), \" \");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "");
     std::cout << "testImplodeOnEmptyArrayReturnsEmptyString OK\n";
@@ -17498,7 +17498,7 @@ static void testImplodeFunctionFoldFormAndNonStringSkipping() {
 // fluffos-2.9-ds2.08/sprintf.c: INFO_T_CHAR requires a T_NUMBER (int)
 // argument, not a string.
 static void testSprintfPercentCEmitsSingleCharacterFromIntArgument() {
-    amlp::Value result = runProbe("return sprintf(\"%c[31m\", 27);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"%c[31m\", 27);\n");
     assert(std::holds_alternative<std::string>(result.data));
     std::string expected;
     expected += static_cast<char>(27);
@@ -17511,7 +17511,7 @@ static void testSprintfPercentCThrowsOnNonIntArgument() {
     bool threw = false;
     try {
         runProbe("return sprintf(\"%c\", \"x\");\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -17543,7 +17543,7 @@ static void testSprintfPercentDThrowsOnNonIntArgument() {
     bool threw = false;
     try {
         runProbe("return sprintf(\"%d\", \"x\");\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -17551,7 +17551,7 @@ static void testSprintfPercentDThrowsOnNonIntArgument() {
 }
 
 static void testSprintfPercentDAcceptsAMissingMappingKeyAndPrintsZero() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m = ([]);\n"
         "return sprintf(\"XP: %d\", m[\"experience\"]);\n");
     assert(std::holds_alternative<std::string>(result.data));
@@ -17560,13 +17560,13 @@ static void testSprintfPercentDAcceptsAMissingMappingKeyAndPrintsZero() {
 }
 
 static void testSprintfPercentOAndPercentXAcceptAMissingMappingKeyAndPrintZero() {
-    amlp::Value oResult = runProbe(
+    aemlpc::Value oResult = runProbe(
         "mapping m = ([]);\n"
         "return sprintf(\"%o\", m[\"missing\"]);\n");
     assert(std::holds_alternative<std::string>(oResult.data));
     assert(std::get<std::string>(oResult.data) == "0");
 
-    amlp::Value xResult = runProbe(
+    aemlpc::Value xResult = runProbe(
         "mapping m = ([]);\n"
         "return sprintf(\"%x\", m[\"missing\"]);\n");
     assert(std::holds_alternative<std::string>(xResult.data));
@@ -17575,7 +17575,7 @@ static void testSprintfPercentOAndPercentXAcceptAMissingMappingKeyAndPrintZero()
 }
 
 static void testSprintfPercentCAcceptsAMissingMappingKeyAsNulByte() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping m = ([]);\n"
         "return sprintf(\"%c\", m[\"missing\"]);\n");
     assert(std::holds_alternative<std::string>(result.data));
@@ -17593,7 +17593,7 @@ static void testSprintfPercentCAcceptsAMissingMappingKeyAsNulByte() {
 // Parser.cpp:803-811) into %d untouched, matching the real driver's own
 // declared-type-is-not-runtime-enforced semantics throughout.
 static void testSprintfPercentDAcceptsANestedMissingMappingKeyLikeARealCharacterSheet() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mapping player_data = ([]);\n"
         "int exp;\n"
         "player_data[\"general\"] = ([\"hp\": 10]);\n"
@@ -17609,28 +17609,28 @@ static void testSprintfPercentDAcceptsANestedMissingMappingKeyLikeARealCharacter
 // Surfaced live: domains/Praxis/setter.c's own show_rolled_attributes(),
 // "%-3d" for each rolled Palladium attribute.
 static void testSprintfLeftJustifiedFieldWidthPadsWithSpaces() {
-    amlp::Value result = runProbe("return sprintf(\"[%-3d]\", 7);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%-3d]\", 7);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[7  ]");
     std::cout << "testSprintfLeftJustifiedFieldWidthPadsWithSpaces OK\n";
 }
 
 static void testSprintfRightJustifiedFieldWidthPadsWithSpaces() {
-    amlp::Value result = runProbe("return sprintf(\"[%3d]\", 7);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%3d]\", 7);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[  7]");
     std::cout << "testSprintfRightJustifiedFieldWidthPadsWithSpaces OK\n";
 }
 
 static void testSprintfZeroPaddedFieldWidthPadsWithZeros() {
-    amlp::Value result = runProbe("return sprintf(\"[%03d]\", 7);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%03d]\", 7);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[007]");
     std::cout << "testSprintfZeroPaddedFieldWidthPadsWithZeros OK\n";
 }
 
 static void testSprintfFieldWidthDoesNotTruncateAWiderValue() {
-    amlp::Value result = runProbe("return sprintf(\"[%-3d]\", 12345);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%-3d]\", 12345);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[12345]");
     std::cout << "testSprintfFieldWidthDoesNotTruncateAWiderValue OK\n";
@@ -17641,7 +17641,7 @@ static void testSprintfCentreJustifiedFieldWidthSplitsPaddingEvenly() {
     // 6 total, 3 on each side when the padding divides evenly. the
     // exact shape secure/SimulEfun/misc.c's own dump_socket_status()
     // uses ("%|9s").
-    amlp::Value result = runProbe("return sprintf(\"[%|9s]\", \"abc\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%|9s]\", \"abc\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[   abc   ]");
     std::cout << "testSprintfCentreJustifiedFieldWidthSplitsPaddingEvenly OK\n";
@@ -17650,14 +17650,14 @@ static void testSprintfCentreJustifiedFieldWidthSplitsPaddingEvenly() {
 static void testSprintfCentreJustifiedFieldWidthPutsExtraPadOnTheLeft() {
     // real add_justified(): "i = fs / 2 + fs % 2". When the padding is
     // odd, the extra character goes on the leading side, not trailing.
-    amlp::Value result = runProbe("return sprintf(\"[%|5s]\", \"ab\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%|5s]\", \"ab\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[  ab ]");
     std::cout << "testSprintfCentreJustifiedFieldWidthPutsExtraPadOnTheLeft OK\n";
 }
 
 static void testSprintfStringFieldWidthLeftJustifies() {
-    amlp::Value result = runProbe("return sprintf(\"[%-5s]\", \"ab\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%-5s]\", \"ab\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[ab   ]");
     std::cout << "testSprintfStringFieldWidthLeftJustifies OK\n";
@@ -17670,21 +17670,21 @@ static void testSprintfStringFieldWidthLeftJustifies() {
 // as a real format itself (needing ":" to mean "field size AND
 // precision", truncating a %s argument longer than the field).
 static void testSprintfDoublePercentEmitsLiteralPercentAndConsumesNoArgument() {
-    amlp::Value result = runProbe("return sprintf(\"100%%\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"100%%\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "100%");
     std::cout << "testSprintfDoublePercentEmitsLiteralPercentAndConsumesNoArgument OK\n";
 }
 
 static void testSprintfColonFieldWidthPadsAShorterStringLeftJustified() {
-    amlp::Value result = runProbe("return sprintf(\"[%:-5s]\", \"ab\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%:-5s]\", \"ab\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[ab   ]");
     std::cout << "testSprintfColonFieldWidthPadsAShorterStringLeftJustified OK\n";
 }
 
 static void testSprintfColonFieldWidthTruncatesALongerString() {
-    amlp::Value result = runProbe("return sprintf(\"[%:-5s]\", \"abcdefgh\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%:-5s]\", \"abcdefgh\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[abcde]");
     std::cout << "testSprintfColonFieldWidthTruncatesALongerString OK\n";
@@ -17693,7 +17693,7 @@ static void testSprintfColonFieldWidthTruncatesALongerString() {
 // The exact live shape: build "%:-Ns" via a first sprintf("%%:-%ds", x)
 // call, then use the result as a real format string in a second call.
 static void testSprintfBuildingAndThenUsingADynamicColonFormatString() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "string fmt;\n"
         "fmt = sprintf(\"%%:-%ds\", 6);\n"
         "return sprintf(fmt, \"hi\");\n");
@@ -17708,7 +17708,7 @@ static void testSprintfBuildingAndThenUsingADynamicColonFormatString() {
 // not driven by a new real call site on this mudlib's own boot path.
 
 static void testSprintfPercentXEmitsLowercaseHex() {
-    amlp::Value result = runProbe("return sprintf(\"%x\", 255);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"%x\", 255);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "ff");
     std::cout << "testSprintfPercentXEmitsLowercaseHex OK\n";
@@ -17718,7 +17718,7 @@ static void testSprintfPercentXThrowsOnNonIntArgument() {
     bool threw = false;
     try {
         runProbe("return sprintf(\"%x\", \"z\");\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -17726,7 +17726,7 @@ static void testSprintfPercentXThrowsOnNonIntArgument() {
 }
 
 static void testSprintfPercentOEmitsOctal() {
-    amlp::Value result = runProbe("return sprintf(\"%o\", 8);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"%o\", 8);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "10");
     std::cout << "testSprintfPercentOEmitsOctal OK\n";
@@ -17742,35 +17742,35 @@ static void testSprintfPercentOEmitsOctal() {
 // end-to-end login work.
 
 static void testSprintfPercentODumpsIntFloatAndString() {
-    amlp::Value intResult = runProbe("return sprintf(\"%O\", 42);\n");
+    aemlpc::Value intResult = runProbe("return sprintf(\"%O\", 42);\n");
     assert(std::get<std::string>(intResult.data) == "42");
 
-    amlp::Value negResult = runProbe("return sprintf(\"%O\", -7);\n");
+    aemlpc::Value negResult = runProbe("return sprintf(\"%O\", -7);\n");
     assert(std::get<std::string>(negResult.data) == "-7");
 
     // Real T_REAL: plain C "%f", six decimal places.
-    amlp::Value floatResult = runProbe("return sprintf(\"%O\", 3.5);\n");
+    aemlpc::Value floatResult = runProbe("return sprintf(\"%O\", 3.5);\n");
     assert(std::get<std::string>(floatResult.data) == "3.500000");
 
     // Real T_STRING: wrapped in literal double quotes, no escaping.
-    amlp::Value strResult = runProbe("return sprintf(\"%O\", \"hi\");\n");
+    aemlpc::Value strResult = runProbe("return sprintf(\"%O\", \"hi\");\n");
     assert(std::get<std::string>(strResult.data) == "\"hi\"");
 
     std::cout << "testSprintfPercentODumpsIntFloatAndString OK\n";
 }
 
 static void testSprintfPercentODumpsEmptyAndNonEmptyArrayWithNesting() {
-    amlp::Value emptyResult = runProbe("return sprintf(\"%O\", ({}));\n");
+    aemlpc::Value emptyResult = runProbe("return sprintf(\"%O\", ({}));\n");
     assert(std::get<std::string>(emptyResult.data) == "({ })");
 
-    amlp::Value flatResult = runProbe("return sprintf(\"%O\", ({1, 2, 3}));\n");
+    aemlpc::Value flatResult = runProbe("return sprintf(\"%O\", ({1, 2, 3}));\n");
     assert(std::get<std::string>(flatResult.data) ==
            "({ /* sizeof() == 3 */\n  1,\n  2,\n  3\n})");
 
     // Nested array: inner elements indent two spaces deeper than their
     // own containing array, real svalue_to_string()'s own recursive
     // "indent + 2". Confirmed here, not just at the top level.
-    amlp::Value nestedResult = runProbe("return sprintf(\"%O\", ({1, ({2, 3})}));\n");
+    aemlpc::Value nestedResult = runProbe("return sprintf(\"%O\", ({1, ({2, 3})}));\n");
     assert(std::get<std::string>(nestedResult.data) ==
            "({ /* sizeof() == 2 */\n"
            "  1,\n"
@@ -17784,13 +17784,13 @@ static void testSprintfPercentODumpsEmptyAndNonEmptyArrayWithNesting() {
 }
 
 static void testSprintfPercentODumpsEmptyAndNonEmptyMapping() {
-    amlp::Value emptyResult = runProbe("return sprintf(\"%O\", ([]));\n");
+    aemlpc::Value emptyResult = runProbe("return sprintf(\"%O\", ([]));\n");
     assert(std::get<std::string>(emptyResult.data) == "([ ])");
 
     // Real T_MAPPING: every entry (not just non-last ones) gets its own
     // trailing ",\n". Confirmed directly, a real asymmetry versus
     // T_ARRAY's own "last element has no trailing comma" rule.
-    amlp::Value oneResult = runProbe("return sprintf(\"%O\", ([\"a\": 1]));\n");
+    aemlpc::Value oneResult = runProbe("return sprintf(\"%O\", ([\"a\": 1]));\n");
     assert(std::get<std::string>(oneResult.data) ==
            "([ /* sizeof() == 1 */\n  \"a\" : 1,\n])");
 
@@ -17806,21 +17806,21 @@ static void testSprintfPercentODumpsObjectAndDestructedObjectAsZero() {
     auto probe = harness.objects.cloneObject("/pctO_probe");
     assert(target != nullptr && probe != nullptr);
 
-    amlp::Value liveResult = harness.vm.callFunction(probe, "probe", {amlp::Value(target)});
+    aemlpc::Value liveResult = harness.vm.callFunction(probe, "probe", {aemlpc::Value(target)});
     assert(std::get<std::string>(liveResult.data) == "/" + target->filename());
 
     harness.objects.destructObject(target);
-    amlp::Value destructedResult = harness.vm.callFunction(probe, "probe", {amlp::Value(target)});
+    aemlpc::Value destructedResult = harness.vm.callFunction(probe, "probe", {aemlpc::Value(target)});
     assert(std::get<std::string>(destructedResult.data) == "0");
 
     std::cout << "testSprintfPercentODumpsObjectAndDestructedObjectAsZero OK\n";
 }
 
 static void testSprintfPercentODumpsClosureWithBoundArgs() {
-    amlp::Value noArgsResult = runProbe("return sprintf(\"%O\", (: lower_case :));\n");
+    aemlpc::Value noArgsResult = runProbe("return sprintf(\"%O\", (: lower_case :));\n");
     assert(std::get<std::string>(noArgsResult.data) == "(: lower_case :)");
 
-    amlp::Value boundResult = runProbe("return sprintf(\"%O\", (: lower_case, \"HI\" :));\n");
+    aemlpc::Value boundResult = runProbe("return sprintf(\"%O\", (: lower_case, \"HI\" :));\n");
     assert(std::get<std::string>(boundResult.data) == "(: lower_case, \"HI\" :)");
 
     std::cout << "testSprintfPercentODumpsClosureWithBoundArgs OK\n";
@@ -17830,10 +17830,10 @@ static void testSprintfPercentOFieldWidthAndPrecisionApplyLikePercentS() {
     // Real sprintf.c converts %O's own dump into an ordinary %s-typed
     // string immediately after building it. Field width/left-justify/
     // precision-truncation all apply exactly like %s, confirmed here.
-    amlp::Value widthResult = runProbe("return sprintf(\"[%-6O]\", 42);\n");
+    aemlpc::Value widthResult = runProbe("return sprintf(\"[%-6O]\", 42);\n");
     assert(std::get<std::string>(widthResult.data) == "[42    ]");
 
-    amlp::Value precisionResult = runProbe("return sprintf(\"%.3O\", \"hello\");\n");
+    aemlpc::Value precisionResult = runProbe("return sprintf(\"%.3O\", \"hello\");\n");
     // The dumped form of "hello" is the 7-character string "\"hello\"";
     // ".3" truncates that dumped form itself to its first 3 characters.
     assert(std::get<std::string>(precisionResult.data) == "\"he");
@@ -17851,14 +17851,14 @@ static void testPrintfLilEvalShapeMatchesRealResultPrefix() {
     auto ob = harness.objects.cloneObject("/pctO_eval_probe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<std::string>(result.data) == "Result = 10\n");
 
     std::cout << "testPrintfLilEvalShapeMatchesRealResultPrefix OK\n";
 }
 
 static void testSprintfDotPrecisionTruncatesLongerString() {
-    amlp::Value result = runProbe("return sprintf(\"[%.3s]\", \"hello\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%.3s]\", \"hello\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[hel]");
     std::cout << "testSprintfDotPrecisionTruncatesLongerString OK\n";
@@ -17869,21 +17869,21 @@ static void testSprintfDotPrecisionTruncatesLongerString() {
 // value: not truncated (shorter than the precision), but padded out to
 // the *precision*, not the smaller explicit field size.
 static void testSprintfDotPrecisionWidensFieldWhenGreaterThanExplicitWidth() {
-    amlp::Value result = runProbe("return sprintf(\"[%3.5s]\", \"ab\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%3.5s]\", \"ab\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[   ab]");
     std::cout << "testSprintfDotPrecisionWidensFieldWhenGreaterThanExplicitWidth OK\n";
 }
 
 static void testSprintfStarFieldWidthPullsWidthFromLeadingArgument() {
-    amlp::Value result = runProbe("return sprintf(\"[%*d]\", 5, 7);\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%*d]\", 5, 7);\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[    7]");
     std::cout << "testSprintfStarFieldWidthPullsWidthFromLeadingArgument OK\n";
 }
 
 static void testSprintfStarPrecisionPullsPrecisionFromLeadingArgument() {
-    amlp::Value result = runProbe("return sprintf(\"[%.*s]\", 3, \"hello\");\n");
+    aemlpc::Value result = runProbe("return sprintf(\"[%.*s]\", 3, \"hello\");\n");
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "[hel]");
     std::cout << "testSprintfStarPrecisionPullsPrecisionFromLeadingArgument OK\n";
@@ -17896,7 +17896,7 @@ static void testSprintfZeroPaddedStarFieldWidthThrows() {
     bool threw = false;
     try {
         runProbe("return sprintf(\"%0*d\", 5, 7);\n");
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -17993,11 +17993,11 @@ static void testPrintfWritesSprintfFormattedResultToCurrentConnection() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(probe, "probe", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     char buf[256];
     ssize_t n = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -18021,7 +18021,7 @@ static void testPrintfThrowsOnNonStringFormatArgument() {
     bool threw = false;
     try {
         harness.vm.callFunction(probe, "probe", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("sprintf") != std::string::npos);
@@ -18045,7 +18045,7 @@ static void testFunctionExistsReturnsTruthyStringForALocallyDefinedFunction() {
     auto ob = harness.objects.cloneObject("/fe_probe1");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     auto* strPtr = std::get_if<std::string>(&result.data);
     assert(strPtr != nullptr);
     assert(!strPtr->empty());
@@ -18060,7 +18060,7 @@ static void testFunctionExistsReturnsZeroForAnUndefinedFunction() {
     auto ob = harness.objects.cloneObject("/fe_probe2");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     auto* intPtr = std::get_if<int64_t>(&result.data);
     assert(intPtr != nullptr);
     assert(*intPtr == 0);
@@ -18080,12 +18080,12 @@ static void testFunctionExistsDefaultsToCurrentObjectWhenObjectArgumentOmitted()
     auto ob = harness.objects.cloneObject("/fe_probe3");
     assert(ob != nullptr);
 
-    amlp::Value found = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value found = harness.vm.callFunction(ob, "probe", {});
     auto* strPtr = std::get_if<std::string>(&found.data);
     assert(strPtr != nullptr);
     assert(!strPtr->empty());
 
-    amlp::Value missing = harness.vm.callFunction(ob, "probe_missing", {});
+    aemlpc::Value missing = harness.vm.callFunction(ob, "probe_missing", {});
     auto* intPtr = std::get_if<int64_t>(&missing.data);
     assert(intPtr != nullptr);
     assert(*intPtr == 0);
@@ -18107,7 +18107,7 @@ static void testFunctionExistsFindsAnInheritedFunctionNotJustLocalOnes() {
     auto ob = harness.objects.cloneObject("/fe_child");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     auto* strPtr = std::get_if<std::string>(&result.data);
     assert(strPtr != nullptr);
     assert(!strPtr->empty());
@@ -18124,7 +18124,7 @@ static void testFunctionExistsThrowsOnNonStringFunctionNameArgument() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("function_exists") != std::string::npos);
@@ -18155,15 +18155,15 @@ static void testPpCombatBonusEfunMatchesLpcAcrossBoundaries() {
         "    return 0;\n"
         "}\n";
     auto obj = compileProgramObject(src);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     int64_t values[] = {-5, 0, 1, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 25, 26, 27, 40};
     for (int64_t pp : values) {
-        amlp::Value lpcResult = vm.callFunction(obj, "pp_combat_bonus", {amlp::Value(pp)});
-        std::vector<amlp::Value> efunArgs{ amlp::Value(pp) };
-        amlp::Value efunResult = amlp::EfunTable::instance().call("pp_combat_bonus", vm, efunArgs);
+        aemlpc::Value lpcResult = vm.callFunction(obj, "pp_combat_bonus", {aemlpc::Value(pp)});
+        std::vector<aemlpc::Value> efunArgs{ aemlpc::Value(pp) };
+        aemlpc::Value efunResult = aemlpc::EfunTable::instance().call("pp_combat_bonus", vm, efunArgs);
         assert(std::holds_alternative<int64_t>(lpcResult.data));
         assert(std::holds_alternative<int64_t>(efunResult.data));
         assert(std::get<int64_t>(lpcResult.data) == std::get<int64_t>(efunResult.data));
@@ -18187,17 +18187,17 @@ static void testPsDamageBonusEfunMatchesLpcAcrossBoundariesAndSupernatural() {
         "    return bonus;\n"
         "}\n";
     auto obj = compileProgramObject(src);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     int64_t values[] = {0, 15, 16, 17, 18, 20, 21, 25, 26, 29, 30, 31, 35};
     for (int64_t ps : values) {
         for (int64_t supernatural : {int64_t{0}, int64_t{1}}) {
-            amlp::Value lpcResult = vm.callFunction(obj, "ps_damage_bonus",
-                {amlp::Value(ps), amlp::Value(supernatural)});
-            std::vector<amlp::Value> efunArgs{ amlp::Value(ps), amlp::Value(supernatural) };
-            amlp::Value efunResult = amlp::EfunTable::instance().call("ps_damage_bonus", vm, efunArgs);
+            aemlpc::Value lpcResult = vm.callFunction(obj, "ps_damage_bonus",
+                {aemlpc::Value(ps), aemlpc::Value(supernatural)});
+            std::vector<aemlpc::Value> efunArgs{ aemlpc::Value(ps), aemlpc::Value(supernatural) };
+            aemlpc::Value efunResult = aemlpc::EfunTable::instance().call("ps_damage_bonus", vm, efunArgs);
             assert(std::holds_alternative<int64_t>(lpcResult.data));
             assert(std::holds_alternative<int64_t>(efunResult.data));
             assert(std::get<int64_t>(lpcResult.data) == std::get<int64_t>(efunResult.data));
@@ -18268,9 +18268,9 @@ static void testOccBaseApmEfunMatchesLpcAcrossAllCategoriesAndEdgeCases() {
         "    }\n"
         "}\n";
     auto obj = compileProgramObject(src);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     // One representative from each bonus tier, plus edge cases: empty
     // string, an unrecognized occ (default), and a case-mismatched
@@ -18283,10 +18283,10 @@ static void testOccBaseApmEfunMatchesLpcAcrossAllCategoriesAndEdgeCases() {
         "", "civilian", "Cyber-Knight",
     };
     for (const char* occ : occs) {
-        amlp::Value lpcResult = vm.callFunction(obj, "occ_base_apm",
-            {amlp::Value(std::string(occ))});
-        std::vector<amlp::Value> efunArgs{ amlp::Value(std::string(occ)) };
-        amlp::Value efunResult = amlp::EfunTable::instance().call("occ_base_apm", vm, efunArgs);
+        aemlpc::Value lpcResult = vm.callFunction(obj, "occ_base_apm",
+            {aemlpc::Value(std::string(occ))});
+        std::vector<aemlpc::Value> efunArgs{ aemlpc::Value(std::string(occ)) };
+        aemlpc::Value efunResult = aemlpc::EfunTable::instance().call("occ_base_apm", vm, efunArgs);
         assert(std::holds_alternative<int64_t>(lpcResult.data));
         assert(std::holds_alternative<int64_t>(efunResult.data));
         assert(std::get<int64_t>(lpcResult.data) == std::get<int64_t>(efunResult.data));
@@ -18297,9 +18297,9 @@ static void testOccBaseApmEfunMatchesLpcAcrossAllCategoriesAndEdgeCases() {
     // argument entirely, matching how the driver treats a missing
     // string arg elsewhere in this file (see occ_base_apm's own
     // registration comment).
-    amlp::Value lpcUndefResult = vm.callFunction(obj, "occ_base_apm", {amlp::Value{}});
-    std::vector<amlp::Value> efunUndefArgs{};
-    amlp::Value efunUndefResult = amlp::EfunTable::instance().call("occ_base_apm", vm, efunUndefArgs);
+    aemlpc::Value lpcUndefResult = vm.callFunction(obj, "occ_base_apm", {aemlpc::Value{}});
+    std::vector<aemlpc::Value> efunUndefArgs{};
+    aemlpc::Value efunUndefResult = aemlpc::EfunTable::instance().call("occ_base_apm", vm, efunUndefArgs);
     assert(std::get<int64_t>(lpcUndefResult.data) == 2);
     assert(std::get<int64_t>(efunUndefResult.data) == 2);
 
@@ -18313,9 +18313,9 @@ static void testOccBaseApmEfunMatchesLpcAcrossAllCategoriesAndEdgeCases() {
 // size sides, summed, plus bonus, floored at 1) via bounds that must
 // hold on every draw, checked across many iterations per case.
 static void testRollWeaponDamageDiceStaysWithinFormulaDerivedBoundsAcrossManyDraws() {
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     struct Case { int64_t num, sides, bonus, lo, hi; };
     Case cases[] = {
@@ -18331,9 +18331,9 @@ static void testRollWeaponDamageDiceStaysWithinFormulaDerivedBoundsAcrossManyDra
         // 500 trials left roughly a 1-in-10 chance of never seeing it,
         // a real flake seen live. 3000 trials brings that under 1e-6.
         for (int trial = 0; trial < 3000; ++trial) {
-            std::vector<amlp::Value> args{
-                amlp::Value(c.num), amlp::Value(c.sides), amlp::Value(c.bonus) };
-            amlp::Value result = amlp::EfunTable::instance().call("roll_weapon_damage_dice", vm, args);
+            std::vector<aemlpc::Value> args{
+                aemlpc::Value(c.num), aemlpc::Value(c.sides), aemlpc::Value(c.bonus) };
+            aemlpc::Value result = aemlpc::EfunTable::instance().call("roll_weapon_damage_dice", vm, args);
             assert(std::holds_alternative<int64_t>(result.data));
             int64_t damage = std::get<int64_t>(result.data);
             assert(damage >= c.lo && damage <= c.hi);
@@ -18361,9 +18361,9 @@ static void testRollWeaponDamageDiceStaysWithinFormulaDerivedBoundsAcrossManyDra
 // registration for the full trail.
 
 static void testRollMdNStaysWithinFormulaDerivedBoundsAndAddsBonusOnlyWhenDiceArePositive() {
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     struct Case { int64_t rolls, sides, bonus, lo, hi; };
     Case cases[] = {
@@ -18377,9 +18377,9 @@ static void testRollMdNStaysWithinFormulaDerivedBoundsAndAddsBonusOnlyWhenDiceAr
     for (const auto& c : cases) {
         bool sawMin = false, sawMax = (c.lo == c.hi);
         for (int trial = 0; trial < 3000; ++trial) {
-            std::vector<amlp::Value> args{
-                amlp::Value(c.rolls), amlp::Value(c.sides), amlp::Value(c.bonus) };
-            amlp::Value result = amlp::EfunTable::instance().call("roll_MdN", vm, args);
+            std::vector<aemlpc::Value> args{
+                aemlpc::Value(c.rolls), aemlpc::Value(c.sides), aemlpc::Value(c.bonus) };
+            aemlpc::Value result = aemlpc::EfunTable::instance().call("roll_MdN", vm, args);
             assert(std::holds_alternative<int64_t>(result.data));
             int64_t roll = std::get<int64_t>(result.data);
             assert(roll >= c.lo && roll <= c.hi);
@@ -18402,7 +18402,7 @@ static void testVowelMatchesAsciiAeiouBothCases() {
     assert(ob != nullptr);
 
     auto probe = [&](char c) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(ob, "probe", {amlp::Value(int64_t{c})});
+        aemlpc::Value r = harness.vm.callFunction(ob, "probe", {aemlpc::Value(int64_t{c})});
         return std::get<int64_t>(r.data);
     };
 
@@ -18423,7 +18423,7 @@ static void testAddAMatchesRealAlgorithmAcrossEveryDocExample() {
     assert(ob != nullptr);
 
     auto probe = [&](const std::string& s) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "probe", {amlp::Value(s)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "probe", {aemlpc::Value(s)});
         return std::get<std::string>(r.data);
     };
 
@@ -18467,7 +18467,7 @@ static void testReplaceHtmlAndReplaceMxpEscapeMarkup() {
     assert(ob != nullptr);
 
     auto call = [&](const char* fn, const std::string& s) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {amlp::Value(s)});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {aemlpc::Value(s)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -18502,7 +18502,7 @@ static void testReplaceHtmlAndReplaceMxpEscapeMarkup() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -18531,8 +18531,8 @@ static void testSetBitAndTestBitRoundTripSingleBit() {
     auto ob = harness.objects.cloneObject("/bit_probe1");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 4);
     assert(std::get<int64_t>((*arr)->items[1].data) == 1);
@@ -18550,9 +18550,9 @@ static void testSetBitThrowsOnOutOfRangeOrNegativeBitIndex() {
     auto ob = harness.objects.cloneObject("/bit_probe2");
     assert(ob != nullptr);
 
-    amlp::Value huge = harness.vm.callFunction(ob, "probe_huge", {});
+    aemlpc::Value huge = harness.vm.callFunction(ob, "probe_huge", {});
     assert(std::holds_alternative<std::string>(huge.data));
-    amlp::Value neg = harness.vm.callFunction(ob, "probe_neg", {});
+    aemlpc::Value neg = harness.vm.callFunction(ob, "probe_neg", {});
     assert(std::holds_alternative<std::string>(neg.data));
 
     std::cout << "testSetBitThrowsOnOutOfRangeOrNegativeBitIndex OK\n";
@@ -18576,8 +18576,8 @@ static void testClearBitIsNoOpPastStringLengthAndClearsWithinRange() {
     auto ob = harness.objects.cloneObject("/bit_probe3");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert(std::get<int64_t>((*arr)->items[0].data) == 0);
     assert(std::get<int64_t>((*arr)->items[1].data) == 1);
@@ -18591,12 +18591,12 @@ static void testClearBitIsNoOpPastStringLengthAndClearsWithinRange() {
 // this test can actually catch a wrong polynomial or a stray final XOR.
 static void testCrc32ReturnsKnownValueForHelloAndSeedValueForEmptyString() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> helloArgs{ amlp::Value(std::string("hello")) };
-    amlp::Value hello = amlp::EfunTable::instance().call("crc32", harness.vm, helloArgs);
+    std::vector<aemlpc::Value> helloArgs{ aemlpc::Value(std::string("hello")) };
+    aemlpc::Value hello = aemlpc::EfunTable::instance().call("crc32", harness.vm, helloArgs);
     assert(std::get<int64_t>(hello.data) == 3387906425LL);
 
-    std::vector<amlp::Value> emptyArgs{ amlp::Value(std::string("")) };
-    amlp::Value empty = amlp::EfunTable::instance().call("crc32", harness.vm, emptyArgs);
+    std::vector<aemlpc::Value> emptyArgs{ aemlpc::Value(std::string("")) };
+    aemlpc::Value empty = aemlpc::EfunTable::instance().call("crc32", harness.vm, emptyArgs);
     assert(std::get<int64_t>(empty.data) == 4294967295LL);
 
     std::cout << "testCrc32ReturnsKnownValueForHelloAndSeedValueForEmptyString OK\n";
@@ -18604,11 +18604,11 @@ static void testCrc32ReturnsKnownValueForHelloAndSeedValueForEmptyString() {
 
 static void testCrc32ThrowsOnNonStringArgument() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> args{ amlp::Value(int64_t{0}) };
+    std::vector<aemlpc::Value> args{ aemlpc::Value(int64_t{0}) };
     bool threw = false;
     try {
-        amlp::EfunTable::instance().call("crc32", harness.vm, args);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("crc32", harness.vm, args);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -18630,8 +18630,8 @@ static void testCpCopiesFileContentAndReturnsTruthy() {
     auto ob = harness.objects.cloneObject("/cp_probe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert(std::get<int64_t>((*arr)->items[0].data) == -1);
     assert(std::get<int64_t>((*arr)->items[1].data) != 0);
@@ -18656,27 +18656,27 @@ static void testInheritsMatchesTransitiveChainInBothDirections() {
     auto leaf = harness.objects.cloneObject("/inh_leaf");
     assert(base && mid && leaf);
 
-    std::vector<amlp::Value> midInLeaf{ amlp::Value(std::string("/inh_mid.c")), amlp::Value(leaf) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, midInLeaf).data) == 1);
+    std::vector<aemlpc::Value> midInLeaf{ aemlpc::Value(std::string("/inh_mid.c")), aemlpc::Value(leaf) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, midInLeaf).data) == 1);
 
-    std::vector<amlp::Value> baseInLeaf{ amlp::Value(std::string("/inh_base.c")), amlp::Value(leaf) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, baseInLeaf).data) == 1);
+    std::vector<aemlpc::Value> baseInLeaf{ aemlpc::Value(std::string("/inh_base.c")), aemlpc::Value(leaf) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, baseInLeaf).data) == 1);
 
-    std::vector<amlp::Value> baseInMid{ amlp::Value(std::string("/inh_base.c")), amlp::Value(mid) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, baseInMid).data) == 1);
+    std::vector<aemlpc::Value> baseInMid{ aemlpc::Value(std::string("/inh_base.c")), aemlpc::Value(mid) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, baseInMid).data) == 1);
 
     // Wrong direction: a base does not inherit its own descendant.
-    std::vector<amlp::Value> leafInMid{ amlp::Value(std::string("/inh_leaf.c")), amlp::Value(mid) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, leafInMid).data) == 0);
+    std::vector<aemlpc::Value> leafInMid{ aemlpc::Value(std::string("/inh_leaf.c")), aemlpc::Value(mid) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, leafInMid).data) == 0);
 
-    std::vector<amlp::Value> leafInBase{ amlp::Value(std::string("/inh_leaf.c")), amlp::Value(base) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, leafInBase).data) == 0);
+    std::vector<aemlpc::Value> leafInBase{ aemlpc::Value(std::string("/inh_leaf.c")), aemlpc::Value(base) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, leafInBase).data) == 0);
 
-    std::vector<amlp::Value> midInBase{ amlp::Value(std::string("/inh_mid.c")), amlp::Value(base) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, midInBase).data) == 0);
+    std::vector<aemlpc::Value> midInBase{ aemlpc::Value(std::string("/inh_mid.c")), aemlpc::Value(base) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, midInBase).data) == 0);
 
-    std::vector<amlp::Value> unknownInBase{ amlp::Value(std::string("foo")), amlp::Value(base) };
-    assert(std::get<int64_t>(amlp::EfunTable::instance().call("inherits", harness.vm, unknownInBase).data) == 0);
+    std::vector<aemlpc::Value> unknownInBase{ aemlpc::Value(std::string("foo")), aemlpc::Value(base) };
+    assert(std::get<int64_t>(aemlpc::EfunTable::instance().call("inherits", harness.vm, unknownInBase).data) == 0);
 
     std::cout << "testInheritsMatchesTransitiveChainInBothDirections OK\n";
 }
@@ -18707,9 +18707,9 @@ static void testFunctionsListsOwnAndInheritedNamesWithOverridePrecedence() {
     // base's shadowed one (both named the same), and the synthesized
     // "$objvarinit" CodeGen.cpp adds for leaf's own "int x;" never
     // appearing at all.
-    std::vector<amlp::Value> allArgs{ amlp::Value(leaf) };
-    amlp::Value all = amlp::EfunTable::instance().call("functions", harness.vm, allArgs);
-    auto allArr = std::get<std::shared_ptr<amlp::Array>>(all.data);
+    std::vector<aemlpc::Value> allArgs{ aemlpc::Value(leaf) };
+    aemlpc::Value all = aemlpc::EfunTable::instance().call("functions", harness.vm, allArgs);
+    auto allArr = std::get<std::shared_ptr<aemlpc::Array>>(all.data);
     std::vector<std::string> allNames;
     for (auto& v : allArr->items) allNames.push_back(std::get<std::string>(v.data));
     assert(allNames.size() == 3);
@@ -18720,9 +18720,9 @@ static void testFunctionsListsOwnAndInheritedNamesWithOverridePrecedence() {
 
     // flag&2: leaf's own directly-defined functions only, "a" (inherited
     // only, never redefined by leaf) excluded.
-    std::vector<amlp::Value> ownArgs{ amlp::Value(leaf), amlp::Value(int64_t{2}) };
-    amlp::Value own = amlp::EfunTable::instance().call("functions", harness.vm, ownArgs);
-    auto ownArr = std::get<std::shared_ptr<amlp::Array>>(own.data);
+    std::vector<aemlpc::Value> ownArgs{ aemlpc::Value(leaf), aemlpc::Value(int64_t{2}) };
+    aemlpc::Value own = aemlpc::EfunTable::instance().call("functions", harness.vm, ownArgs);
+    auto ownArr = std::get<std::shared_ptr<aemlpc::Array>>(own.data);
     std::vector<std::string> ownNames;
     for (auto& v : ownArr->items) ownNames.push_back(std::get<std::string>(v.data));
     assert(ownNames.size() == 2);
@@ -18739,11 +18739,11 @@ static void testFunctionsDetailedFormIncludesNumArgsAndMixedTypePlaceholders() {
     auto ob = harness.objects.cloneObject("/fn_detail");
     assert(ob != nullptr);
 
-    std::vector<amlp::Value> detailArgs{ amlp::Value(ob), amlp::Value(int64_t{1}) };
-    amlp::Value detail = amlp::EfunTable::instance().call("functions", harness.vm, detailArgs);
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(detail.data);
+    std::vector<aemlpc::Value> detailArgs{ aemlpc::Value(ob), aemlpc::Value(int64_t{1}) };
+    aemlpc::Value detail = aemlpc::EfunTable::instance().call("functions", harness.vm, detailArgs);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(detail.data);
     assert(arr->items.size() == 1);
-    auto sub = std::get<std::shared_ptr<amlp::Array>>(arr->items[0].data);
+    auto sub = std::get<std::shared_ptr<aemlpc::Array>>(arr->items[0].data);
     // [name, num_args, return_type, arg_type...]. Real f_functions()'s
     // own subvec layout; no declared-type metadata exists in this
     // driver's own CompiledProgram, so every type slot is the fixed
@@ -18765,18 +18765,18 @@ static void testVariablesListsFlattenedNamesInInheritedThenOwnOrder() {
     auto leaf = harness.objects.cloneObject("/var_leaf");
     assert(leaf != nullptr);
 
-    std::vector<amlp::Value> bareArgs{ amlp::Value(leaf) };
-    amlp::Value bare = amlp::EfunTable::instance().call("variables", harness.vm, bareArgs);
-    auto bareArr = std::get<std::shared_ptr<amlp::Array>>(bare.data);
+    std::vector<aemlpc::Value> bareArgs{ aemlpc::Value(leaf) };
+    aemlpc::Value bare = aemlpc::EfunTable::instance().call("variables", harness.vm, bareArgs);
+    auto bareArr = std::get<std::shared_ptr<aemlpc::Array>>(bare.data);
     assert(bareArr->items.size() == 2);
     assert(std::get<std::string>(bareArr->items[0].data) == "x");
     assert(std::get<std::string>(bareArr->items[1].data) == "y");
 
-    std::vector<amlp::Value> pairArgs{ amlp::Value(leaf), amlp::Value(int64_t{1}) };
-    amlp::Value pair = amlp::EfunTable::instance().call("variables", harness.vm, pairArgs);
-    auto pairArr = std::get<std::shared_ptr<amlp::Array>>(pair.data);
+    std::vector<aemlpc::Value> pairArgs{ aemlpc::Value(leaf), aemlpc::Value(int64_t{1}) };
+    aemlpc::Value pair = aemlpc::EfunTable::instance().call("variables", harness.vm, pairArgs);
+    auto pairArr = std::get<std::shared_ptr<aemlpc::Array>>(pair.data);
     assert(pairArr->items.size() == 2);
-    auto first = std::get<std::shared_ptr<amlp::Array>>(pairArr->items[0].data);
+    auto first = std::get<std::shared_ptr<aemlpc::Array>>(pairArr->items[0].data);
     assert(std::get<std::string>(first->items[0].data) == "x");
     assert(std::get<std::string>(first->items[1].data) == "mixed");
 
@@ -18792,20 +18792,20 @@ static void testFetchAndStoreVariableRoundTripByNameAndThrowOnUnknownName() {
     auto ob = harness.objects.cloneObject("/fv_probe");
     assert(ob != nullptr);
 
-    amlp::Value fetched = harness.vm.callFunction(ob, "do_fetch",
-        { amlp::Value(std::string("x")) });
+    aemlpc::Value fetched = harness.vm.callFunction(ob, "do_fetch",
+        { aemlpc::Value(std::string("x")) });
     assert(std::get<int64_t>(fetched.data) == 5);
 
     harness.vm.callFunction(ob, "do_store",
-        { amlp::Value(std::string("x")), amlp::Value(int64_t{42}) });
-    amlp::Value refetched = harness.vm.callFunction(ob, "do_fetch",
-        { amlp::Value(std::string("x")) });
+        { aemlpc::Value(std::string("x")), aemlpc::Value(int64_t{42}) });
+    aemlpc::Value refetched = harness.vm.callFunction(ob, "do_fetch",
+        { aemlpc::Value(std::string("x")) });
     assert(std::get<int64_t>(refetched.data) == 42);
 
     bool fetchThrew = false;
     try {
-        harness.vm.callFunction(ob, "do_fetch", { amlp::Value(std::string("nope")) });
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(ob, "do_fetch", { aemlpc::Value(std::string("nope")) });
+    } catch (const aemlpc::LpcRuntimeError&) {
         fetchThrew = true;
     }
     assert(fetchThrew);
@@ -18813,8 +18813,8 @@ static void testFetchAndStoreVariableRoundTripByNameAndThrowOnUnknownName() {
     bool storeThrew = false;
     try {
         harness.vm.callFunction(ob, "do_store",
-            { amlp::Value(std::string("nope")), amlp::Value(int64_t{1}) });
-    } catch (const amlp::LpcRuntimeError&) {
+            { aemlpc::Value(std::string("nope")), aemlpc::Value(int64_t{1}) });
+    } catch (const aemlpc::LpcRuntimeError&) {
         storeThrew = true;
     }
     assert(storeThrew);
@@ -18824,15 +18824,15 @@ static void testFetchAndStoreVariableRoundTripByNameAndThrowOnUnknownName() {
 
 static void testGetConfigReturnsMudNameForIndexZeroAndThrowsForNegative() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> zeroArgs{ amlp::Value(int64_t{0}) };
-    amlp::Value name = amlp::EfunTable::instance().call("get_config", harness.vm, zeroArgs);
+    std::vector<aemlpc::Value> zeroArgs{ aemlpc::Value(int64_t{0}) };
+    aemlpc::Value name = aemlpc::EfunTable::instance().call("get_config", harness.vm, zeroArgs);
     assert(std::get<std::string>(name.data) == "AMLP");
 
-    std::vector<amlp::Value> negArgs{ amlp::Value(int64_t{-1}) };
+    std::vector<aemlpc::Value> negArgs{ aemlpc::Value(int64_t{-1}) };
     bool threw = false;
     try {
-        amlp::EfunTable::instance().call("get_config", harness.vm, negArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("get_config", harness.vm, negArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -18855,16 +18855,16 @@ static void testGetConfigReturnsMudNameForIndexZeroAndThrowsForNegative() {
 // keeps throwing, exactly as before this fix.
 static void testGetConfigReturnsMaxEvalCostForIndexTwentyThree() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> args{ amlp::Value(int64_t{23}) };
-    amlp::Value result = amlp::EfunTable::instance().call("get_config", harness.vm, args);
+    std::vector<aemlpc::Value> args{ aemlpc::Value(int64_t{23}) };
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("get_config", harness.vm, args);
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == harness.config.maxEvalCost());
 
-    std::vector<amlp::Value> unimplementedArgs{ amlp::Value(int64_t{1}) };
+    std::vector<aemlpc::Value> unimplementedArgs{ aemlpc::Value(int64_t{1}) };
     bool threw = false;
     try {
-        amlp::EfunTable::instance().call("get_config", harness.vm, unimplementedArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("get_config", harness.vm, unimplementedArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -18883,8 +18883,8 @@ static void testGetConfigReturnsMaxEvalCostForIndexTwentyThree() {
 // initializer, blocking the simul_efun object from loading at all.
 static void testGetConfigReturnsMaxStringLengthForIndexTwentyNine() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> args{ amlp::Value(int64_t{29}) };
-    amlp::Value result = amlp::EfunTable::instance().call("get_config", harness.vm, args);
+    std::vector<aemlpc::Value> args{ aemlpc::Value(int64_t{29}) };
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("get_config", harness.vm, args);
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == harness.config.maxStringLength());
 
@@ -18893,8 +18893,8 @@ static void testGetConfigReturnsMaxStringLengthForIndexTwentyNine() {
 
 static void testQueryLoadAverageReturnsAStringInRealFormat() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> noArgs;
-    amlp::Value result = amlp::EfunTable::instance().call("query_load_average", harness.vm, noArgs);
+    std::vector<aemlpc::Value> noArgs;
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("query_load_average", harness.vm, noArgs);
     auto* s = std::get_if<std::string>(&result.data);
     assert(s != nullptr);
     assert(s->find("cmds/s") != std::string::npos);
@@ -18919,19 +18919,19 @@ static void testSayBroadcastsToRoomSiblingsButNotOriginItself() {
     auto listener = harness.objects.cloneObject("/say_mover");
     assert(room && actor && listener);
 
-    harness.vm.callFunction(actor, "go", {amlp::Value(room)});
-    harness.vm.callFunction(listener, "go", {amlp::Value(room)});
+    harness.vm.callFunction(actor, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(listener, "go", {aemlpc::Value(room)});
 
     int fdsActor[2];
     int fdsListener[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsActor) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsListener) == 0);
-    amlp::Connection connActor(fdsActor[0]);
-    amlp::Connection connListener(fdsListener[0]);
+    aemlpc::Connection connActor(fdsActor[0]);
+    aemlpc::Connection connListener(fdsListener[0]);
     connActor.attach(actor);
     connListener.attach(listener);
 
-    harness.vm.callFunction(actor, "speak", {amlp::Value(std::string("hi there\n"))});
+    harness.vm.callFunction(actor, "speak", {aemlpc::Value(std::string("hi there\n"))});
 
     char buf[256];
     ssize_t n = ::recv(fdsListener[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -18961,20 +18961,20 @@ static void testSayAvoidArgumentExcludesSpecifiedTarget() {
     auto skip = harness.objects.cloneObject("/say_mover2");
     assert(room && actor && keep && skip);
 
-    harness.vm.callFunction(actor, "go", {amlp::Value(room)});
-    harness.vm.callFunction(keep, "go", {amlp::Value(room)});
-    harness.vm.callFunction(skip, "go", {amlp::Value(room)});
+    harness.vm.callFunction(actor, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(keep, "go", {aemlpc::Value(room)});
+    harness.vm.callFunction(skip, "go", {aemlpc::Value(room)});
 
     int fdsKeep[2];
     int fdsSkip[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsKeep) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsSkip) == 0);
-    amlp::Connection connKeep(fdsKeep[0]);
-    amlp::Connection connSkip(fdsSkip[0]);
+    aemlpc::Connection connKeep(fdsKeep[0]);
+    aemlpc::Connection connSkip(fdsSkip[0]);
     connKeep.attach(keep);
     connSkip.attach(skip);
 
-    harness.vm.callFunction(actor, "speak", {amlp::Value(std::string("secret\n")), amlp::Value(skip)});
+    harness.vm.callFunction(actor, "speak", {aemlpc::Value(std::string("secret\n")), aemlpc::Value(skip)});
 
     char buf[256];
     ssize_t nKeep = ::recv(fdsKeep[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -18997,27 +18997,27 @@ static void testSayAvoidArgumentExcludesSpecifiedTarget() {
 static void testSaveVariableMatchesRealFormatForStringsNumbersArraysAndMappings() {
     ObjectVarHarness harness;
 
-    auto save = [&](amlp::Value v) -> std::string {
-        std::vector<amlp::Value> args{ std::move(v) };
-        return std::get<std::string>(amlp::EfunTable::instance().call("save_variable", harness.vm, args).data);
+    auto save = [&](aemlpc::Value v) -> std::string {
+        std::vector<aemlpc::Value> args{ std::move(v) };
+        return std::get<std::string>(aemlpc::EfunTable::instance().call("save_variable", harness.vm, args).data);
     };
 
-    assert(save(amlp::Value(std::string("\n"))) == std::string("\"\r\""));
-    assert(save(amlp::Value(std::string("\""))) == "\"\\\"\"");
-    assert(save(amlp::Value(int64_t{-1})) == "-1");
-    assert(save(amlp::Value(int64_t{22})) == "22");
-    assert(save(amlp::Value(1.2)) == "1.200000");
+    assert(save(aemlpc::Value(std::string("\n"))) == std::string("\"\r\""));
+    assert(save(aemlpc::Value(std::string("\""))) == "\"\\\"\"");
+    assert(save(aemlpc::Value(int64_t{-1})) == "-1");
+    assert(save(aemlpc::Value(int64_t{22})) == "22");
+    assert(save(aemlpc::Value(1.2)) == "1.200000");
 
-    auto emptyArr = std::make_shared<amlp::Array>();
-    assert(save(amlp::Value(emptyArr)) == "({})");
+    auto emptyArr = std::make_shared<aemlpc::Array>();
+    assert(save(aemlpc::Value(emptyArr)) == "({})");
 
-    auto oneArr = std::make_shared<amlp::Array>();
-    oneArr->items.push_back(amlp::Value(int64_t{0}));
-    assert(save(amlp::Value(oneArr)) == "({0,})");
+    auto oneArr = std::make_shared<aemlpc::Array>();
+    oneArr->items.push_back(aemlpc::Value(int64_t{0}));
+    assert(save(aemlpc::Value(oneArr)) == "({0,})");
 
-    auto oneMap = std::make_shared<amlp::Mapping>();
-    oneMap->entries.emplace_back(amlp::Value(int64_t{1}), amlp::Value(int64_t{22}));
-    assert(save(amlp::Value(oneMap)) == "([1:22,])");
+    auto oneMap = std::make_shared<aemlpc::Mapping>();
+    oneMap->entries.emplace_back(aemlpc::Value(int64_t{1}), aemlpc::Value(int64_t{22}));
+    assert(save(aemlpc::Value(oneMap)) == "([1:22,])");
 
     std::cout << "testSaveVariableMatchesRealFormatForStringsNumbersArraysAndMappings OK\n";
 }
@@ -19032,14 +19032,14 @@ static void testSaveVariableMatchesRealFormatForStringsNumbersArraysAndMappings(
 static void testRestoreVariableRoundTripsSaveVariableOutputAndRejectsMalformedInput() {
     ObjectVarHarness harness;
 
-    auto restore = [&](const std::string& s) -> amlp::Value {
-        std::vector<amlp::Value> args{ amlp::Value(s) };
-        return amlp::EfunTable::instance().call("restore_variable", harness.vm, args);
+    auto restore = [&](const std::string& s) -> aemlpc::Value {
+        std::vector<aemlpc::Value> args{ aemlpc::Value(s) };
+        return aemlpc::EfunTable::instance().call("restore_variable", harness.vm, args);
     };
     auto throws = [&](const std::string& s) -> bool {
         try {
             restore(s);
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             return true;
         }
         return false;
@@ -19051,11 +19051,11 @@ static void testRestoreVariableRoundTripsSaveVariableOutputAndRejectsMalformedIn
     assert(std::get<int64_t>(restore("22").data) == 22);
     assert(std::get<double>(restore("1.200000").data) == 1.2);
 
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(restore("({0,})").data);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(restore("({0,})").data);
     assert(arr && arr->items.size() == 1);
     assert(std::get<int64_t>(arr->items[0].data) == 0);
 
-    auto map = std::get<std::shared_ptr<amlp::Mapping>>(restore("([1:22,])").data);
+    auto map = std::get<std::shared_ptr<aemlpc::Mapping>>(restore("([1:22,])").data);
     assert(map && map->entries.size() == 1);
     assert(std::get<int64_t>(map->entries[0].first.data) == 1);
     assert(std::get<int64_t>(map->entries[0].second.data) == 22);
@@ -19092,7 +19092,7 @@ static void testChildrenReturnsEveryLiveObjectMatchingFilenamePrefix() {
     // this vector for exactly that reason, deliberately, not an
     // oversight. Matching how a real clone stays alive in practice via
     // an environment/inventory slot or some other genuine reference.
-    std::vector<std::shared_ptr<amlp::LpcObject>> liveClones;
+    std::vector<std::shared_ptr<aemlpc::LpcObject>> liveClones;
     liveClones.push_back(harness.objects.cloneObject("/children_probe"));
     assert(liveClones.back() != nullptr);
     for (int i = 0; i < 4; ++i) {
@@ -19104,13 +19104,13 @@ static void testChildrenReturnsEveryLiveObjectMatchingFilenamePrefix() {
 
     // Real __FILE__ always carries ".c". Confirmed the driver's own
     // extension-less LpcObject::filename() storage still matches it.
-    std::vector<amlp::Value> args{ amlp::Value(std::string("/children_probe.c")) };
-    amlp::Value result = amlp::EfunTable::instance().call("children", harness.vm, args);
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    std::vector<aemlpc::Value> args{ aemlpc::Value(std::string("/children_probe.c")) };
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("children", harness.vm, args);
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && *arr);
     assert((*arr)->items.size() == 5);
     for (auto& item : (*arr)->items) {
-        auto* ob = std::get_if<std::shared_ptr<amlp::LpcObject>>(&item.data);
+        auto* ob = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&item.data);
         assert(ob != nullptr && *ob);
         assert((*ob)->filename() == "/children_probe");
     }
@@ -19134,17 +19134,17 @@ static void testSetLightAccumulatesUpThroughEnvironmentChainAndReturnsRootTotal(
     auto leaf = harness.objects.cloneObject("/light_leaf");
     assert(root && mid && leaf);
 
-    harness.vm.callFunction(mid, "go", {amlp::Value(root)});
-    harness.vm.callFunction(leaf, "go", {amlp::Value(mid)});
+    harness.vm.callFunction(mid, "go", {aemlpc::Value(root)});
+    harness.vm.callFunction(leaf, "go", {aemlpc::Value(mid)});
 
-    amlp::Value result = harness.vm.callFunction(leaf, "shine", {amlp::Value(int64_t{3})});
+    aemlpc::Value result = harness.vm.callFunction(leaf, "shine", {aemlpc::Value(int64_t{3})});
     assert(std::get<int64_t>(result.data) == 3);
     assert(leaf->totalLight() == 3);
     assert(mid->totalLight() == 3);
     assert(root->totalLight() == 3);
 
     // A second call accumulates rather than replacing.
-    amlp::Value second = harness.vm.callFunction(leaf, "shine", {amlp::Value(int64_t{2})});
+    aemlpc::Value second = harness.vm.callFunction(leaf, "shine", {aemlpc::Value(int64_t{2})});
     assert(std::get<int64_t>(second.data) == 5);
     assert(root->totalLight() == 5);
 
@@ -19153,10 +19153,10 @@ static void testSetLightAccumulatesUpThroughEnvironmentChainAndReturnsRootTotal(
 
 static void testSetDebugLevelAcceptsIntOrStringWithoutThrowing() {
     ObjectVarHarness harness;
-    std::vector<amlp::Value> intArgs{ amlp::Value(int64_t{10}) };
-    amlp::EfunTable::instance().call("set_debug_level", harness.vm, intArgs);
-    std::vector<amlp::Value> stringArgs{ amlp::Value(std::string("connections")) };
-    amlp::EfunTable::instance().call("set_debug_level", harness.vm, stringArgs);
+    std::vector<aemlpc::Value> intArgs{ aemlpc::Value(int64_t{10}) };
+    aemlpc::EfunTable::instance().call("set_debug_level", harness.vm, intArgs);
+    std::vector<aemlpc::Value> stringArgs{ aemlpc::Value(std::string("connections")) };
+    aemlpc::EfunTable::instance().call("set_debug_level", harness.vm, stringArgs);
 
     std::cout << "testSetDebugLevelAcceptsIntOrStringWithoutThrowing OK\n";
 }
@@ -19180,19 +19180,19 @@ static void testBindRebindsClosureOwnerAndChangesResolution() {
     auto ownerB = harness.objects.cloneObject("/bind_owner_b");
     assert(ownerA && ownerB);
 
-    amlp::Value closureVal = harness.vm.callFunction(ownerA, "make", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Closure>>(closureVal.data));
+    aemlpc::Value closureVal = harness.vm.callFunction(ownerA, "make", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Closure>>(closureVal.data));
 
-    amlp::Value beforeCall =
-        harness.vm.callClosure(std::get<std::shared_ptr<amlp::Closure>>(closureVal.data), {});
+    aemlpc::Value beforeCall =
+        harness.vm.callClosure(std::get<std::shared_ptr<aemlpc::Closure>>(closureVal.data), {});
     assert(std::get<int64_t>(beforeCall.data) == 111);
 
-    std::vector<amlp::Value> bindArgs{ closureVal, amlp::Value(ownerB) };
-    amlp::Value rebound = amlp::EfunTable::instance().call("bind", harness.vm, bindArgs);
-    assert(std::holds_alternative<std::shared_ptr<amlp::Closure>>(rebound.data));
+    std::vector<aemlpc::Value> bindArgs{ closureVal, aemlpc::Value(ownerB) };
+    aemlpc::Value rebound = aemlpc::EfunTable::instance().call("bind", harness.vm, bindArgs);
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Closure>>(rebound.data));
 
-    amlp::Value afterCall =
-        harness.vm.callClosure(std::get<std::shared_ptr<amlp::Closure>>(rebound.data), {});
+    aemlpc::Value afterCall =
+        harness.vm.callClosure(std::get<std::shared_ptr<aemlpc::Closure>>(rebound.data), {});
     assert(std::get<int64_t>(afterCall.data) == 222);
 
     std::cout << "testBindRebindsClosureOwnerAndChangesResolution OK\n";
@@ -19211,11 +19211,11 @@ static void testBindIsNoOpWhenNewOwnerMatchesCurrentOwner() {
     auto ob = harness.objects.cloneObject("/bind_self");
     assert(ob != nullptr);
 
-    amlp::Value closureVal = harness.vm.callFunction(ob, "make", {});
-    std::vector<amlp::Value> bindArgs{ closureVal, amlp::Value(ob) };
-    amlp::Value result = amlp::EfunTable::instance().call("bind", harness.vm, bindArgs);
-    assert(std::get<std::shared_ptr<amlp::Closure>>(result.data) ==
-           std::get<std::shared_ptr<amlp::Closure>>(closureVal.data));
+    aemlpc::Value closureVal = harness.vm.callFunction(ob, "make", {});
+    std::vector<aemlpc::Value> bindArgs{ closureVal, aemlpc::Value(ob) };
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("bind", harness.vm, bindArgs);
+    assert(std::get<std::shared_ptr<aemlpc::Closure>>(result.data) ==
+           std::get<std::shared_ptr<aemlpc::Closure>>(closureVal.data));
 
     std::cout << "testBindIsNoOpWhenNewOwnerMatchesCurrentOwner OK\n";
 }
@@ -19230,12 +19230,12 @@ static void testBindThrowsWhenNoMasterIsLoaded() {
     auto ownerD = harness.objects.cloneObject("/bind_owner_d");
     assert(ownerC && ownerD);
 
-    amlp::Value closureVal = harness.vm.callFunction(ownerC, "make", {});
-    std::vector<amlp::Value> bindArgs{ closureVal, amlp::Value(ownerD) };
+    aemlpc::Value closureVal = harness.vm.callFunction(ownerC, "make", {});
+    std::vector<aemlpc::Value> bindArgs{ closureVal, aemlpc::Value(ownerD) };
     bool threw = false;
     try {
-        amlp::EfunTable::instance().call("bind", harness.vm, bindArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("bind", harness.vm, bindArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -19269,18 +19269,18 @@ static void testTellObjectWritesToConnectionOrCallsCatchTellWhenNotInteractive()
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(interactiveOb);
 
     harness.vm.callFunction(caller, "ping",
-        {amlp::Value(interactiveOb), amlp::Value(std::string("hi there\n"))});
+        {aemlpc::Value(interactiveOb), aemlpc::Value(std::string("hi there\n"))});
     char buf[64];
     ssize_t n = ::recv(fds[1], buf, sizeof(buf), MSG_DONTWAIT);
     assert(n > 0);
     assert(std::string(buf, static_cast<size_t>(n)) == "hi there\n");
 
-    harness.vm.callFunction(caller, "ping", {amlp::Value(npc), amlp::Value(std::string("npc msg\n"))});
-    amlp::Value got = harness.vm.callFunction(npc, "get_got", {});
+    harness.vm.callFunction(caller, "ping", {aemlpc::Value(npc), aemlpc::Value(std::string("npc msg\n"))});
+    aemlpc::Value got = harness.vm.callFunction(npc, "get_got", {});
     assert(std::holds_alternative<std::string>(got.data));
     assert(std::get<std::string>(got.data) == "npc msg\n");
 
@@ -19311,14 +19311,14 @@ static void testTellRoomBroadcastsToDirectInventoryExcludingAvoid() {
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsA) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsB) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsC) == 0);
-    amlp::Connection connA(fdsA[0]);
-    amlp::Connection connB(fdsB[0]);
-    amlp::Connection connC(fdsC[0]);
+    aemlpc::Connection connA(fdsA[0]);
+    aemlpc::Connection connB(fdsB[0]);
+    aemlpc::Connection connC(fdsC[0]);
     connA.attach(a);
     connB.attach(b);
     connC.attach(c);
 
-    harness.vm.callFunction(caller, "announce", {amlp::Value(room), amlp::Value(b)});
+    harness.vm.callFunction(caller, "announce", {aemlpc::Value(room), aemlpc::Value(b)});
 
     char buf[64];
     ssize_t n = ::recv(fdsA[1], buf, sizeof(buf), MSG_DONTWAIT);
@@ -19352,15 +19352,15 @@ static void testShoutBroadcastsToEveryoneExceptCommandGiver() {
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsA) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsB) == 0);
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fdsCaller) == 0);
-    amlp::Connection connA(fdsA[0]);
-    amlp::Connection connB(fdsB[0]);
-    amlp::Connection connCaller(fdsCaller[0]);
+    aemlpc::Connection connA(fdsA[0]);
+    aemlpc::Connection connB(fdsB[0]);
+    aemlpc::Connection connCaller(fdsCaller[0]);
     connA.attach(a);
     connB.attach(b);
     connCaller.attach(caller);
 
     harness.vm.pushCommandGiver(caller);
-    harness.vm.callFunction(caller, "yell", {amlp::Value(std::string("hear ye\n"))});
+    harness.vm.callFunction(caller, "yell", {aemlpc::Value(std::string("hear ye\n"))});
     harness.vm.popCommandGiver();
 
     char buf[64];
@@ -19394,29 +19394,29 @@ static void testThisInteractiveAndThisUserReturnConnectionBoundObjectNotCommandG
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(connOb);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     // command_giver reassigned away from the connection's own bound
     // object. this_player() must follow the reassignment,
     // this_interactive()/this_user() must not.
     harness.vm.pushCommandGiver(otherOb);
 
-    amlp::Value playerResult = harness.vm.callFunction(connOb, "probe_player", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(playerResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(playerResult.data) == otherOb);
+    aemlpc::Value playerResult = harness.vm.callFunction(connOb, "probe_player", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(playerResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(playerResult.data) == otherOb);
 
-    amlp::Value interactiveResult = harness.vm.callFunction(connOb, "probe_interactive", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(interactiveResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(interactiveResult.data) == connOb);
+    aemlpc::Value interactiveResult = harness.vm.callFunction(connOb, "probe_interactive", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(interactiveResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(interactiveResult.data) == connOb);
 
-    amlp::Value userResult = harness.vm.callFunction(connOb, "probe_user", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(userResult.data));
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(userResult.data) == connOb);
+    aemlpc::Value userResult = harness.vm.callFunction(connOb, "probe_user", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(userResult.data));
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(userResult.data) == connOb);
 
     harness.vm.popCommandGiver();
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testThisInteractiveAndThisUserReturnConnectionBoundObjectNotCommandGiver OK\n";
 }
@@ -19434,8 +19434,8 @@ static void testMapMappingReplacesValuesKeepingKeysViaStringFunctionName() {
     auto caller = harness.objects.cloneObject("/mm_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* mapPtr = std::get_if<std::shared_ptr<amlp::Mapping>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* mapPtr = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&result.data);
     assert(mapPtr != nullptr && *mapPtr != nullptr);
     assert((*mapPtr)->entries.size() == 2);
     for (auto& entry : (*mapPtr)->entries) {
@@ -19461,8 +19461,8 @@ static void testFilterMappingKeepsOnlyEntriesWhereCallbackIsTruthy() {
     auto caller = harness.objects.cloneObject("/fm_caller");
     assert(target != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {amlp::Value(target)});
-    auto* mapPtr = std::get_if<std::shared_ptr<amlp::Mapping>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {aemlpc::Value(target)});
+    auto* mapPtr = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&result.data);
     assert(mapPtr != nullptr && *mapPtr != nullptr);
     assert((*mapPtr)->entries.size() == 2);
     for (auto& entry : (*mapPtr)->entries) {
@@ -19485,7 +19485,7 @@ static void testStrwidthReturnsSameLengthAsSizeof() {
     harness.writeFile("/sw_probe.c", "int probe(string s) { return strwidth(s); }\n");
     auto ob = harness.objects.cloneObject("/sw_probe");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("hello"))});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("hello"))});
     assert(std::get<int64_t>(result.data) == 5);
     std::cout << "testStrwidthReturnsSameLengthAsSizeof OK\n";
 }
@@ -19524,7 +19524,7 @@ static void testResetEvalCostZeroesUsedCostLeavingCeilingUnchanged() {
     int64_t ceiling = costPerCall + costPerCall / 2;
     harness.vm.setMaxEvalCost(ceiling);
     harness.vm.resetEvalCost();
-    amlp::Value first = harness.vm.callFunction(ob, "burn", {});
+    aemlpc::Value first = harness.vm.callFunction(ob, "burn", {});
     assert(std::get<int64_t>(first.data) == 20);
 
     // No reset in between: cost accumulates across calls (real cross-
@@ -19534,7 +19534,7 @@ static void testResetEvalCostZeroesUsedCostLeavingCeilingUnchanged() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "burn", {});
-    } catch (const amlp::EvalCostError&) {
+    } catch (const aemlpc::EvalCostError&) {
         threw = true;
     }
     assert(threw);
@@ -19542,13 +19542,13 @@ static void testResetEvalCostZeroesUsedCostLeavingCeilingUnchanged() {
     // reset_eval_cost() with no arguments (real default 0): zeroes the
     // *used* cost back to zero while leaving the ceiling itself
     // completely untouched, and returns that unchanged ceiling.
-    std::vector<amlp::Value> noArgs;
-    amlp::Value resetResult = amlp::EfunTable::instance().call("reset_eval_cost", harness.vm, noArgs);
+    std::vector<aemlpc::Value> noArgs;
+    aemlpc::Value resetResult = aemlpc::EfunTable::instance().call("reset_eval_cost", harness.vm, noArgs);
     assert(std::get<int64_t>(resetResult.data) == ceiling);
     assert(harness.vm.evalCost() == 0);
     assert(harness.vm.maxEvalCost() == ceiling);
 
-    amlp::Value second = harness.vm.callFunction(ob, "burn", {});
+    aemlpc::Value second = harness.vm.callFunction(ob, "burn", {});
     assert(std::get<int64_t>(second.data) == 20);
 
     std::cout << "testResetEvalCostZeroesUsedCostLeavingCeilingUnchanged OK\n";
@@ -19567,15 +19567,15 @@ static void testEvalCostAndMaxEvalCostQueryWithoutMutatingStateThenExplicitArgum
     int64_t usedAfterBurn = harness.vm.evalCost();
     assert(usedAfterBurn > 0 && usedAfterBurn < 1000000);
 
-    std::vector<amlp::Value> noArgs;
+    std::vector<aemlpc::Value> noArgs;
     // max_eval_cost(): pure query of the ceiling, no mutation.
-    amlp::Value ceiling = amlp::EfunTable::instance().call("max_eval_cost", harness.vm, noArgs);
+    aemlpc::Value ceiling = aemlpc::EfunTable::instance().call("max_eval_cost", harness.vm, noArgs);
     assert(std::get<int64_t>(ceiling.data) == 1000000);
     assert(harness.vm.maxEvalCost() == 1000000);
     assert(harness.vm.evalCost() == usedAfterBurn);
 
     // eval_cost(): pure query of the *remaining* budget, no mutation.
-    amlp::Value remaining = amlp::EfunTable::instance().call("eval_cost", harness.vm, noArgs);
+    aemlpc::Value remaining = aemlpc::EfunTable::instance().call("eval_cost", harness.vm, noArgs);
     assert(std::get<int64_t>(remaining.data) == 1000000 - usedAfterBurn);
     assert(harness.vm.maxEvalCost() == 1000000);
     assert(harness.vm.evalCost() == usedAfterBurn);
@@ -19583,8 +19583,8 @@ static void testEvalCostAndMaxEvalCostQueryWithoutMutatingStateThenExplicitArgum
     // An explicit argument to any of the four names sets the ceiling
     // directly, same as set_eval_limit(x). All four share one real
     // dispatch keyed on the argument value, not the name used to call it.
-    std::vector<amlp::Value> explicitArgs{amlp::Value(int64_t{500})};
-    amlp::Value setResult = amlp::EfunTable::instance().call("eval_cost", harness.vm, explicitArgs);
+    std::vector<aemlpc::Value> explicitArgs{aemlpc::Value(int64_t{500})};
+    aemlpc::Value setResult = aemlpc::EfunTable::instance().call("eval_cost", harness.vm, explicitArgs);
     assert(std::get<int64_t>(setResult.data) == 500);
     assert(harness.vm.maxEvalCost() == 500);
 
@@ -19606,17 +19606,17 @@ static void testRemoveShadowSplicesOutOfChainAndReturnsZeroWhenNotShadowing() {
     auto sh = harness.objects.cloneObject("/rs1_shadow");
     assert(victim != nullptr && sh != nullptr);
 
-    harness.vm.callFunction(sh, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(sh, "attach", {aemlpc::Value(victim)});
     assert(victim->shadowedBy().lock() == sh);
     assert(sh->shadowing().lock() == victim);
 
-    amlp::Value result = harness.vm.callFunction(sh, "unshadow", {});
+    aemlpc::Value result = harness.vm.callFunction(sh, "unshadow", {});
     assert(std::get<int64_t>(result.data) == 1);
     assert(!victim->shadowedBy().lock());
     assert(!sh->shadowing().lock());
 
     // No longer part of any shadow relationship. Returns 0, not an error.
-    amlp::Value again = harness.vm.callFunction(sh, "unshadow", {});
+    aemlpc::Value again = harness.vm.callFunction(sh, "unshadow", {});
     assert(std::get<int64_t>(again.data) == 0);
 
     std::cout << "testRemoveShadowSplicesOutOfChainAndReturnsZeroWhenNotShadowing OK\n";
@@ -19629,10 +19629,10 @@ static void testOldcryptTruncatesSaltToFirstTwoCharactersUnlikeCrypt() {
     auto ob = harness.objects.cloneObject("/oldcrypt_probe");
     assert(ob != nullptr);
 
-    amlp::Value r1 = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("hunter2")), amlp::Value(std::string("ab"))});
-    amlp::Value r2 = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("hunter2")), amlp::Value(std::string("abXXXXXX"))});
+    aemlpc::Value r1 = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("hunter2")), aemlpc::Value(std::string("ab"))});
+    aemlpc::Value r2 = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("hunter2")), aemlpc::Value(std::string("abXXXXXX"))});
     const std::string& hash1 = std::get<std::string>(r1.data);
     const std::string& hash2 = std::get<std::string>(r2.data);
     // Both salts share the same first two characters ("ab"); oldcrypt()
@@ -19663,8 +19663,8 @@ static void testHashComputesKnownDigestsForSeveralRealFluffosAlgorithmNames() {
     assert(ob != nullptr);
 
     auto probe = [&](const std::string& algo, const std::string& str) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "probe",
-            {amlp::Value(algo), amlp::Value(str)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "probe",
+            {aemlpc::Value(algo), aemlpc::Value(str)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -19692,12 +19692,12 @@ static void testHashMatchesAlgorithmNamesCaseInsensitivelyLikeRealFHash() {
     auto ob = harness.objects.cloneObject("/hash_probe2");
     assert(ob != nullptr);
 
-    amlp::Value lower = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("sha256")), amlp::Value(std::string("Something"))});
-    amlp::Value upper = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("SHA256")), amlp::Value(std::string("Something"))});
-    amlp::Value mixed = harness.vm.callFunction(ob, "probe",
-        {amlp::Value(std::string("Sha3-256")), amlp::Value(std::string("Something"))});
+    aemlpc::Value lower = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("sha256")), aemlpc::Value(std::string("Something"))});
+    aemlpc::Value upper = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("SHA256")), aemlpc::Value(std::string("Something"))});
+    aemlpc::Value mixed = harness.vm.callFunction(ob, "probe",
+        {aemlpc::Value(std::string("Sha3-256")), aemlpc::Value(std::string("Something"))});
     assert(std::get<std::string>(lower.data) == std::get<std::string>(upper.data));
     assert(!std::get<std::string>(mixed.data).empty());
 
@@ -19714,8 +19714,8 @@ static void testHashThrowsOnUnknownAlgorithmNameLikeRealFHash() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "probe",
-            {amlp::Value(std::string("not-a-real-algorithm")), amlp::Value(std::string("x"))});
-    } catch (const amlp::LpcRuntimeError&) {
+            {aemlpc::Value(std::string("not-a-real-algorithm")), aemlpc::Value(std::string("x"))});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -19739,7 +19739,7 @@ static void testSha1ComputesKnownDigestsIncludingTheRealDocWorkedExample() {
     assert(ob != nullptr);
 
     auto probe = [&](const std::string& s) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "probe", {amlp::Value(s)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "probe", {aemlpc::Value(s)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -19769,8 +19769,8 @@ static void testSha1AgreesWithHashSha1AndThrowsOnNonStringArgument() {
     assert(ob != nullptr);
 
     const std::string msg = "The quick brown fox jumps over the lazy dog";
-    amlp::Value a = harness.vm.callFunction(ob, "via_sha1", {amlp::Value(msg)});
-    amlp::Value b = harness.vm.callFunction(ob, "via_hash", {amlp::Value(msg)});
+    aemlpc::Value a = harness.vm.callFunction(ob, "via_sha1", {aemlpc::Value(msg)});
+    aemlpc::Value b = harness.vm.callFunction(ob, "via_hash", {aemlpc::Value(msg)});
     assert(std::holds_alternative<std::string>(a.data));
     assert(std::get<std::string>(a.data) == std::get<std::string>(b.data));
     assert(std::get<std::string>(a.data) ==
@@ -19778,8 +19778,8 @@ static void testSha1AgreesWithHashSha1AndThrowsOnNonStringArgument() {
 
     bool threw = false;
     try {
-        harness.vm.callFunction(ob, "bad", {amlp::Value(int64_t{42})});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(ob, "bad", {aemlpc::Value(int64_t{42})});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -19811,9 +19811,9 @@ static void testIdMatrixAndTranslateScaleProduceKnownMatrices() {
     assert(ob != nullptr);
 
     auto rows16 = [&](const char* fn) -> std::vector<double> {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(r.data));
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(r.data);
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(r.data));
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         assert(arr && arr->items.size() == 16);
         std::vector<double> out;
         for (const auto& el : arr->items) {
@@ -19876,14 +19876,14 @@ static void testTranslateMutatesItsMatrixInPlaceAndRejectsBadMatrices() {
     assert(ob != nullptr);
 
     // Mutated in place: reading m[13] after the call sees the new value.
-    amlp::Value ip = harness.vm.callFunction(ob, "in_place", {});
+    aemlpc::Value ip = harness.vm.callFunction(ob, "in_place", {});
     assert(std::holds_alternative<double>(ip.data));
     assert(std::get<double>(ip.data) == 8.0);
 
     // The return value IS the passed array: mutating r (the return of the
     // first translate) also mutates m. m = T(1,0,0) then r = r * T(5,0,0)
     // gives element 12 = 1*1 + 1*5 = 6.
-    amlp::Value same = harness.vm.callFunction(ob, "returns_same_array", {});
+    aemlpc::Value same = harness.vm.callFunction(ob, "returns_same_array", {});
     assert(std::holds_alternative<double>(same.data));
     assert(std::get<double>(same.data) == 6.0);
 
@@ -19891,7 +19891,7 @@ static void testTranslateMutatesItsMatrixInPlaceAndRejectsBadMatrices() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -19923,9 +19923,9 @@ static void testRotateXYZProduceKnownRotationMatrices() {
     assert(ob != nullptr);
 
     auto rows16 = [&](const char* fn, double d) -> std::vector<double> {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {amlp::Value(d)});
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(r.data));
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(r.data);
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {aemlpc::Value(d)});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(r.data));
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         assert(arr && arr->items.size() == 16);
         std::vector<double> out;
         for (const auto& el : arr->items) {
@@ -19962,9 +19962,9 @@ static void testRotateXYZProduceKnownRotationMatrices() {
 
     // Two 90-degree rotate_z calls compose (in place) to a 180 rotation:
     // m = Rz(90), then m = Rz(90) * Rz(90) = Rz(180).
-    amlp::Value rr = harness.vm.callFunction(ob, "rz_twice", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(rr.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(rr.data);
+    aemlpc::Value rr = harness.vm.callFunction(ob, "rz_twice", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(rr.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(rr.data);
     std::vector<double> z180;
     for (const auto& el : arr->items) z180.push_back(std::get<double>(el.data));
     assert(near(z180[0], -1.0) && near(z180[1], 0.0));
@@ -20005,12 +20005,12 @@ static void testRotateConvertsDegreesAndRejectsBadMatrices() {
 
     // cos(180 degrees) ~ -1. If the angle were taken as radians,
     // cos(180 rad) ~ -0.598, so this pins the degrees interpretation.
-    amlp::Value d = harness.vm.callFunction(ob, "deg_not_rad", {});
+    aemlpc::Value d = harness.vm.callFunction(ob, "deg_not_rad", {});
     assert(std::holds_alternative<double>(d.data));
     assert(near(std::get<double>(d.data), -1.0));
 
     // r is the same array m: Rx(90) element 6 ~ 1.
-    amlp::Value ip = harness.vm.callFunction(ob, "returns_same_array", {});
+    aemlpc::Value ip = harness.vm.callFunction(ob, "returns_same_array", {});
     assert(std::holds_alternative<double>(ip.data));
     assert(near(std::get<double>(ip.data), 1.0));
 
@@ -20018,7 +20018,7 @@ static void testRotateConvertsDegreesAndRejectsBadMatrices() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20069,9 +20069,9 @@ static void testLookatRotateProducesKnownViewingMatrices() {
     assert(ob != nullptr);
 
     auto rows16 = [&](const char* fn) -> std::vector<double> {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(r.data));
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(r.data);
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(r.data));
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         assert(arr && arr->items.size() == 16);
         std::vector<double> out;
         for (const auto& el : arr->items) {
@@ -20188,19 +20188,19 @@ static void testLookatRotateAliasesArrayRejectsBadMatricesAndTakesSevenArgs() {
 
     // lookat_rotate(id, 0,1,0) writes -1 into element 9 (V.z), and the
     // mutation is visible on the array that was passed in.
-    amlp::Value ip = harness.vm.callFunction(ob, "in_place", {});
+    aemlpc::Value ip = harness.vm.callFunction(ob, "in_place", {});
     assert(std::holds_alternative<double>(ip.data));
     assert(near(std::get<double>(ip.data), -1.0));
 
     // The return value IS the passed array: reading element 9 off the
     // returned reference sees the same -1.
-    amlp::Value same = harness.vm.callFunction(ob, "returns_same_array", {});
+    aemlpc::Value same = harness.vm.callFunction(ob, "returns_same_array", {});
     assert(std::holds_alternative<double>(same.data));
     assert(near(std::get<double>(same.data), -1.0));
 
     // lookat_rotate2 overwrites the passed array too: element 10 (N.z)
     // becomes -1 for look direction (0,0,-1).
-    amlp::Value la2ip = harness.vm.callFunction(ob, "la2_in_place", {});
+    aemlpc::Value la2ip = harness.vm.callFunction(ob, "la2_in_place", {});
     assert(std::holds_alternative<double>(la2ip.data));
     assert(near(std::get<double>(la2ip.data), -1.0));
 
@@ -20208,7 +20208,7 @@ static void testLookatRotateAliasesArrayRejectsBadMatricesAndTakesSevenArgs() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20239,8 +20239,8 @@ static void testZonetimeFormatsClockInNamedZone() {
     assert(ob != nullptr);
 
     auto zt = [&](const char* tz, long long c) -> std::string {
-        amlp::Value r = harness.vm.callFunction(
-            ob, "zt", {amlp::Value(std::string(tz)), amlp::Value(static_cast<int64_t>(c))});
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, "zt", {aemlpc::Value(std::string(tz)), aemlpc::Value(static_cast<int64_t>(c))});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -20258,7 +20258,7 @@ static void testZonetimeFormatsClockInNamedZone() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20290,8 +20290,8 @@ static void testIsDaylightSavingsTimeReflectsZoneAndDate() {
     assert(ob != nullptr);
 
     auto dst = [&](const char* tz, long long c) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(
-            ob, "dst", {amlp::Value(std::string(tz)), amlp::Value(static_cast<int64_t>(c))});
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, "dst", {aemlpc::Value(std::string(tz)), aemlpc::Value(static_cast<int64_t>(c))});
         assert(std::holds_alternative<int64_t>(r.data));
         return std::get<int64_t>(r.data);
     };
@@ -20311,7 +20311,7 @@ static void testIsDaylightSavingsTimeReflectsZoneAndDate() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20341,7 +20341,7 @@ static void testVectorNormDotprodDistanceKnownValues() {
     assert(ob != nullptr);
 
     auto call = [&](const char* fn) -> double {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
         assert(std::holds_alternative<double>(r.data));
         return std::get<double>(r.data);
     };
@@ -20387,7 +20387,7 @@ static void testVectorAngleAndBadArgsThrow() {
     assert(ob != nullptr);
 
     auto call = [&](const char* fn) -> double {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
         assert(std::holds_alternative<double>(r.data));
         return std::get<double>(r.data);
     };
@@ -20405,7 +20405,7 @@ static void testVectorAngleAndBadArgsThrow() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20432,8 +20432,8 @@ static void testStringDifferenceIsLevenshteinDistance() {
     assert(ob != nullptr);
 
     auto sd = [&](const char* a, const char* b) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(
-            ob, "sd", {amlp::Value(std::string(a)), amlp::Value(std::string(b))});
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, "sd", {aemlpc::Value(std::string(a)), aemlpc::Value(std::string(b))});
         assert(std::holds_alternative<int64_t>(r.data));
         return std::get<int64_t>(r.data);
     };
@@ -20458,7 +20458,7 @@ static void testStringDifferenceIsLevenshteinDistance() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20479,7 +20479,7 @@ static void testPcreVersionReturnsAVersionString() {
     auto ob = harness.objects.cloneObject("/pcrever_probe");
     assert(ob != nullptr);
 
-    amlp::Value r = harness.vm.callFunction(ob, "v", {});
+    aemlpc::Value r = harness.vm.callFunction(ob, "v", {});
     assert(std::holds_alternative<std::string>(r.data));
     const std::string& s = std::get<std::string>(r.data);
     assert(!s.empty());
@@ -20504,13 +20504,13 @@ static void testPcreExtractReturnsCaptureGroups() {
     auto ob = harness.objects.cloneObject("/pcreextract_probe");
     assert(ob != nullptr);
 
-    auto arr = [&](const char* fn, const char* s, const char* p) -> std::shared_ptr<amlp::Array> {
-        amlp::Value r = harness.vm.callFunction(
-            ob, fn, {amlp::Value(std::string(s)), amlp::Value(std::string(p))});
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(r.data));
-        return std::get<std::shared_ptr<amlp::Array>>(r.data);
+    auto arr = [&](const char* fn, const char* s, const char* p) -> std::shared_ptr<aemlpc::Array> {
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, fn, {aemlpc::Value(std::string(s)), aemlpc::Value(std::string(p))});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(r.data));
+        return std::get<std::shared_ptr<aemlpc::Array>>(r.data);
     };
-    auto strs = [](const std::shared_ptr<amlp::Array>& a) -> std::vector<std::string> {
+    auto strs = [](const std::shared_ptr<aemlpc::Array>& a) -> std::vector<std::string> {
         std::vector<std::string> out;
         for (const auto& el : a->items) {
             assert(std::holds_alternative<std::string>(el.data));
@@ -20533,25 +20533,25 @@ static void testPcreExtractReturnsCaptureGroups() {
     // pcre_flags: PCRE_I as the 4th argument makes a lowercase char class
     // match uppercase input; without it the same pattern does not match.
     {
-        amlp::Value r = harness.vm.callFunction(
-            ob, "ex_i", {amlp::Value(std::string("__ABC__")), amlp::Value(std::string("([a-c]+)"))});
-        auto a = std::get<std::shared_ptr<amlp::Array>>(r.data);
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, "ex_i", {aemlpc::Value(std::string("__ABC__")), aemlpc::Value(std::string("([a-c]+)"))});
+        auto a = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         assert((strs(a) == std::vector<std::string>{"ABC"}));
     }
     assert(arr("ex", "__ABC__", "([a-c]+)")->items.empty());  // no flag -> no match
 
     // include_names: last element is a mapping of named group -> value.
     {
-        amlp::Value r = harness.vm.callFunction(
+        aemlpc::Value r = harness.vm.callFunction(
             ob, "ex_named",
-            {amlp::Value(std::string("2026-08")),
-             amlp::Value(std::string("(?<year>[0-9]{4})-(?<mon>[0-9]{2})"))});
-        auto a = std::get<std::shared_ptr<amlp::Array>>(r.data);
+            {aemlpc::Value(std::string("2026-08")),
+             aemlpc::Value(std::string("(?<year>[0-9]{4})-(?<mon>[0-9]{2})"))});
+        auto a = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         assert(a->items.size() == 3);  // "2026", "08", ([...])
         assert(std::get<std::string>(a->items[0].data) == "2026");
         assert(std::get<std::string>(a->items[1].data) == "08");
-        assert(std::holds_alternative<std::shared_ptr<amlp::Mapping>>(a->items[2].data));
-        auto m = std::get<std::shared_ptr<amlp::Mapping>>(a->items[2].data);
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Mapping>>(a->items[2].data));
+        auto m = std::get<std::shared_ptr<aemlpc::Mapping>>(a->items[2].data);
         assert(m->entries.size() == 2);
         bool sawYear = false, sawMon = false;
         for (const auto& e : m->entries) {
@@ -20581,14 +20581,14 @@ static void testPcreMatchAllReturnsEveryMatch() {
     assert(ob != nullptr);
 
     auto matches = [&](const char* s, const char* p) -> std::vector<std::vector<std::string>> {
-        amlp::Value r = harness.vm.callFunction(
-            ob, "ma", {amlp::Value(std::string(s)), amlp::Value(std::string(p))});
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(r.data));
-        auto outer = std::get<std::shared_ptr<amlp::Array>>(r.data);
+        aemlpc::Value r = harness.vm.callFunction(
+            ob, "ma", {aemlpc::Value(std::string(s)), aemlpc::Value(std::string(p))});
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(r.data));
+        auto outer = std::get<std::shared_ptr<aemlpc::Array>>(r.data);
         std::vector<std::vector<std::string>> out;
         for (const auto& el : outer->items) {
-            assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(el.data));
-            auto inner = std::get<std::shared_ptr<amlp::Array>>(el.data);
+            assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(el.data));
+            auto inner = std::get<std::shared_ptr<aemlpc::Array>>(el.data);
             std::vector<std::string> row;
             for (const auto& g : inner->items) {
                 assert(std::holds_alternative<std::string>(g.data));
@@ -20654,13 +20654,13 @@ static void testPcreReplaceSubstitutesSelectedGroups() {
     assert(ob != nullptr);
 
     auto mkarr = [](std::initializer_list<const char*> ss) {
-        auto a = std::make_shared<amlp::Array>();
-        for (const char* s : ss) a->items.push_back(amlp::Value(std::string(s)));
-        return amlp::Value(a);
+        auto a = std::make_shared<aemlpc::Array>();
+        for (const char* s : ss) a->items.push_back(aemlpc::Value(std::string(s)));
+        return aemlpc::Value(a);
     };
-    auto rp = [&](const char* fn, const char* s, const char* p, amlp::Value r) -> std::string {
-        amlp::Value out = harness.vm.callFunction(
-            ob, fn, {amlp::Value(std::string(s)), amlp::Value(std::string(p)), std::move(r)});
+    auto rp = [&](const char* fn, const char* s, const char* p, aemlpc::Value r) -> std::string {
+        aemlpc::Value out = harness.vm.callFunction(
+            ob, fn, {aemlpc::Value(std::string(s)), aemlpc::Value(std::string(p)), std::move(r)});
         assert(std::holds_alternative<std::string>(out.data));
         return std::get<std::string>(out.data);
     };
@@ -20689,7 +20689,7 @@ static void testPcreReplaceSubstitutesSelectedGroups() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20719,27 +20719,27 @@ static void testStrToArrAndArrToStrRoundTripUtf8() {
     auto ob = harness.objects.cloneObject("/utf32conv_probe");
     assert(ob != nullptr);
 
-    auto staValue = [&](const std::string& s) -> amlp::Value {
-        return harness.vm.callFunction(ob, "sta", {amlp::Value(s)});
+    auto staValue = [&](const std::string& s) -> aemlpc::Value {
+        return harness.vm.callFunction(ob, "sta", {aemlpc::Value(s)});
     };
     auto sta = [&](const std::string& s) -> std::vector<int64_t> {
-        amlp::Value r = staValue(s);
-        auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&r.data);
+        aemlpc::Value r = staValue(s);
+        auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&r.data);
         assert(arr && *arr);
         std::vector<int64_t> out;
-        for (const amlp::Value& v : (*arr)->items) {
+        for (const aemlpc::Value& v : (*arr)->items) {
             assert(std::holds_alternative<int64_t>(v.data));
             out.push_back(std::get<int64_t>(v.data));
         }
         return out;
     };
     auto mkints = [](std::initializer_list<int64_t> ns) {
-        auto a = std::make_shared<amlp::Array>();
-        for (int64_t n : ns) a->items.push_back(amlp::Value(n));
-        return amlp::Value(a);
+        auto a = std::make_shared<aemlpc::Array>();
+        for (int64_t n : ns) a->items.push_back(aemlpc::Value(n));
+        return aemlpc::Value(a);
     };
-    auto ats = [&](amlp::Value arr) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "ats", {std::move(arr)});
+    auto ats = [&](aemlpc::Value arr) -> std::string {
+        aemlpc::Value r = harness.vm.callFunction(ob, "ats", {std::move(arr)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -20787,7 +20787,7 @@ static void testStrToArrAndArrToStrRoundTripUtf8() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20814,23 +20814,23 @@ static void testReplaceStringOccurrenceRangeForm() {
     assert(ob != nullptr);
 
     auto r3 = [&](const std::string& s, const std::string& p, const std::string& x) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "r3",
-            {amlp::Value(s), amlp::Value(p), amlp::Value(x)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "r3",
+            {aemlpc::Value(s), aemlpc::Value(p), aemlpc::Value(x)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
     auto r4 = [&](const std::string& s, const std::string& p, const std::string& x,
                   int64_t last) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "r4",
-            {amlp::Value(s), amlp::Value(p), amlp::Value(x), amlp::Value(last)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "r4",
+            {aemlpc::Value(s), aemlpc::Value(p), aemlpc::Value(x), aemlpc::Value(last)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
     auto r5 = [&](const std::string& s, const std::string& p, const std::string& x,
                   int64_t first, int64_t last) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, "r5",
-            {amlp::Value(s), amlp::Value(p), amlp::Value(x),
-             amlp::Value(first), amlp::Value(last)});
+        aemlpc::Value r = harness.vm.callFunction(ob, "r5",
+            {aemlpc::Value(s), aemlpc::Value(p), aemlpc::Value(x),
+             aemlpc::Value(first), aemlpc::Value(last)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -20872,7 +20872,7 @@ static void testReplaceStringOccurrenceRangeForm() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -20898,12 +20898,12 @@ static void testStrsrchIntNeedleAndBackwardFlag() {
     assert(ob != nullptr);
 
     auto ss = [&](const char* fn, const std::string& s, const std::string& p) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {amlp::Value(s), amlp::Value(p)});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {aemlpc::Value(s), aemlpc::Value(p)});
         assert(std::holds_alternative<int64_t>(r.data));
         return std::get<int64_t>(r.data);
     };
     auto ssc = [&](const char* fn, const std::string& s, int64_t c) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {amlp::Value(s), amlp::Value(c)});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {aemlpc::Value(s), aemlpc::Value(c)});
         assert(std::holds_alternative<int64_t>(r.data));
         return std::get<int64_t>(r.data);
     };
@@ -20918,8 +20918,8 @@ static void testStrsrchIntNeedleAndBackwardFlag() {
     assert(ss("bwd", "a/b/c/d", "/") == 5);
     assert(ss("bwd", "abXabXab", "ab") == 6);
     {
-        amlp::Value r = harness.vm.callFunction(ob, "lastslash",
-            {amlp::Value(std::string("/domains/foo/bar.c"))});
+        aemlpc::Value r = harness.vm.callFunction(ob, "lastslash",
+            {aemlpc::Value(std::string("/domains/foo/bar.c"))});
         assert(std::holds_alternative<int64_t>(r.data));
         assert(std::get<int64_t>(r.data) == 12);
     }
@@ -20949,7 +20949,7 @@ static void testStrsrchIntNeedleAndBackwardFlag() {
         bool threw = false;
         try {
             harness.vm.callFunction(ob, fn, {});
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -21005,18 +21005,18 @@ static void testBufferTypeAndCoreEfuns() {
     assert(ob != nullptr);
 
     auto callI = [&](const char* fn) -> int64_t {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
         assert(std::holds_alternative<int64_t>(r.data));
         return std::get<int64_t>(r.data);
     };
     auto callS = [&](const char* fn) -> std::string {
-        amlp::Value r = harness.vm.callFunction(ob, fn, {});
+        aemlpc::Value r = harness.vm.callFunction(ob, fn, {});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
     auto throws = [&](const char* fn) -> bool {
         try { harness.vm.callFunction(ob, fn, {}); return false; }
-        catch (const amlp::LpcRuntimeError&) { return true; }
+        catch (const aemlpc::LpcRuntimeError&) { return true; }
     };
 
     // bufferp: true only for a buffer.
@@ -21028,9 +21028,9 @@ static void testBufferTypeAndCoreEfuns() {
     // allocate_buffer: a buffer of N zero bytes; sizeof/strlen give N;
     // size 0 is legal; a negative size throws "Illegal buffer size.".
     {
-        amlp::Value r = harness.vm.callFunction(ob, "sz", {amlp::Value(int64_t{0})});
+        aemlpc::Value r = harness.vm.callFunction(ob, "sz", {aemlpc::Value(int64_t{0})});
         assert(std::holds_alternative<int64_t>(r.data) && std::get<int64_t>(r.data) == 0);
-        r = harness.vm.callFunction(ob, "sz", {amlp::Value(int64_t{5})});
+        r = harness.vm.callFunction(ob, "sz", {aemlpc::Value(int64_t{5})});
         assert(std::holds_alternative<int64_t>(r.data) && std::get<int64_t>(r.data) == 5);
     }
     assert(callI("slen") == 6);
@@ -21068,8 +21068,8 @@ static void testBufferTypeAndCoreEfuns() {
     // File-path forms: read_buffer(filename) returns a buffer of the
     // file's bytes; write_buffer(filename, ...) writes to the file.
     {
-        amlp::Value r = harness.vm.callFunction(ob, "rb_file", {});
-        auto* bp = std::get_if<std::shared_ptr<amlp::Buffer>>(&r.data);
+        aemlpc::Value r = harness.vm.callFunction(ob, "rb_file", {});
+        auto* bp = std::get_if<std::shared_ptr<aemlpc::Buffer>>(&r.data);
         assert(bp && *bp);
         assert((*bp)->bytes == (std::vector<unsigned char>{1, 2, 3, 4, 5}));
     }
@@ -21099,20 +21099,20 @@ static void testNextBitFindsFollowingSetBitWithRealBoundaryAsymmetry() {
     auto ob = harness.objects.cloneObject("/nb_probe");
     assert(ob != nullptr);
 
-    amlp::Value made = harness.vm.callFunction(ob, "make", {});
+    aemlpc::Value made = harness.vm.callFunction(ob, "make", {});
     assert(std::holds_alternative<std::string>(made.data));
 
     // start == 0 is inclusive: bit 0 is set, so it is returned itself.
-    amlp::Value fromZero = harness.vm.callFunction(ob, "probe", {made, amlp::Value(int64_t{0})});
+    aemlpc::Value fromZero = harness.vm.callFunction(ob, "probe", {made, aemlpc::Value(int64_t{0})});
     assert(std::get<int64_t>(fromZero.data) == 0);
 
     // start > 0 is exclusive: next_bit(s, 3) must skip bit 3 itself even
     // though it is set, landing on bit 10 instead.
-    amlp::Value fromThree = harness.vm.callFunction(ob, "probe", {made, amlp::Value(int64_t{3})});
+    aemlpc::Value fromThree = harness.vm.callFunction(ob, "probe", {made, aemlpc::Value(int64_t{3})});
     assert(std::get<int64_t>(fromThree.data) == 10);
 
     // Nothing left after the last set bit.
-    amlp::Value fromTen = harness.vm.callFunction(ob, "probe", {made, amlp::Value(int64_t{10})});
+    aemlpc::Value fromTen = harness.vm.callFunction(ob, "probe", {made, aemlpc::Value(int64_t{10})});
     assert(std::get<int64_t>(fromTen.data) == -1);
 
     std::cout << "testNextBitFindsFollowingSetBitWithRealBoundaryAsymmetry OK\n";
@@ -21124,21 +21124,21 @@ static void testElementOfReturnsAMemberOfTheArrayAndThrowsWhenEmpty() {
     auto ob = harness.objects.cloneObject("/eo_probe");
     assert(ob != nullptr);
 
-    auto arr = std::make_shared<amlp::Array>();
-    arr->items.push_back(amlp::Value(int64_t{7}));
-    arr->items.push_back(amlp::Value(int64_t{8}));
-    arr->items.push_back(amlp::Value(int64_t{9}));
+    auto arr = std::make_shared<aemlpc::Array>();
+    arr->items.push_back(aemlpc::Value(int64_t{7}));
+    arr->items.push_back(aemlpc::Value(int64_t{8}));
+    arr->items.push_back(aemlpc::Value(int64_t{9}));
     for (int i = 0; i < 20; ++i) {
-        amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(arr)});
+        aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(arr)});
         int64_t v = std::get<int64_t>(result.data);
         assert(v == 7 || v == 8 || v == 9);
     }
 
-    auto empty = std::make_shared<amlp::Array>();
+    auto empty = std::make_shared<aemlpc::Array>();
     bool threw = false;
     try {
-        harness.vm.callFunction(ob, "probe", {amlp::Value(empty)});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(ob, "probe", {aemlpc::Value(empty)});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -21152,11 +21152,11 @@ static void testShuffleReordersInPlaceAndKeepsSameElementsAndIdentity() {
     auto ob = harness.objects.cloneObject("/sf_probe");
     assert(ob != nullptr);
 
-    auto arr = std::make_shared<amlp::Array>();
-    for (int64_t i = 0; i < 20; ++i) arr->items.push_back(amlp::Value(i));
+    auto arr = std::make_shared<aemlpc::Array>();
+    for (int64_t i = 0; i < 20; ++i) arr->items.push_back(aemlpc::Value(i));
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(arr)});
-    auto* resultArr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(arr)});
+    auto* resultArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(resultArr != nullptr && *resultArr == arr); // same identity, mutated in place
 
     assert(arr->items.size() == 20);
@@ -21182,7 +21182,7 @@ static void testRealTimeReturnsCurrentUnixTime() {
     assert(ob != nullptr);
 
     int64_t before = static_cast<int64_t>(std::time(nullptr));
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     int64_t after = static_cast<int64_t>(std::time(nullptr));
     int64_t got = std::get<int64_t>(result.data);
     assert(got >= before && got <= after);
@@ -21211,7 +21211,7 @@ static void testTimeNsReturnsWallClockNanosecondsSinceEpoch() {
     };
 
     int64_t before = toNs(std::chrono::system_clock::now());
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     int64_t after = toNs(std::chrono::system_clock::now());
     int64_t got = std::get<int64_t>(result.data);
     assert(got >= before && got <= after);
@@ -21233,8 +21233,8 @@ static void testPerfCounterNsIsMonotonicAcrossTwoSuccessiveCalls() {
     auto ob = harness.objects.cloneObject("/pcns_probe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr && arr->items.size() == 2);
     int64_t a = std::get<int64_t>(arr->items[0].data);
     int64_t b = std::get<int64_t>(arr->items[1].data);
@@ -21253,9 +21253,9 @@ static void testTimeNsReflectsAMeasuredSleepIntervalCorrectly() {
     auto ob = harness.objects.cloneObject("/tns_sleep_probe");
     assert(ob != nullptr);
 
-    amlp::Value first = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value first = harness.vm.callFunction(ob, "probe", {});
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    amlp::Value second = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value second = harness.vm.callFunction(ob, "probe", {});
 
     int64_t a = std::get<int64_t>(first.data);
     int64_t b = std::get<int64_t>(second.data);
@@ -21282,7 +21282,7 @@ static void testRemoveInteractiveClosesConnectionWithoutDestructingAndReturnsZer
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
 
     harness.writeFile("/ri_caller.c",
@@ -21290,14 +21290,14 @@ static void testRemoveInteractiveClosesConnectionWithoutDestructingAndReturnsZer
     auto caller = harness.objects.cloneObject("/ri_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "disconnect", {amlp::Value(ob)});
+    aemlpc::Value result = harness.vm.callFunction(caller, "disconnect", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(result.data) == 1);
     assert(!conn.isOpen());
     assert(!ob->isDestructed());
-    assert(amlp::InteractiveRegistry::find(ob) == nullptr);
+    assert(aemlpc::InteractiveRegistry::find(ob) == nullptr);
 
     // No longer interactive. A second call is a no-op returning 0.
-    amlp::Value again = harness.vm.callFunction(caller, "disconnect", {amlp::Value(ob)});
+    aemlpc::Value again = harness.vm.callFunction(caller, "disconnect", {aemlpc::Value(ob)});
     assert(std::get<int64_t>(again.data) == 0);
 
     ::close(fds[1]);
@@ -21311,13 +21311,13 @@ static void testFileLengthCountsNewlinesAndReturnsNegativeForMissingOrDirectory(
     auto ob = harness.objects.cloneObject("/fl_probe");
     assert(ob != nullptr);
 
-    amlp::Value three = harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("/fl_three_lines.txt"))});
+    aemlpc::Value three = harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("/fl_three_lines.txt"))});
     assert(std::get<int64_t>(three.data) == 3);
 
-    amlp::Value missing = harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("/fl_does_not_exist.txt"))});
+    aemlpc::Value missing = harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("/fl_does_not_exist.txt"))});
     assert(std::get<int64_t>(missing.data) == -1);
 
-    amlp::Value dir = harness.vm.callFunction(ob, "probe", {amlp::Value(std::string("/"))});
+    aemlpc::Value dir = harness.vm.callFunction(ob, "probe", {aemlpc::Value(std::string("/"))});
     assert(std::get<int64_t>(dir.data) == -2);
 
     std::cout << "testFileLengthCountsNewlinesAndReturnsNegativeForMissingOrDirectory OK\n";
@@ -21337,12 +21337,12 @@ static void testRefsReflectsSharedReferenceCountMinusOne() {
     // "alias" and the object's own "shared" variable both hold the same
     // underlying array. At least one extra real reference beyond the
     // fresh local a truly-unshared array would have.
-    amlp::Value sharedResult = harness.vm.callFunction(ob, "probe_shared", {});
-    amlp::Value freshResult = harness.vm.callFunction(ob, "probe_fresh", {});
+    aemlpc::Value sharedResult = harness.vm.callFunction(ob, "probe_shared", {});
+    aemlpc::Value freshResult = harness.vm.callFunction(ob, "probe_fresh", {});
     assert(std::get<int64_t>(sharedResult.data) > std::get<int64_t>(freshResult.data));
 
     // This driver has no interned/shared string concept. Always 0.
-    amlp::Value stringResult = harness.vm.callFunction(ob, "probe_string", {});
+    aemlpc::Value stringResult = harness.vm.callFunction(ob, "probe_string", {});
     assert(std::get<int64_t>(stringResult.data) == 0);
 
     std::cout << "testRefsReflectsSharedReferenceCountMinusOne OK\n";
@@ -21350,7 +21350,7 @@ static void testRefsReflectsSharedReferenceCountMinusOne() {
 
 static void testHeartBeatsListsEveryObjectWithHeartbeatEnabledSkippingDestructed() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/hb_a.c", "void create() {} void heart_beat() {}\n");
     harness.writeFile("/hb_b.c", "void create() {} void heart_beat() {}\n");
@@ -21365,12 +21365,12 @@ static void testHeartBeatsListsEveryObjectWithHeartbeatEnabledSkippingDestructed
     auto caller = harness.objects.cloneObject("/hb_caller");
     assert(caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr && (*arr)->items.size() == 2);
     bool sawA = false, sawB = false;
     for (auto& item : (*arr)->items) {
-        auto ob = std::get<std::shared_ptr<amlp::LpcObject>>(item.data);
+        auto ob = std::get<std::shared_ptr<aemlpc::LpcObject>>(item.data);
         if (ob == a) sawA = true;
         if (ob == b) sawB = true;
     }
@@ -21390,13 +21390,13 @@ static void testQueryIpPortReturnsConfiguredPortForInteractiveElseZero() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(interactive);
 
-    amlp::Value connected = harness.vm.callFunction(probe, "probe", {amlp::Value(interactive)});
+    aemlpc::Value connected = harness.vm.callFunction(probe, "probe", {aemlpc::Value(interactive)});
     assert(std::get<int64_t>(connected.data) == harness.config.port());
 
-    amlp::Value notConnected = harness.vm.callFunction(probe, "probe", {amlp::Value(plain)});
+    aemlpc::Value notConnected = harness.vm.callFunction(probe, "probe", {aemlpc::Value(plain)});
     assert(std::get<int64_t>(notConnected.data) == 0);
 
     ::close(fds[1]);
@@ -21451,12 +21451,12 @@ static void testNamedLivingsListsOnlyLivingNamedObjectsWithCommandsEnabledRespec
     denying.vm.callFunction(hidden, "hide", {});
     assert(hidden->isHidden());
 
-    amlp::Value result = denying.vm.callFunction(probe, "probe", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = denying.vm.callFunction(probe, "probe", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arr != nullptr);
     bool sawNamed = false, sawNoCommands = false, sawUnnamed = false, sawHidden = false;
     for (auto& item : (*arr)->items) {
-        auto* ob = std::get_if<std::shared_ptr<amlp::LpcObject>>(&item.data);
+        auto* ob = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&item.data);
         assert(ob != nullptr);
         if (*ob == named) sawNamed = true;
         if (*ob == noCommands) sawNoCommands = true;
@@ -21498,19 +21498,19 @@ static void testQueryNotifyFailPeeksPendingMessageWithoutConsumingIt() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(player, "setup", {});
-    amlp::Server::dispatchLine(harness.vm, conn, "go north");
-    amlp::OutputContext::set(nullptr);
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go north");
+    aemlpc::OutputContext::set(nullptr);
 
-    amlp::Value before = harness.vm.callFunction(player, "get_before", {});
+    aemlpc::Value before = harness.vm.callFunction(player, "get_before", {});
     assert(std::holds_alternative<int64_t>(before.data));
     assert(std::get<int64_t>(before.data) == 0);
 
-    amlp::Value after = harness.vm.callFunction(player, "get_after", {});
+    aemlpc::Value after = harness.vm.callFunction(player, "get_after", {});
     assert(std::holds_alternative<std::string>(after.data));
     assert(std::get<std::string>(after.data) == "You can't go that way.\n");
 
@@ -21538,12 +21538,12 @@ static void testRequestTermSizeSendsIacDoNawsAndIsNoOpWithoutInteractiveCommandG
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(probe, "probe", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     unsigned char expected[] = {255, 253, 31}; // IAC DO NAWS
     char buf[16];
@@ -21573,12 +21573,12 @@ static void testRequestTermTypeSendsIacSbTtypeSendAndIsNoOpWithoutInteractiveCom
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(probe, "probe", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     unsigned char expected[] = {255, 250, 24, 1, 255, 240}; // IAC SB TTYPE SEND IAC SE
     char buf[16];
@@ -21602,12 +21602,12 @@ static void testStartRequestTermTypeSendsIacDoTtypeAndIsNoOpWithoutInteractiveCo
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(probe);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(probe, "probe", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     unsigned char expected[] = {255, 253, 24}; // IAC DO TTYPE
     char buf[16];
@@ -21637,10 +21637,10 @@ static void testPluralizeMatchesRealExceptionTableGeneralRulesAndOfClauseAcrossV
     auto probe = harness.objects.cloneObject("/pl_probe");
     assert(probe != nullptr);
 
-    auto p = [&](const std::string& in) -> amlp::Value {
-        return harness.vm.callFunction(probe, "p", {amlp::Value(in)});
+    auto p = [&](const std::string& in) -> aemlpc::Value {
+        return harness.vm.callFunction(probe, "p", {aemlpc::Value(in)});
     };
-    auto str = [](const amlp::Value& v) -> std::string {
+    auto str = [](const aemlpc::Value& v) -> std::string {
         assert(std::holds_alternative<std::string>(v.data));
         return std::get<std::string>(v.data);
     };
@@ -21677,7 +21677,7 @@ static void testPluralizeMatchesRealExceptionTableGeneralRulesAndOfClauseAcrossV
     // "X of Y". Only X is pluralized, " of Y" rides along verbatim.
     assert(str(p("loaf of bread")) == "loaves of bread");
     // Empty input: real int 0, not an empty string.
-    amlp::Value empty = p("");
+    aemlpc::Value empty = p("");
     assert(std::holds_alternative<int64_t>(empty.data) && std::get<int64_t>(empty.data) == 0);
 
     std::cout << "testPluralizeMatchesRealExceptionTableGeneralRulesAndOfClauseAcrossVariousInputs OK\n";
@@ -21708,21 +21708,21 @@ static void testUniqueMappingGroupsByCallbackResultInFirstAppearanceOrderForClos
     assert(probe != nullptr);
 
     auto makeIntArray = [](std::vector<int64_t> nums) {
-        auto arr = std::make_shared<amlp::Array>();
+        auto arr = std::make_shared<aemlpc::Array>();
         for (auto n : nums) arr->items.emplace_back(n);
         return arr;
     };
 
     // Closure form: group by parity. First appearance order: 3 (odd)
     // seen before 4 (even).
-    amlp::Value closureResult = harness.vm.callFunction(
-        probe, "probe_closure", {amlp::Value(makeIntArray({3, 4, 5, 6, 7}))});
-    auto* closureMap = std::get_if<std::shared_ptr<amlp::Mapping>>(&closureResult.data);
+    aemlpc::Value closureResult = harness.vm.callFunction(
+        probe, "probe_closure", {aemlpc::Value(makeIntArray({3, 4, 5, 6, 7}))});
+    auto* closureMap = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&closureResult.data);
     assert(closureMap != nullptr && *closureMap != nullptr);
     assert((*closureMap)->entries.size() == 2);
     assert(std::get<int64_t>((*closureMap)->entries[0].first.data) == 1); // odd first
     {
-        auto* oddGroup = std::get_if<std::shared_ptr<amlp::Array>>(&(*closureMap)->entries[0].second.data);
+        auto* oddGroup = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*closureMap)->entries[0].second.data);
         assert(oddGroup != nullptr && (*oddGroup)->items.size() == 3);
         assert(std::get<int64_t>((*oddGroup)->items[0].data) == 3);
         assert(std::get<int64_t>((*oddGroup)->items[1].data) == 5);
@@ -21730,7 +21730,7 @@ static void testUniqueMappingGroupsByCallbackResultInFirstAppearanceOrderForClos
     }
     assert(std::get<int64_t>((*closureMap)->entries[1].first.data) == 0); // even second
     {
-        auto* evenGroup = std::get_if<std::shared_ptr<amlp::Array>>(&(*closureMap)->entries[1].second.data);
+        auto* evenGroup = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*closureMap)->entries[1].second.data);
         assert(evenGroup != nullptr && (*evenGroup)->items.size() == 2);
         assert(std::get<int64_t>((*evenGroup)->items[0].data) == 4);
         assert(std::get<int64_t>((*evenGroup)->items[1].data) == 6);
@@ -21738,9 +21738,9 @@ static void testUniqueMappingGroupsByCallbackResultInFirstAppearanceOrderForClos
 
     // String function name + explicit target object form, extra arg
     // (mod = 3) passed through after the element.
-    amlp::Value stringResult = harness.vm.callFunction(
-        probe, "probe_string", {amlp::Value(makeIntArray({1, 2, 3, 4, 5}))});
-    auto* stringMap = std::get_if<std::shared_ptr<amlp::Mapping>>(&stringResult.data);
+    aemlpc::Value stringResult = harness.vm.callFunction(
+        probe, "probe_string", {aemlpc::Value(makeIntArray({1, 2, 3, 4, 5}))});
+    auto* stringMap = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&stringResult.data);
     assert(stringMap != nullptr && *stringMap != nullptr);
     assert((*stringMap)->entries.size() == 3); // 1%3, 2%3, 0%3
     assert(std::get<int64_t>((*stringMap)->entries[0].first.data) == 1);
@@ -21748,8 +21748,8 @@ static void testUniqueMappingGroupsByCallbackResultInFirstAppearanceOrderForClos
     assert(std::get<int64_t>((*stringMap)->entries[2].first.data) == 0);
 
     // Empty array -> empty mapping.
-    amlp::Value emptyResult = harness.vm.callFunction(probe, "probe_empty", {});
-    auto* emptyMap = std::get_if<std::shared_ptr<amlp::Mapping>>(&emptyResult.data);
+    aemlpc::Value emptyResult = harness.vm.callFunction(probe, "probe_empty", {});
+    auto* emptyMap = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&emptyResult.data);
     assert(emptyMap != nullptr && *emptyMap != nullptr && (*emptyMap)->entries.empty());
 
     std::cout << "testUniqueMappingGroupsByCallbackResultInFirstAppearanceOrderForClosureAndStringForms OK\n";
@@ -21788,13 +21788,13 @@ static void testReclaimObjectsCoercesStaleReferencesAndErasesDestructedMappingKe
     auto probe = harness.objects.cloneObject("/rc_probe");
     assert(target != nullptr && holder != nullptr && probe != nullptr);
 
-    harness.vm.callFunction(holder, "setup", {amlp::Value(target)});
-    amlp::Value sizeBefore = harness.vm.callFunction(holder, "map_size", {});
+    harness.vm.callFunction(holder, "setup", {aemlpc::Value(target)});
+    aemlpc::Value sizeBefore = harness.vm.callFunction(holder, "map_size", {});
     assert(std::get<int64_t>(sizeBefore.data) == 1);
 
     harness.vm.destructObject(target); // target stays alive via this local
 
-    amlp::Value cleaned = harness.vm.callFunction(probe, "probe", {});
+    aemlpc::Value cleaned = harness.vm.callFunction(probe, "probe", {});
     assert(std::holds_alternative<int64_t>(cleaned.data));
     // stale_ob (1) + stale_arr's element 0 (1) + the destructed-keyed
     // mapping entry (1, real map_delete(), see the function comment).
@@ -21803,7 +21803,7 @@ static void testReclaimObjectsCoercesStaleReferencesAndErasesDestructedMappingKe
     // The mapping entry was erased outright, not rewritten to a 0 key.
     // sizeof(m) genuinely shrank, an effect no lazy read anywhere else
     // in this driver ever produces for a mapping key.
-    amlp::Value sizeAfter = harness.vm.callFunction(holder, "map_size", {});
+    aemlpc::Value sizeAfter = harness.vm.callFunction(holder, "map_size", {});
     assert(std::get<int64_t>(sizeAfter.data) == 0);
 
     std::cout << "testReclaimObjectsCoercesStaleReferencesAndErasesDestructedMappingKeysReturningCount OK\n";
@@ -21837,7 +21837,7 @@ static void testReplaceProgramDeferredSwapPreservesInheritedVariablesAndDropsOwn
     // both the child's own function and the inherited one.
     assert(std::get<std::string>(harness.vm.callFunction(ob, "desc", {}).data) == "a room");
     assert(std::get<std::string>(harness.vm.callFunction(ob, "special", {}).data) == "special");
-    harness.vm.callFunction(ob, "set_vars", {amlp::Value(int64_t{42}), amlp::Value(int64_t{99})});
+    harness.vm.callFunction(ob, "set_vars", {aemlpc::Value(int64_t{42}), aemlpc::Value(int64_t{99})});
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_shared", {}).data) == 42);
     assert(ob->variables().size() == 2); // shared_var (inherited) + child_var (own)
 
@@ -21858,7 +21858,7 @@ static void testReplaceProgramDeferredSwapPreservesInheritedVariablesAndDropsOwn
     // function is a silent void return, not a throw (that is
     // OpCode::Call's own behavior for a bare in-LPC call, a different
     // entry point). Checked accordingly, not against an exception.
-    amlp::Value afterSwap = harness.vm.callFunction(ob, "special", {});
+    aemlpc::Value afterSwap = harness.vm.callFunction(ob, "special", {});
     assert(afterSwap.isVoid());
     assert(std::get<std::string>(harness.vm.callFunction(ob, "desc", {}).data) == "a room");
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_shared", {}).data) == 42);
@@ -21886,15 +21886,15 @@ static void testQueryReplacedProgramReflectsOnlyAnActuallyAppliedSwap() {
     auto probe = harness.objects.cloneObject("/qrp_probe");
     assert(ob != nullptr && probe != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(probe, "probe", {amlp::Value(ob)});
+    aemlpc::Value before = harness.vm.callFunction(probe, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<int64_t>(before.data) && std::get<int64_t>(before.data) == 0);
 
     harness.vm.callFunction(ob, "do_replace", {});
-    amlp::Value staged = harness.vm.callFunction(probe, "probe", {amlp::Value(ob)});
+    aemlpc::Value staged = harness.vm.callFunction(probe, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<int64_t>(staged.data) && std::get<int64_t>(staged.data) == 0);
 
     harness.vm.processPendingReplacePrograms();
-    amlp::Value applied = harness.vm.callFunction(probe, "probe", {amlp::Value(ob)});
+    aemlpc::Value applied = harness.vm.callFunction(probe, "probe", {aemlpc::Value(ob)});
     assert(std::holds_alternative<std::string>(applied.data));
     assert(std::get<std::string>(applied.data) == "/qrp_parent");
 
@@ -21915,8 +21915,8 @@ static void testReplaceProgramThrowsWhenTargetNotInheritedOrCalledOnSimulEfunObj
     // inherit chain.
     bool threwNotInherited = false;
     try {
-        harness.vm.callFunction(ob, "try_replace", {amlp::Value(std::string("/rp2_unrelated"))});
-    } catch (const amlp::LpcRuntimeError&) {
+        harness.vm.callFunction(ob, "try_replace", {aemlpc::Value(std::string("/rp2_unrelated"))});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwNotInherited = true;
     }
     assert(threwNotInherited);
@@ -21929,7 +21929,7 @@ static void testReplaceProgramThrowsWhenTargetNotInheritedOrCalledOnSimulEfunObj
     bool threwSimulEfun = false;
     try {
         harness.vm.callFunction(harness.objects.simulEfunObject(), "try_replace_self", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwSimulEfun = true;
     }
     assert(threwSimulEfun);
@@ -21962,7 +21962,7 @@ static void testReplaceProgramNoArgAutoSelectsSoleInheritUnderLdmudDialect() {
 
     // Own function gone, inherited one still resolves. The swap
     // genuinely landed on /rp3_parent without naming it explicitly.
-    amlp::Value afterSwap = harness.vm.callFunction(ob, "special", {});
+    aemlpc::Value afterSwap = harness.vm.callFunction(ob, "special", {});
     assert(afterSwap.isVoid());
     assert(std::get<std::string>(harness.vm.callFunction(ob, "tag", {}).data) == "parent");
 
@@ -21989,7 +21989,7 @@ static void testReplaceProgramNoArgThrowsWithMultipleInheritsUnderLdmudDialect()
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "do_replace", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22016,7 +22016,7 @@ static void testReplaceProgramNoArgStillRequiresArgumentUnderFluffosDialect() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "do_replace", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22036,13 +22036,13 @@ static void testFunctionOwnerReturnsClosureOwnerOrZeroOnceOwnerIsGone() {
     auto owner = harness.objects.cloneObject("/fo_owner");
     assert(owner != nullptr);
 
-    amlp::Value closureVal = harness.vm.callFunction(owner, "make", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Closure>>(closureVal.data));
+    aemlpc::Value closureVal = harness.vm.callFunction(owner, "make", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Closure>>(closureVal.data));
 
     {
-        std::vector<amlp::Value> ownerArgs{closureVal};
-        amlp::Value ownerResult = amlp::EfunTable::instance().call("function_owner", harness.vm, ownerArgs);
-        auto* ownerOb = std::get_if<std::shared_ptr<amlp::LpcObject>>(&ownerResult.data);
+        std::vector<aemlpc::Value> ownerArgs{closureVal};
+        aemlpc::Value ownerResult = aemlpc::EfunTable::instance().call("function_owner", harness.vm, ownerArgs);
+        auto* ownerOb = std::get_if<std::shared_ptr<aemlpc::LpcObject>>(&ownerResult.data);
         assert(ownerOb != nullptr && *ownerOb == owner);
         // ownerResult itself holds a strong shared_ptr to the same
         // object (the efun's own real return value). Must not outlive
@@ -22054,10 +22054,10 @@ static void testFunctionOwnerReturnsClosureOwnerOrZeroOnceOwnerIsGone() {
 
     // Wrong argument type throws.
     bool threw = false;
-    std::vector<amlp::Value> badArgs{amlp::Value(int64_t{5})};
+    std::vector<aemlpc::Value> badArgs{aemlpc::Value(int64_t{5})};
     try {
-        amlp::EfunTable::instance().call("function_owner", harness.vm, badArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("function_owner", harness.vm, badArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22068,9 +22068,9 @@ static void testFunctionOwnerReturnsClosureOwnerOrZeroOnceOwnerIsGone() {
     // put_unrefed_object()'s own explicit O_DESTRUCTED check must still
     // read this back as 0, not the object.
     harness.vm.destructObject(owner); // owner stays alive via this local
-    std::vector<amlp::Value> destructedArgs{closureVal};
-    amlp::Value destructedResult =
-        amlp::EfunTable::instance().call("function_owner", harness.vm, destructedArgs);
+    std::vector<aemlpc::Value> destructedArgs{closureVal};
+    aemlpc::Value destructedResult =
+        aemlpc::EfunTable::instance().call("function_owner", harness.vm, destructedArgs);
     assert(std::holds_alternative<int64_t>(destructedResult.data) &&
            std::get<int64_t>(destructedResult.data) == 0);
 
@@ -22078,8 +22078,8 @@ static void testFunctionOwnerReturnsClosureOwnerOrZeroOnceOwnerIsGone() {
     // weak_ptr itself expires too. A second, independent way to reach
     // the same real int-0 answer.
     owner.reset();
-    std::vector<amlp::Value> goneArgs{closureVal};
-    amlp::Value goneResult = amlp::EfunTable::instance().call("function_owner", harness.vm, goneArgs);
+    std::vector<aemlpc::Value> goneArgs{closureVal};
+    aemlpc::Value goneResult = aemlpc::EfunTable::instance().call("function_owner", harness.vm, goneArgs);
     assert(std::holds_alternative<int64_t>(goneResult.data) && std::get<int64_t>(goneResult.data) == 0);
 
     std::cout << "testFunctionOwnerReturnsClosureOwnerOrZeroOnceOwnerIsGone OK\n";
@@ -22091,15 +22091,15 @@ static void testNumClassesAlwaysReturnsZeroSinceClassDeclarationsDoNotExist() {
     auto ob = harness.objects.cloneObject("/nc_probe");
     assert(ob != nullptr);
 
-    std::vector<amlp::Value> args{amlp::Value(ob)};
-    amlp::Value result = amlp::EfunTable::instance().call("num_classes", harness.vm, args);
+    std::vector<aemlpc::Value> args{aemlpc::Value(ob)};
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("num_classes", harness.vm, args);
     assert(std::holds_alternative<int64_t>(result.data) && std::get<int64_t>(result.data) == 0);
 
     bool threw = false;
-    std::vector<amlp::Value> badArgs{amlp::Value(int64_t{1})};
+    std::vector<aemlpc::Value> badArgs{aemlpc::Value(int64_t{1})};
     try {
-        amlp::EfunTable::instance().call("num_classes", harness.vm, badArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("num_classes", harness.vm, badArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22110,15 +22110,15 @@ static void testNumClassesAlwaysReturnsZeroSinceClassDeclarationsDoNotExist() {
 static void testSetAuthorAcceptsStringReturnsVoidAndThrowsOnWrongType() {
     ObjectVarHarness harness;
 
-    std::vector<amlp::Value> args{amlp::Value(std::string("someone"))};
-    amlp::Value result = amlp::EfunTable::instance().call("set_author", harness.vm, args);
+    std::vector<aemlpc::Value> args{aemlpc::Value(std::string("someone"))};
+    aemlpc::Value result = aemlpc::EfunTable::instance().call("set_author", harness.vm, args);
     assert(result.isVoid());
 
     bool threw = false;
-    std::vector<amlp::Value> badArgs{amlp::Value(int64_t{1})};
+    std::vector<aemlpc::Value> badArgs{aemlpc::Value(int64_t{1})};
     try {
-        amlp::EfunTable::instance().call("set_author", harness.vm, badArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("set_author", harness.vm, badArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22143,11 +22143,11 @@ static void testReplaceableTrueOnlyWhenEveryLocalFunctionIsIgnorable() {
     auto extra = harness.objects.cloneObject("/repl_extra");
     assert(bare && withInit && extra);
 
-    auto callReplaceable = [&](std::shared_ptr<amlp::LpcObject> ob,
-                                std::shared_ptr<amlp::Array> ignore = nullptr) {
-        std::vector<amlp::Value> args{amlp::Value(ob)};
+    auto callReplaceable = [&](std::shared_ptr<aemlpc::LpcObject> ob,
+                                std::shared_ptr<aemlpc::Array> ignore = nullptr) {
+        std::vector<aemlpc::Value> args{aemlpc::Value(ob)};
         if (ignore) args.emplace_back(ignore);
-        return amlp::EfunTable::instance().call("replaceable", harness.vm, args);
+        return aemlpc::EfunTable::instance().call("replaceable", harness.vm, args);
     };
 
     // Only create(): trivially replaceable.
@@ -22161,16 +22161,16 @@ static void testReplaceableTrueOnlyWhenEveryLocalFunctionIsIgnorable() {
     assert(std::get<int64_t>(callReplaceable(extra).data) == 0);
 
     // ...unless that function is explicitly ignored.
-    auto ignoreExtra = std::make_shared<amlp::Array>();
+    auto ignoreExtra = std::make_shared<aemlpc::Array>();
     ignoreExtra->items.emplace_back(std::string("extra"));
     assert(std::get<int64_t>(callReplaceable(extra, ignoreExtra).data) == 1);
 
     // Wrong argument type throws.
     bool threw = false;
-    std::vector<amlp::Value> badArgs{amlp::Value(int64_t{1})};
+    std::vector<aemlpc::Value> badArgs{aemlpc::Value(int64_t{1})};
     try {
-        amlp::EfunTable::instance().call("replaceable", harness.vm, badArgs);
-    } catch (const amlp::LpcRuntimeError&) {
+        aemlpc::EfunTable::instance().call("replaceable", harness.vm, badArgs);
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -22202,13 +22202,13 @@ static void testQueryNumMatchesRealAssemblyOrderAcrossRepresentativeInputsAndLim
     assert(probe != nullptr);
 
     auto p = [&](int64_t n) -> std::string {
-        amlp::Value r = harness.vm.callFunction(probe, "p", {amlp::Value(n)});
+        aemlpc::Value r = harness.vm.callFunction(probe, "p", {aemlpc::Value(n)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
     auto pLimit = [&](int64_t n, int64_t limit) -> std::string {
-        amlp::Value r = harness.vm.callFunction(probe, "p_limit",
-            {amlp::Value(n), amlp::Value(limit)});
+        aemlpc::Value r = harness.vm.callFunction(probe, "p_limit",
+            {aemlpc::Value(n), aemlpc::Value(limit)});
         assert(std::holds_alternative<std::string>(r.data));
         return std::get<std::string>(r.data);
     };
@@ -22269,7 +22269,7 @@ static void testOriginReturnsLocalForABareSameObjectCall() {
     // probe()'s own origin, reached via a bare call *from LPC code*
     // (outer() calling probe()), real F_CALL_FUNCTION_BY_ADDRESS's own
     // "caller_type = ORIGIN_LOCAL".
-    amlp::Value result = harness.vm.callFunction(ob, "outer", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "outer", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "local");
 
@@ -22288,7 +22288,7 @@ static void testOriginReturnsCallOtherForACallOtherDispatch() {
     // Real f__call_other()'s own "call_origin = ORIGIN_CALL_OTHER;"
     // (efuns_main.c). Target's probe() must see "call_other", not
     // "local" (it is not target's own bare call) or "efun".
-    amlp::Value result = harness.vm.callFunction(caller, "call_it", {amlp::Value(target)});
+    aemlpc::Value result = harness.vm.callFunction(caller, "call_it", {aemlpc::Value(target)});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "call_other");
 
@@ -22309,7 +22309,7 @@ static void testOriginReturnsSimulForABareCallResolvingToSimulEfun() {
 
     // Real call_simul_efun()'s own "call_direct(simul_efun_ob, ...,
     // ORIGIN_SIMUL_EFUN, ...)" (eoperators.c).
-    amlp::Value result = harness.vm.callFunction(caller, "call_it", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "call_it", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "simul");
 
@@ -22318,7 +22318,7 @@ static void testOriginReturnsSimulForABareCallResolvingToSimulEfun() {
 
 static void testOriginReturnsInternalForCallOutStringFormFiring() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/origin_internal.c",
         "string result;\n"
@@ -22335,7 +22335,7 @@ static void testOriginReturnsInternalForCallOutStringFormFiring() {
     // extra, ORIGIN_INTERNAL)". Not "driver" despite being a
     // Scheduler/driver-triggered fire (see Scheduler.cpp's own citation
     // for why heart_beat firing, by contrast, really is "driver").
-    amlp::Value result = harness.vm.callFunction(ob, "query_result", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "query_result", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "internal");
 
@@ -22350,7 +22350,7 @@ static void testOriginReturnsEfunForAMapArrayCallback() {
     auto ob = harness.objects.cloneObject("/origin_efun");
     assert(ob != nullptr);
 
-    auto arg = std::make_shared<amlp::Array>();
+    auto arg = std::make_shared<aemlpc::Array>();
     arg->items.emplace_back(int64_t{1});
     arg->items.emplace_back(int64_t{2});
 
@@ -22358,8 +22358,8 @@ static void testOriginReturnsEfunForAMapArrayCallback() {
     // 1+numex, ORIGIN_EFUN)" for its own string-target-object callback
     // shape. A mudlib-supplied callback argument invoked from inside
     // an efun's own C body, the real, narrow meaning of ORIGIN_EFUN.
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {amlp::Value(arg)});
-    auto* resultArr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {aemlpc::Value(arg)});
+    auto* resultArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(resultArr != nullptr && (*resultArr)->items.size() == 2);
     for (auto& item : (*resultArr)->items) {
         assert(std::holds_alternative<std::string>(item.data));
@@ -22385,7 +22385,7 @@ static void testOriginReturnsFunctionalForAnInlineLambdaBody() {
     // target would see (see testOriginReturnsLocalForABareSameObjectCall's
     // own sibling coverage of that distinction via
     // isSynthesizedLambdaName()).
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     assert(std::get<std::string>(result.data) == "functional");
 
@@ -22394,7 +22394,7 @@ static void testOriginReturnsFunctionalForAnInlineLambdaBody() {
 
 static void testOriginReturnsDriverForTopLevelDispatchHeartBeatAndCommandDispatch() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/origin_driver.c",
         "string hb_result;\n"
@@ -22422,16 +22422,16 @@ static void testOriginReturnsDriverForTopLevelDispatchHeartBeatAndCommandDispatc
     // directly.
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(ob);
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.callFunction(ob, "setup", {});
 
     // (a) VM::callFunction()'s own default. Real logon()/create()/
     // process_input()/net_dead()/window_size()/every master apply all
     // confirmed real ORIGIN_DRIVER, this is the shared entry point all
     // of them go through.
-    amlp::Value direct = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value direct = harness.vm.callFunction(ob, "probe", {});
     assert(std::holds_alternative<std::string>(direct.data));
     assert(std::get<std::string>(direct.data) == "driver");
 
@@ -22444,7 +22444,7 @@ static void testOriginReturnsDriverForTopLevelDispatchHeartBeatAndCommandDispatc
     // against a nonexistent "set_heart_beat" *local* function.
     harness.vm.callFunction(ob, "enable_hb", {});
     scheduler.tickHeartbeats();
-    amlp::Value hb = harness.vm.callFunction(ob, "query_hb", {});
+    aemlpc::Value hb = harness.vm.callFunction(ob, "query_hb", {});
     assert(std::holds_alternative<std::string>(hb.data));
     assert(std::get<std::string>(hb.data) == "driver");
 
@@ -22454,9 +22454,9 @@ static void testOriginReturnsDriverForTopLevelDispatchHeartBeatAndCommandDispatc
     // reached with no LPC frame already active, current_object null).
     // Real add_action.c's own "where = (current_object ? ORIGIN_EFUN :
     // ORIGIN_DRIVER);" resolves to the driver half here.
-    amlp::Server::dispatchLine(harness.vm, conn, "go");
-    amlp::OutputContext::set(nullptr);
-    amlp::Value cmd = harness.vm.callFunction(ob, "query_cmd", {});
+    aemlpc::Server::dispatchLine(harness.vm, conn, "go");
+    aemlpc::OutputContext::set(nullptr);
+    aemlpc::Value cmd = harness.vm.callFunction(ob, "query_cmd", {});
     assert(std::holds_alternative<std::string>(cmd.data));
     assert(std::get<std::string>(cmd.data) == "driver");
     ::close(fds[1]);
@@ -22473,14 +22473,14 @@ static void testOriginNameCoversAllEightRealValuesIncludingTheUnreachableFunctio
     // the full real-semantics citation for why), so this is the only
     // way to confirm origin_name() would still report it correctly if
     // something unexpected ever did reach it.
-    assert(std::string(amlp::originName(amlp::Origin::Driver)) == "driver");
-    assert(std::string(amlp::originName(amlp::Origin::Local)) == "local");
-    assert(std::string(amlp::originName(amlp::Origin::CallOther)) == "call_other");
-    assert(std::string(amlp::originName(amlp::Origin::SimulEfun)) == "simul");
-    assert(std::string(amlp::originName(amlp::Origin::Internal)) == "internal");
-    assert(std::string(amlp::originName(amlp::Origin::Efun)) == "efun");
-    assert(std::string(amlp::originName(amlp::Origin::FunctionPointer)) == "function pointer");
-    assert(std::string(amlp::originName(amlp::Origin::Functional)) == "functional");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::Driver)) == "driver");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::Local)) == "local");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::CallOther)) == "call_other");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::SimulEfun)) == "simul");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::Internal)) == "internal");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::Efun)) == "efun");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::FunctionPointer)) == "function pointer");
+    assert(std::string(aemlpc::originName(aemlpc::Origin::Functional)) == "functional");
 
     std::cout << "testOriginNameCoversAllEightRealValuesIncludingTheUnreachableFunctionPointer OK\n";
 }
@@ -22515,8 +22515,8 @@ static void testReloadObjectResetsVariablesReinitializesAndCallsCreateAgain() {
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_create_count", {}).data) == 1);
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_initialized", {}).data) == 5);
 
-    harness.vm.callFunction(ob, "set_plain", {amlp::Value(int64_t{42})});
-    harness.vm.callFunction(ob, "set_initialized", {amlp::Value(int64_t{99})});
+    harness.vm.callFunction(ob, "set_plain", {aemlpc::Value(int64_t{42})});
+    harness.vm.callFunction(ob, "set_initialized", {aemlpc::Value(int64_t{99})});
     // create_count is itself an ordinary object variable, so it is
     // subject to the exact same zero-then-reinit step everything else
     // is. It cannot be used to count *across* a reload by simply
@@ -22527,12 +22527,12 @@ static void testReloadObjectResetsVariablesReinitializesAndCallsCreateAgain() {
     // so "did create() genuinely run again" can still be told apart from
     // "create() was skipped": skipped would leave it at 0 (the zero
     // step's own result), genuinely re-run leaves it at 1.
-    harness.vm.callFunction(ob, "set_create_count", {amlp::Value(int64_t{777})});
+    harness.vm.callFunction(ob, "set_create_count", {aemlpc::Value(int64_t{777})});
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_plain", {}).data) == 42);
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_initialized", {}).data) == 99);
 
-    std::vector<amlp::Value> reloadArgs{amlp::Value(ob)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(ob)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     // plain has no initializer. Zeroed, and create() does not set it,
     // so it stays 0. initialized has a real initializer. Zeroed, then
@@ -22561,7 +22561,7 @@ static void testReloadObjectClosesOwnedSocketsWithNoCallbackFiring() {
     auto ob = harness.objects.cloneObject("/reload_socket");
     assert(ob != nullptr);
 
-    amlp::Value madeFd = harness.vm.callFunction(ob, "make", {});
+    aemlpc::Value madeFd = harness.vm.callFunction(ob, "make", {});
     assert(std::get<int64_t>(madeFd.data) >= 0);
     // Captured *before* reload zeroes ob's own "fd" variable. reading
     // socket_status() through ob's own (post-reload) fd afterward would
@@ -22570,20 +22570,20 @@ static void testReloadObjectClosesOwnedSocketsWithNoCallbackFiring() {
     // registry could easily own), not this test's own actual socket.
     int handle = static_cast<int>(std::get<int64_t>(madeFd.data));
 
-    std::vector<amlp::Value> statusArgsBefore{amlp::Value(int64_t{handle})};
-    amlp::Value before = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgsBefore);
-    auto* beforeArr = std::get_if<std::shared_ptr<amlp::Array>>(&before.data);
+    std::vector<aemlpc::Value> statusArgsBefore{aemlpc::Value(int64_t{handle})};
+    aemlpc::Value before = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgsBefore);
+    auto* beforeArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&before.data);
     assert(beforeArr != nullptr && !(*beforeArr)->items.empty());
 
-    std::vector<amlp::Value> reloadArgs{amlp::Value(ob)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(ob)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     // Real close_referencing_sockets()'s own "socket_close(i, SC_FORCE)"
     // SC_FORCE alone, without SC_DO_CALLBACK, so the socket is gone
     // but on_close() never runs.
-    std::vector<amlp::Value> statusArgs{amlp::Value(int64_t{handle})};
-    amlp::Value after = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
-    auto* afterArr = std::get_if<std::shared_ptr<amlp::Array>>(&after.data);
+    std::vector<aemlpc::Value> statusArgs{aemlpc::Value(int64_t{handle})};
+    aemlpc::Value after = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
+    auto* afterArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&after.data);
     assert(afterArr != nullptr && (*afterArr)->items.empty());
     assert(std::get<int64_t>(harness.vm.callFunction(ob, "get_close_fired", {}).data) == 0);
 
@@ -22592,7 +22592,7 @@ static void testReloadObjectClosesOwnedSocketsWithNoCallbackFiring() {
 
 static void testReloadObjectRemovesPendingCallOutsAndDisablesHeartbeat() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/reload_timers.c",
         "int co_fired;\n"
@@ -22607,8 +22607,8 @@ static void testReloadObjectRemovesPendingCallOutsAndDisablesHeartbeat() {
 
     harness.vm.callFunction(ob, "go", {});
 
-    std::vector<amlp::Value> reloadArgs{amlp::Value(ob)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(ob)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     // Real "set_heart_beat(obj, 0); remove_all_call_out(obj);". neither
     // the pending call_out nor the heartbeat should ever fire once
@@ -22634,7 +22634,7 @@ static void testReloadObjectCascadeDestructsObjectsThatWereShadowingIt() {
     auto shadowOb = harness.objects.cloneObject("/reload_sh_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
 
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(victim->shadowedBy().lock() == shadowOb);
 
     // victim is the base of the chain (shadowed by shadowOb, shadowing
@@ -22642,8 +22642,8 @@ static void testReloadObjectCascadeDestructsObjectsThatWereShadowingIt() {
     // every object shadowing it, identical to destruct()'s own real
     // cascade, but victim itself survives (it is being reloaded, not
     // destructed).
-    std::vector<amlp::Value> reloadArgs{amlp::Value(victim)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(victim)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     assert(shadowOb->isDestructed());
     assert(!victim->isDestructed());
@@ -22665,7 +22665,7 @@ static void testReloadObjectSplicesOutWithoutDestructingAnythingWhenItIsItselfTh
     auto shadowOb = harness.objects.cloneObject("/reload_sp_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
 
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(shadowOb->shadowing().lock() == victim);
 
     // shadowOb is itself the shadow (shadowing victim, shadowed by
@@ -22673,8 +22673,8 @@ static void testReloadObjectSplicesOutWithoutDestructingAnythingWhenItIsItselfTh
     // ("obj->shadowed && !obj->shadowing") is false here, so this takes
     // the splice branch instead: shadowOb's own shadowing relationship
     // to victim is severed, and *neither* object gets destructed.
-    std::vector<amlp::Value> reloadArgs{amlp::Value(shadowOb)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(shadowOb)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     assert(!shadowOb->isDestructed());
     assert(!victim->isDestructed());
@@ -22699,15 +22699,15 @@ static void testReloadObjectLeavesAnActiveSnoopRelationshipUntouched() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(victim);
 
-    harness.vm.callFunction(snooper, "start", {amlp::Value(victim)});
+    harness.vm.callFunction(snooper, "start", {aemlpc::Value(victim)});
     assert(victim->snoopedBy().lock() == snooper);
     assert(snooper->snooping().lock() == victim);
 
-    std::vector<amlp::Value> reloadArgs{amlp::Value(victim)};
-    amlp::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
+    std::vector<aemlpc::Value> reloadArgs{aemlpc::Value(victim)};
+    aemlpc::EfunTable::instance().call("reload_object", harness.vm, reloadArgs);
 
     assert(victim->snoopedBy().lock() == snooper);
     assert(snooper->snooping().lock() == victim);
@@ -22737,7 +22737,7 @@ static void testDestructClosesOwnedSocketsWithNoCallbackFiring() {
     auto ob = harness.objects.cloneObject("/destruct_socket");
     assert(ob != nullptr);
 
-    amlp::Value madeFd = harness.vm.callFunction(ob, "make", {});
+    aemlpc::Value madeFd = harness.vm.callFunction(ob, "make", {});
     assert(std::get<int64_t>(madeFd.data) >= 0);
     // Captured before destruct(), the same reasoning
     // testReloadObjectClosesOwnedSocketsWithNoCallbackFiring's own
@@ -22748,13 +22748,13 @@ static void testDestructClosesOwnedSocketsWithNoCallbackFiring() {
     // ob afterward would not work regardless.
     int handle = static_cast<int>(std::get<int64_t>(madeFd.data));
 
-    std::vector<amlp::Value> statusArgsBefore{amlp::Value(int64_t{handle})};
-    amlp::Value before = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgsBefore);
-    auto* beforeArr = std::get_if<std::shared_ptr<amlp::Array>>(&before.data);
+    std::vector<aemlpc::Value> statusArgsBefore{aemlpc::Value(int64_t{handle})};
+    aemlpc::Value before = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgsBefore);
+    auto* beforeArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&before.data);
     assert(beforeArr != nullptr && !(*beforeArr)->items.empty());
 
-    std::vector<amlp::Value> destructArgs{amlp::Value(ob)};
-    amlp::EfunTable::instance().call("destruct", harness.vm, destructArgs);
+    std::vector<aemlpc::Value> destructArgs{aemlpc::Value(ob)};
+    aemlpc::EfunTable::instance().call("destruct", harness.vm, destructArgs);
 
     // Real "socket_close(i, SC_FORCE)". SC_FORCE alone, without
     // SC_DO_CALLBACK, so the socket is gone but on_close() never runs.
@@ -22762,9 +22762,9 @@ static void testDestructClosesOwnedSocketsWithNoCallbackFiring() {
     // read through the still-live local shared_ptr, matching this
     // driver's own established "destructed but still referenced" test
     // pattern rather than through a fresh lookup.
-    std::vector<amlp::Value> statusArgsAfter{amlp::Value(int64_t{handle})};
-    amlp::Value after = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgsAfter);
-    auto* afterArr = std::get_if<std::shared_ptr<amlp::Array>>(&after.data);
+    std::vector<aemlpc::Value> statusArgsAfter{aemlpc::Value(int64_t{handle})};
+    aemlpc::Value after = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgsAfter);
+    auto* afterArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&after.data);
     assert(afterArr != nullptr && (*afterArr)->items.empty());
     assert(ob->isDestructed());
 
@@ -22786,28 +22786,28 @@ static void testDestructShadowCascadeAlsoClosesTheCascadedObjectsOwnSockets() {
     auto shadowOb = harness.objects.cloneObject("/destruct_sh_shadow");
     assert(victim != nullptr && shadowOb != nullptr);
 
-    harness.vm.callFunction(shadowOb, "attach", {amlp::Value(victim)});
+    harness.vm.callFunction(shadowOb, "attach", {aemlpc::Value(victim)});
     assert(victim->shadowedBy().lock() == shadowOb);
 
     // shadowOb owns a socket of its own. Not victim, the object
     // actually named in the destruct() call below.
-    amlp::Value madeFd = harness.vm.callFunction(shadowOb, "make", {});
+    aemlpc::Value madeFd = harness.vm.callFunction(shadowOb, "make", {});
     assert(std::get<int64_t>(madeFd.data) >= 0);
     int handle = static_cast<int>(std::get<int64_t>(madeFd.data));
 
     // victim is the base of the chain. Destructing it cascades,
     // destructing shadowOb along with it (the exact same real cascade
     // reload_object()'s own equivalent test already exercises).
-    std::vector<amlp::Value> destructArgs{amlp::Value(victim)};
-    amlp::EfunTable::instance().call("destruct", harness.vm, destructArgs);
+    std::vector<aemlpc::Value> destructArgs{aemlpc::Value(victim)};
+    aemlpc::EfunTable::instance().call("destruct", harness.vm, destructArgs);
     assert(shadowOb->isDestructed());
 
     // shadowOb's own socket must be closed too. Proof the callback
     // genuinely threads through the recursive cascade, not just the
     // one object named directly in the destruct() call.
-    std::vector<amlp::Value> statusArgs{amlp::Value(int64_t{handle})};
-    amlp::Value status = amlp::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
-    auto* statusArr = std::get_if<std::shared_ptr<amlp::Array>>(&status.data);
+    std::vector<aemlpc::Value> statusArgs{aemlpc::Value(int64_t{handle})};
+    aemlpc::Value status = aemlpc::EfunTable::instance().call("socket_status", harness.vm, statusArgs);
+    auto* statusArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&status.data);
     assert(statusArr != nullptr && (*statusArr)->items.empty());
 
     std::cout << "testDestructShadowCascadeAlsoClosesTheCascadedObjectsOwnSockets OK\n";
@@ -22823,17 +22823,17 @@ static void testDestructShadowCascadeAlsoClosesTheCascadedObjectsOwnSockets() {
 // here. See BootApi.hpp's own comment on why those two are still open.
 
 static void testLpcDialectNameAndFromStringRoundTripAllThreeDialects() {
-    assert(std::string(amlp::dialectName(amlp::LpcDialect::FluffOS)) == "fluffos");
-    assert(std::string(amlp::dialectName(amlp::LpcDialect::LdMud)) == "ldmud");
-    assert(std::string(amlp::dialectName(amlp::LpcDialect::DGD)) == "dgd");
+    assert(std::string(aemlpc::dialectName(aemlpc::LpcDialect::FluffOS)) == "fluffos");
+    assert(std::string(aemlpc::dialectName(aemlpc::LpcDialect::LdMud)) == "ldmud");
+    assert(std::string(aemlpc::dialectName(aemlpc::LpcDialect::DGD)) == "dgd");
 
-    assert(amlp::dialectFromString("fluffos") == amlp::LpcDialect::FluffOS);
-    assert(amlp::dialectFromString("ldmud") == amlp::LpcDialect::LdMud);
-    assert(amlp::dialectFromString("dgd") == amlp::LpcDialect::DGD);
+    assert(aemlpc::dialectFromString("fluffos") == aemlpc::LpcDialect::FluffOS);
+    assert(aemlpc::dialectFromString("ldmud") == aemlpc::LpcDialect::LdMud);
+    assert(aemlpc::dialectFromString("dgd") == aemlpc::LpcDialect::DGD);
 
     bool threw = false;
     try {
-        amlp::dialectFromString("not_a_real_dialect");
+        aemlpc::dialectFromString("not_a_real_dialect");
     } catch (const std::invalid_argument&) {
         threw = true;
     }
@@ -22855,26 +22855,26 @@ static void testLexerAtomicKeywordOnlyRecognizedUnderDgdDialect() {
     // like explicit FluffOS. The "byte-identical to before this change"
     // requirement, checked directly rather than just assumed.
     {
-        amlp::Lexer lexer("atomic");
+        aemlpc::Lexer lexer("atomic");
         auto tokens = lexer.tokenize();
         assert(tokens.size() == 2); // "atomic", End
-        assert(tokens[0].type == amlp::TokenType::Ident);
+        assert(tokens[0].type == aemlpc::TokenType::Ident);
         assert(tokens[0].text == "atomic");
     }
     {
-        amlp::Lexer lexer("atomic", amlp::LpcDialect::FluffOS);
+        aemlpc::Lexer lexer("atomic", aemlpc::LpcDialect::FluffOS);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Ident);
+        assert(tokens[0].type == aemlpc::TokenType::Ident);
     }
     {
-        amlp::Lexer lexer("atomic", amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer("atomic", aemlpc::LpcDialect::LdMud);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Ident);
+        assert(tokens[0].type == aemlpc::TokenType::Ident);
     }
     {
-        amlp::Lexer lexer("atomic", amlp::LpcDialect::DGD);
+        aemlpc::Lexer lexer("atomic", aemlpc::LpcDialect::DGD);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Keyword);
+        assert(tokens[0].type == aemlpc::TokenType::Keyword);
         assert(tokens[0].text == "atomic");
     }
 
@@ -22931,24 +22931,24 @@ static void testCompileAtomicFunctionModifierAcceptedOnlyUnderDgdDialect() {
 // int 0).
 static void testLexerNilKeywordOnlyRecognizedUnderDgdDialect() {
     {
-        amlp::Lexer lexer("nil");
+        aemlpc::Lexer lexer("nil");
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Ident); // default == FluffOS
+        assert(tokens[0].type == aemlpc::TokenType::Ident); // default == FluffOS
     }
     {
-        amlp::Lexer lexer("nil", amlp::LpcDialect::FluffOS);
+        aemlpc::Lexer lexer("nil", aemlpc::LpcDialect::FluffOS);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Ident);
+        assert(tokens[0].type == aemlpc::TokenType::Ident);
     }
     {
-        amlp::Lexer lexer("nil", amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer("nil", aemlpc::LpcDialect::LdMud);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Ident);
+        assert(tokens[0].type == aemlpc::TokenType::Ident);
     }
     {
-        amlp::Lexer lexer("nil", amlp::LpcDialect::DGD);
+        aemlpc::Lexer lexer("nil", aemlpc::LpcDialect::DGD);
         auto tokens = lexer.tokenize();
-        assert(tokens[0].type == amlp::TokenType::Keyword);
+        assert(tokens[0].type == aemlpc::TokenType::Keyword);
         assert(tokens[0].text == "nil");
     }
 
@@ -22993,24 +22993,24 @@ static void testCompileNilLiteralAcceptedOnlyUnderDgdDialectAndEvaluatesCorrectl
         assert(ob != nullptr);
 
         // A real nil literal compiles and evaluates: PushNil pushes a
-        // genuine amlp::Nil-holding Value, not int64_t 0 or monostate.
-        amlp::Value got = harness.vm.callFunction(ob, "getNil", {});
-        assert(std::holds_alternative<amlp::Nil>(got.data));
+        // genuine aemlpc::Nil-holding Value, not int64_t 0 or monostate.
+        aemlpc::Value got = harness.vm.callFunction(ob, "getNil", {});
+        assert(std::holds_alternative<aemlpc::Nil>(got.data));
 
         // isTruthy(nil) == false, real VAL_TRUE(v) semantics.
-        amlp::Value truthy = harness.vm.callFunction(ob, "nilIsFalsy", {});
+        aemlpc::Value truthy = harness.vm.callFunction(ob, "nilIsFalsy", {});
         assert(std::holds_alternative<int64_t>(truthy.data));
         assert(std::get<int64_t>(truthy.data) == 0);
 
         // nil == nil is true (real VAL_NIL(v), always true for a value
         // already known to be nil-typed).
-        amlp::Value eqNil = harness.vm.callFunction(ob, "nilEqualsNil", {});
+        aemlpc::Value eqNil = harness.vm.callFunction(ob, "nilEqualsNil", {});
         assert(std::holds_alternative<int64_t>(eqNil.data));
         assert(std::get<int64_t>(eqNil.data) == 1);
 
         // nil == 0 is false. Real strict-typechecking DGD's own
         // distinct T_NIL vs T_INT type tags, not the same value.
-        amlp::Value eqZero = harness.vm.callFunction(ob, "nilEqualsZero", {});
+        aemlpc::Value eqZero = harness.vm.callFunction(ob, "nilEqualsZero", {});
         assert(std::holds_alternative<int64_t>(eqZero.data));
         assert(std::get<int64_t>(eqZero.data) == 0);
     }
@@ -23030,44 +23030,44 @@ static void testCompileNilLiteralAcceptedOnlyUnderDgdDialectAndEvaluatesCorrectl
 // different token type.
 static void testLexerHashQuoteClosureOnlyRecognizedUnderLdmudDialect() {
     {
-        amlp::Lexer lexer("#'foo"); // default == FluffOS
+        aemlpc::Lexer lexer("#'foo"); // default == FluffOS
         bool threw = false;
         try {
             lexer.tokenize();
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
     }
     {
-        amlp::Lexer lexer("#'foo", amlp::LpcDialect::FluffOS);
+        aemlpc::Lexer lexer("#'foo", aemlpc::LpcDialect::FluffOS);
         bool threw = false;
         try {
             lexer.tokenize();
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
     }
     {
-        amlp::Lexer lexer("#'foo", amlp::LpcDialect::DGD);
+        aemlpc::Lexer lexer("#'foo", aemlpc::LpcDialect::DGD);
         bool threw = false;
         try {
             lexer.tokenize();
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
     }
     {
-        amlp::Lexer lexer("#'foo", amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer("#'foo", aemlpc::LpcDialect::LdMud);
         auto tokens = lexer.tokenize();
         assert(tokens.size() == 3); // "#'", "foo", End
-        assert(tokens[0].type == amlp::TokenType::Symbol);
+        assert(tokens[0].type == aemlpc::TokenType::Symbol);
         assert(tokens[0].text == "#'");
-        assert(tokens[1].type == amlp::TokenType::Ident);
+        assert(tokens[1].type == aemlpc::TokenType::Ident);
         assert(tokens[1].text == "foo");
-        assert(tokens[2].type == amlp::TokenType::End);
+        assert(tokens[2].type == aemlpc::TokenType::End);
     }
 
     std::cout << "testLexerHashQuoteClosureOnlyRecognizedUnderLdmudDialect OK\n";
@@ -23117,7 +23117,7 @@ static void testCompileHashQuoteClosureAcceptedOnlyUnderLdmudDialectAndEvaluates
         // "(: lower_case :)" already uses (see
         // testFuncallIsAnAliasOfEvaluate just above), reached here through
         // LDMud's own spelling of the identical concept instead.
-        amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+        aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
         assert(std::holds_alternative<std::string>(result.data));
         assert(std::get<std::string>(result.data) == "abc");
     }
@@ -23138,14 +23138,14 @@ static void testCompileHashQuoteClosureAcceptedOnlyUnderLdmudDialectAndEvaluates
 // kind, not just a resolution-tier hint. Deliberately still not
 // covered).
 static void testHashQuoteEfunPrefixParsesToClosureLiteralExprWithForceEfun() {
-    amlp::Lexer lexer("mixed probe() { return #'efun::lower_case; }", amlp::LpcDialect::LdMud);
-    amlp::Parser parser(lexer.tokenize(), amlp::LpcDialect::LdMud);
+    aemlpc::Lexer lexer("mixed probe() { return #'efun::lower_case; }", aemlpc::LpcDialect::LdMud);
+    aemlpc::Parser parser(lexer.tokenize(), aemlpc::LpcDialect::LdMud);
     auto program = parser.parseProgram();
 
     auto& body = program->functions[0]->body->statements;
-    auto* ret = dynamic_cast<amlp::ReturnStmt*>(body[0].get());
+    auto* ret = dynamic_cast<aemlpc::ReturnStmt*>(body[0].get());
     assert(ret != nullptr);
-    auto* closure = dynamic_cast<amlp::ClosureLiteralExpr*>(ret->expr.get());
+    auto* closure = dynamic_cast<aemlpc::ClosureLiteralExpr*>(ret->expr.get());
     assert(closure != nullptr);
     assert(closure->functionName == "lower_case");
     assert(closure->forceEfun == true);
@@ -23177,14 +23177,14 @@ static void testHashQuoteEfunPrefixBypassesALocalFunctionOfTheSameNameUnlikeBare
     // Bare "#'lower_case" resolves through the normal tiered lookup.
     // This object's own local lower_case() wins, exactly like an ordinary
     // bare call to lower_case(...) from inside this same object would.
-    amlp::Value bareResult = harness.vm.callFunction(ob, "probeBare", {});
+    aemlpc::Value bareResult = harness.vm.callFunction(ob, "probeBare", {});
     assert(std::holds_alternative<std::string>(bareResult.data));
     assert(std::get<std::string>(bareResult.data) == "SHADOWED:ABC");
 
     // "#'efun::lower_case" bypasses that local override entirely and
     // reaches the real core efun. Real lower_case("ABC") == "abc", not
     // the local function's own "SHADOWED:ABC".
-    amlp::Value efunResult = harness.vm.callFunction(ob, "probeEfun", {});
+    aemlpc::Value efunResult = harness.vm.callFunction(ob, "probeEfun", {});
     assert(std::holds_alternative<std::string>(efunResult.data));
     assert(std::get<std::string>(efunResult.data) == "abc");
 
@@ -23200,20 +23200,20 @@ static void testHashQuoteEfunPrefixBypassesALocalFunctionOfTheSameNameUnlikeBare
 // symbol-literal concept at all.
 static void testSymbolLiteralLexesDistinctFromCharLiteralUnderLdmudDialectOnly() {
     {
-        amlp::Lexer lexer("'item", amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer("'item", aemlpc::LpcDialect::LdMud);
         auto tokens = lexer.tokenize();
         assert(tokens.size() == 2); // symbol, End
-        assert(tokens[0].type == amlp::TokenType::QuotedSymbol);
+        assert(tokens[0].type == aemlpc::TokenType::QuotedSymbol);
         assert(tokens[0].text == "item");
     }
     {
         // Ordinary single-character constant stays a char literal (Number
         // token, real LPC's own int-encoding-of-a-char), not a symbol.
         // Real lex.c's own "'x'" case, see Lexer::lexQuote()'s comment.
-        amlp::Lexer lexer("'a'", amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer("'a'", aemlpc::LpcDialect::LdMud);
         auto tokens = lexer.tokenize();
         assert(tokens.size() == 2); // number, End
-        assert(tokens[0].type == amlp::TokenType::Number);
+        assert(tokens[0].type == aemlpc::TokenType::Number);
         assert(tokens[0].text == "97"); // 'a' == 97
     }
     {
@@ -23221,11 +23221,11 @@ static void testSymbolLiteralLexesDistinctFromCharLiteralUnderLdmudDialectOnly()
         // pre-existing behavior (a char literal must contain exactly one
         // character) is completely unchanged, so this throws exactly as
         // it always did.
-        amlp::Lexer lexer("'item", amlp::LpcDialect::FluffOS);
+        aemlpc::Lexer lexer("'item", aemlpc::LpcDialect::FluffOS);
         bool threw = false;
         try {
             lexer.tokenize();
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
@@ -23269,8 +23269,8 @@ static void testUnboundLambdaIsUncallableUntilBoundThenRunsHooksCsOwnQuotedCodeS
     auto ob = harness.objects.cloneObject("/unbound_move");
     assert(ob != nullptr);
 
-    amlp::Value hookVal = harness.vm.callFunction(ob, "makeHook", {});
-    auto hookClosure = std::get<std::shared_ptr<amlp::Closure>>(hookVal.data);
+    aemlpc::Value hookVal = harness.vm.callFunction(ob, "makeHook", {});
+    auto hookClosure = std::get<std::shared_ptr<aemlpc::Closure>>(hookVal.data);
     assert(hookClosure != nullptr);
     assert(hookClosure->unboundUntilBound);
 
@@ -23279,7 +23279,7 @@ static void testUnboundLambdaIsUncallableUntilBoundThenRunsHooksCsOwnQuotedCodeS
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "callDirect", {hookVal});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         // run()'s own object/function-name error-context prefix (same
         // convention every other in-VM LpcRuntimeError already gets),
@@ -23289,17 +23289,17 @@ static void testUnboundLambdaIsUncallableUntilBoundThenRunsHooksCsOwnQuotedCodeS
     }
     assert(threw);
 
-    amlp::Value boundVal = harness.vm.callFunction(ob, "bindIt", {hookVal});
-    auto boundClosure = std::get<std::shared_ptr<amlp::Closure>>(boundVal.data);
+    aemlpc::Value boundVal = harness.vm.callFunction(ob, "bindIt", {hookVal});
+    auto boundClosure = std::get<std::shared_ptr<aemlpc::Closure>>(boundVal.data);
     assert(boundClosure != nullptr);
     assert(!boundClosure->unboundUntilBound);
 
-    amlp::Value result = harness.vm.callFunction(ob, "callDirect", {boundVal});
+    aemlpc::Value result = harness.vm.callFunction(ob, "callDirect", {boundVal});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 7); // moveHook(3, 4) -> 3 + 4
 
-    amlp::Value item = harness.vm.callFunction(ob, "getLastItem", {});
-    amlp::Value dest = harness.vm.callFunction(ob, "getLastDest", {});
+    aemlpc::Value item = harness.vm.callFunction(ob, "getLastItem", {});
+    aemlpc::Value dest = harness.vm.callFunction(ob, "getLastDest", {});
     assert(std::get<int64_t>(item.data) == 3);
     assert(std::get<int64_t>(dest.data) == 4);
 
@@ -23325,9 +23325,9 @@ static void testUnboundLambdaNestedQuotedCallMatchesHooksCsLoadUidsShape() {
     auto ob = harness.objects.cloneObject("/unbound_nested");
     assert(ob != nullptr);
 
-    amlp::Value hookVal = harness.vm.callFunction(ob, "makeHook", {});
-    amlp::Value result = harness.vm.callFunction(ob, "run", {hookVal});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value hookVal = harness.vm.callFunction(ob, "makeHook", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "run", {hookVal});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr->items.size() == 2);
     assert(std::get<std::string>(arr->items[0].data) == "/std/thing");
     // previous_object() with no call_other() in progress: this driver's
@@ -23361,7 +23361,7 @@ static void testUnboundLambdaBodySymbolNotAmongParamsThrowsClearError() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "run", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         assert(std::string(e.what()).find("notAParam") != std::string::npos);
     }
@@ -23399,8 +23399,8 @@ static void testBindLambdaCrossObjectDeniedByRealPrivilegeViolationReturnsClosur
     auto caller = harness.objects.cloneObject("/bl_caller");
     assert(other != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "run", {amlp::Value(other)});
-    auto* closurePtr = std::get_if<std::shared_ptr<amlp::Closure>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "run", {aemlpc::Value(other)});
+    auto* closurePtr = std::get_if<std::shared_ptr<aemlpc::Closure>>(&result.data);
     assert(closurePtr != nullptr && *closurePtr != nullptr);
     // Still unbound. The real "Return closure unharmed" case, denial is
     // not an error and does not rebind.
@@ -23440,8 +23440,8 @@ static void testBindLambdaCrossObjectGrantedByRealPrivilegeViolationRebindsTheCl
     auto caller = harness.objects.cloneObject("/bl2_caller");
     assert(other != nullptr && caller != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(caller, "run", {amlp::Value(other)});
-    auto* closurePtr = std::get_if<std::shared_ptr<amlp::Closure>>(&result.data);
+    aemlpc::Value result = harness.vm.callFunction(caller, "run", {aemlpc::Value(other)});
+    auto* closurePtr = std::get_if<std::shared_ptr<aemlpc::Closure>>(&result.data);
     assert(closurePtr != nullptr && *closurePtr != nullptr);
     assert((*closurePtr)->unboundUntilBound == false);
     assert((*closurePtr)->owner.lock() == other);
@@ -23468,8 +23468,8 @@ static void testBindLambdaCrossObjectWithNoMasterPrivilegeViolationLfunHardError
 
     bool threw = false;
     try {
-        harness.vm.callFunction(caller, "run", {amlp::Value(other)});
-    } catch (const amlp::LpcRuntimeError& e) {
+        harness.vm.callFunction(caller, "run", {aemlpc::Value(other)});
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         assert(std::string(e.what()).find("privilege violation") != std::string::npos);
     }
@@ -23498,7 +23498,7 @@ static void testPrivilegeViolationTrustBypassGrantsTheMasterObjectItselfWithNoLf
 
     auto master = harness.objects.masterObject();
     assert(master != nullptr);
-    amlp::Value result = harness.vm.callFunction(master, "run", {amlp::Value(other)});
+    aemlpc::Value result = harness.vm.callFunction(master, "run", {aemlpc::Value(other)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 3);
 
@@ -23532,7 +23532,7 @@ static void testSetDriverHookDeniedByRealPrivilegeViolationSilentlyLeavesHookUnc
     // than only inferred from move_object()'s own fallback behavior.
     assert(harness.vm.getDriverHook(0).isVoid());
 
-    harness.vm.callFunction(mover, "doMove", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "doMove", {aemlpc::Value(room)});
     assert(mover->environment().lock() == room);
 
     std::cout << "testSetDriverHookDeniedByRealPrivilegeViolationSilentlyLeavesHookUnchanged OK\n";
@@ -23554,7 +23554,7 @@ static void testSetDriverHookRejectsOutOfRangeHookNumberWithRealMessage() {
     bool threwLow = false;
     try {
         harness.vm.callFunction(ob, "tooLow", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threwLow = true;
         assert(std::string(e.what()).find("Bad hook number") != std::string::npos);
     }
@@ -23563,7 +23563,7 @@ static void testSetDriverHookRejectsOutOfRangeHookNumberWithRealMessage() {
     bool threwHigh = false;
     try {
         harness.vm.callFunction(ob, "tooHigh", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threwHigh = true;
         assert(std::string(e.what()).find("Bad hook number") != std::string::npos);
     }
@@ -23582,7 +23582,7 @@ static void testCallOutInfoLdmudDialectDeniedByRealPrivilegeViolationReturnsEmpt
         "void create() {}\n"
         "int privilege_violation(string what, mixed who, mixed arg) { return 0; }\n");
     assert(harness.objects.loadMasterObject());
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/coid_test.c",
         "int probe() { return call_out(\"idle\", 60); }\n"
@@ -23592,8 +23592,8 @@ static void testCallOutInfoLdmudDialectDeniedByRealPrivilegeViolationReturnsEmpt
     assert(ob != nullptr);
 
     harness.vm.callFunction(ob, "probe", {});
-    amlp::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&infoResult.data);
+    aemlpc::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&infoResult.data);
     assert(arr != nullptr && (*arr)->items.empty());
 
     std::cout << "testCallOutInfoLdmudDialectDeniedByRealPrivilegeViolationReturnsEmptyArray OK\n";
@@ -23610,7 +23610,7 @@ static void testCallOutInfoLdmudDialectGrantedByRealPrivilegeViolationReturnsPen
         "    return what == \"call_out_info\" ? 1 : -1;\n"
         "}\n");
     assert(harness.objects.loadMasterObject());
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/coig_test.c",
         "int probe() { return call_out(\"idle\", 60); }\n"
@@ -23620,12 +23620,12 @@ static void testCallOutInfoLdmudDialectGrantedByRealPrivilegeViolationReturnsPen
     assert(ob != nullptr);
 
     harness.vm.callFunction(ob, "probe", {});
-    amlp::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&infoResult.data);
+    aemlpc::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&infoResult.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
-    auto* entry = std::get_if<std::shared_ptr<amlp::Array>>(&(*arr)->items[0].data);
+    auto* entry = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*arr)->items[0].data);
     assert(entry != nullptr && (*entry)->items.size() == 3);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*entry)->items[0].data) == ob);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*entry)->items[0].data) == ob);
 
     std::cout << "testCallOutInfoLdmudDialectGrantedByRealPrivilegeViolationReturnsPendingEntry OK\n";
 }
@@ -23640,7 +23640,7 @@ static void testCallOutInfoUnderFluffosDialectStaysUngatedEvenWithADenyingMaster
         "void create() {}\n"
         "int privilege_violation(string what, mixed who, mixed arg) { return 0; }\n");
     assert(harness.objects.loadMasterObject());
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/coif_test.c",
         "int probe() { return call_out(\"idle\", 60); }\n"
@@ -23650,8 +23650,8 @@ static void testCallOutInfoUnderFluffosDialectStaysUngatedEvenWithADenyingMaster
     assert(ob != nullptr);
 
     harness.vm.callFunction(ob, "probe", {});
-    amlp::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
-    auto* arr = std::get_if<std::shared_ptr<amlp::Array>>(&infoResult.data);
+    aemlpc::Value infoResult = harness.vm.callFunction(ob, "probe_info", {});
+    auto* arr = std::get_if<std::shared_ptr<aemlpc::Array>>(&infoResult.data);
     assert(arr != nullptr && (*arr)->items.size() == 1);
 
     std::cout << "testCallOutInfoUnderFluffosDialectStaysUngatedEvenWithADenyingMaster OK\n";
@@ -23677,13 +23677,13 @@ static void testInputToIgnoreBangFlagDeniedByRealPrivilegeViolationDoesNotRegist
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
-    amlp::Value startResult = harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Value startResult = harness.vm.callFunction(ob, "start", {});
+    aemlpc::OutputContext::set(nullptr);
     assert(std::holds_alternative<int64_t>(startResult.data));
     assert(std::get<int64_t>(startResult.data) == 0);
     assert(conn.hasPendingInputTo() == false);
@@ -23710,13 +23710,13 @@ static void testInputToIgnoreBangFlagGrantedByRealPrivilegeViolationRegistersNor
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
-    amlp::Value startResult = harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Value startResult = harness.vm.callFunction(ob, "start", {});
+    aemlpc::OutputContext::set(nullptr);
     assert(std::holds_alternative<int64_t>(startResult.data));
     assert(std::get<int64_t>(startResult.data) == 1);
     assert(conn.hasPendingInputTo() == true);
@@ -23747,13 +23747,13 @@ static void testInputToWithoutIgnoreBangFlagNeverConsultsPrivilegeViolation() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     makeNonBlocking(fds[0]);
     conn.attach(ob);
 
-    amlp::OutputContext::set(&conn);
-    amlp::Value startResult = harness.vm.callFunction(ob, "start", {});
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(&conn);
+    aemlpc::Value startResult = harness.vm.callFunction(ob, "start", {});
+    aemlpc::OutputContext::set(nullptr);
     assert(std::holds_alternative<int64_t>(startResult.data));
     assert(std::get<int64_t>(startResult.data) == 1);
     assert(conn.hasPendingInputTo() == true);
@@ -23825,13 +23825,13 @@ static void testSetDriverHookH_MOVE_OBJECT0DispatchesThroughRealMoveObjectEfun()
     // move_object() efun already has (see its own EfunTable.cpp
     // comment), now routed through the real H_MOVE_OBJECT0 hook instead
     // of the hardcoded fallback.
-    harness.vm.callFunction(mover, "doMove", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "doMove", {aemlpc::Value(room)});
 
-    amlp::Value item = harness.vm.callFunction(master, "getLastItem", {});
-    amlp::Value dest = harness.vm.callFunction(master, "getLastDest", {});
-    amlp::Value whom = harness.vm.callFunction(master, "getHookRanAsWhom", {});
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(item.data) == mover);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(dest.data) == room);
+    aemlpc::Value item = harness.vm.callFunction(master, "getLastItem", {});
+    aemlpc::Value dest = harness.vm.callFunction(master, "getLastDest", {});
+    aemlpc::Value whom = harness.vm.callFunction(master, "getHookRanAsWhom", {});
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(item.data) == mover);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(dest.data) == room);
     // Real object.c's own move_object() rebinds the *outer* unbound_
     // lambda wrapper's own base.ob to current_object (assign_current_
     // object()) on every call. Confirmed real, cited in VM::
@@ -23845,7 +23845,7 @@ static void testSetDriverHookH_MOVE_OBJECT0DispatchesThroughRealMoveObjectEfun()
     // body. So this_object() inside moveHook() is genuinely master, not
     // mover. Confirmed by reasoning from real source, then verified
     // against this driver's own actual behavior, not assumed either way.
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(whom.data) == master);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(whom.data) == master);
 
     // The hook's own set_environment() call actually performed the
     // move. Proof the real hook ran at all, not just that it was
@@ -23872,7 +23872,7 @@ static void testMoveObjectFallsBackToHardcodedLogicWhenNoHookIsSet() {
     assert(room != nullptr);
     assert(mover != nullptr);
 
-    harness.vm.callFunction(mover, "doMove", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "doMove", {aemlpc::Value(room)});
 
     assert(mover->environment().lock() == room);
     auto& roomInv = room->inventory();
@@ -23917,7 +23917,7 @@ static void testHModifyCommandRewritesBareAbbreviationToTheMappedFullVerb() {
     auto mover = harness.objects.cloneObject("/hmc_mover");
     assert(room != nullptr);
     assert(mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
     harness.vm.callFunction(mover, "install", {});
 
     // Bare "n" is not itself a registered action (only "north" is).
@@ -23953,7 +23953,7 @@ static void testHModifyCommandIsANoOpWhenNoHookIsSetOrTheValueIsNotAMapping() {
     auto mover = harness.objects.cloneObject("/hmc2_mover");
     assert(room != nullptr);
     assert(mover != nullptr);
-    harness.vm.callFunction(mover, "go", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "go", {aemlpc::Value(room)});
 
     // No set_driver_hook() call at all. "n" stays unmatched, same as
     // this driver's own pre-existing behavior before this slice.
@@ -23981,7 +23981,7 @@ static void testHModifyCommandIsANoOpWhenNoHookIsSetOrTheValueIsNotAMapping() {
 // precondition a genuine (non-virtual) reset() call needs.
 static void testTickResetsAndCleanupCallsRealResetOnceDueAndNotInResetState() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/tr_room.c",
         "int resetCount;\n"
@@ -24002,7 +24002,7 @@ static void testTickResetsAndCleanupCallsRealResetOnceDueAndNotInResetState() {
     assert(room->resetState() == true); // real reset_object()'s own unconditional final step
     assert(room->timeReset() > std::chrono::steady_clock::now()); // "Be sure to update time first!"
 
-    amlp::Value count = harness.vm.callFunction(room, "queryResetCount", {});
+    aemlpc::Value count = harness.vm.callFunction(room, "queryResetCount", {});
     assert(std::get<int64_t>(count.data) == 1);
 
     std::cout << "testTickResetsAndCleanupCallsRealResetOnceDueAndNotInResetState OK\n";
@@ -24015,7 +24015,7 @@ static void testTickResetsAndCleanupCallsRealResetOnceDueAndNotInResetState() {
 // reset() again, just push its own timer out.
 static void testTickResetsAndCleanupDoesAVirtualResetWhenAlreadyInResetState() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/vr_room.c",
         "int resetCount;\n"
@@ -24029,7 +24029,7 @@ static void testTickResetsAndCleanupDoesAVirtualResetWhenAlreadyInResetState() {
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value count = harness.vm.callFunction(room, "queryResetCount", {});
+    aemlpc::Value count = harness.vm.callFunction(room, "queryResetCount", {});
     assert(std::get<int64_t>(count.data) == 0); // reset() never actually called
     assert(room->timeReset() > std::chrono::steady_clock::now()); // still rescheduled
 
@@ -24043,7 +24043,7 @@ static void testTickResetsAndCleanupDoesAVirtualResetWhenAlreadyInResetState() {
 // attempts the first time the driver notices, in both real drivers.
 static void testTickResetsAndCleanupPermanentlyDisablesResetWhenNoResetFunctionExists() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/nr_thing.c", "int probe() { return 1; }\n"); // no reset() at all
     auto thing = harness.objects.cloneObject("/nr_thing");
@@ -24057,7 +24057,7 @@ static void testTickResetsAndCleanupPermanentlyDisablesResetWhenNoResetFunctionE
     assert(thing->timeReset() == std::chrono::steady_clock::time_point::max());
     // Confirms the object survived (no crash calling a function that does
     // not exist) and is still otherwise perfectly usable.
-    amlp::Value probe = harness.vm.callFunction(thing, "probe", {});
+    aemlpc::Value probe = harness.vm.callFunction(thing, "probe", {});
     assert(std::get<int64_t>(probe.data) == 1);
 
     std::cout << "testTickResetsAndCleanupPermanentlyDisablesResetWhenNoResetFunctionExists OK\n";
@@ -24074,7 +24074,7 @@ static void testTickResetsAndCleanupPermanentlyDisablesResetWhenNoResetFunctionE
 // gets 1).
 static void testTickResetsAndCleanupCallsRealCleanUpAndTracksItsReturnValue() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/cu_clone.c",
         "int lastArg; int calls;\n"
@@ -24098,8 +24098,8 @@ static void testTickResetsAndCleanupCallsRealCleanUpAndTracksItsReturnValue() {
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value lastArg = harness.vm.callFunction(clone, "queryLastArg", {});
-    amlp::Value calls = harness.vm.callFunction(clone, "queryCalls", {});
+    aemlpc::Value lastArg = harness.vm.callFunction(clone, "queryLastArg", {});
+    aemlpc::Value calls = harness.vm.callFunction(clone, "queryCalls", {});
     assert(std::get<int64_t>(calls.data) == 1);
     assert(std::get<int64_t>(lastArg.data) == 0); // real: a clone always gets 0
     assert(clone->willCleanUp() == false); // real: falsy return clears O_WILL_CLEAN_UP
@@ -24113,7 +24113,7 @@ static void testTickResetsAndCleanupCallsRealCleanUpAndTracksItsReturnValue() {
 // be called again.").
 static void testTickResetsAndCleanupPassesOneForANonCloneAndKeepsTryingOnTruthyReturn() {
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/cu_blueprint.c",
         "int lastArg;\n"
@@ -24128,7 +24128,7 @@ static void testTickResetsAndCleanupPassesOneForANonCloneAndKeepsTryingOnTruthyR
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value lastArg = harness.vm.callFunction(blueprint, "queryLastArg", {});
+    aemlpc::Value lastArg = harness.vm.callFunction(blueprint, "queryLastArg", {});
     assert(std::get<int64_t>(lastArg.data) == 1); // real: a non-clone gets 1 here
     assert(blueprint->willCleanUp() == true); // real: truthy return keeps it armed
 
@@ -24173,7 +24173,7 @@ static void testTickResetsAndCleanupPassesOneForANonCloneAndKeepsTryingOnTruthyR
 // with either phrasing).
 static void testTickResetsAndCleanupSkipsCleanUpOnTheSameCycleARealResetFiredUnderLdmudDialect() {
     ObjectVarHarness harness("dialect: ldmud\n");
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/rc_both.c",
         "int resetCalls; int cleanUpCalls;\n"
@@ -24192,8 +24192,8 @@ static void testTickResetsAndCleanupSkipsCleanUpOnTheSameCycleARealResetFiredUnd
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
-    amlp::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
+    aemlpc::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
+    aemlpc::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
     assert(std::get<int64_t>(resetCalls.data) == 1);
     assert(std::get<int64_t>(cleanUpCalls.data) == 0); // suppressed this cycle, LDMud only
     assert(obj->willCleanUp() == true); // never actually called, so still armed
@@ -24228,7 +24228,7 @@ static void testTickResetsAndCleanupSkipsCleanUpOnTheSameCycleARealResetFiredUnd
 // and the other's is not.
 static void testTickResetsAndCleanupDoesNotSuppressCleanUpOnTheSameCycleARealResetFiredUnderFluffosDialect() {
     ObjectVarHarness harness; // default dialect: fluffos
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/rc_both_fluffos.c",
         "int resetCalls; int cleanUpCalls;\n"
@@ -24247,8 +24247,8 @@ static void testTickResetsAndCleanupDoesNotSuppressCleanUpOnTheSameCycleARealRes
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
-    amlp::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
+    aemlpc::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
+    aemlpc::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
     assert(std::get<int64_t>(resetCalls.data) == 1);
     assert(std::get<int64_t>(cleanUpCalls.data) == 1); // NOT suppressed under FluffOS, unlike LDMud above
     assert(obj->willCleanUp() == false); // real: falsy return clears O_WILL_CLEAN_UP, same as any other clean_up() call
@@ -24275,7 +24275,7 @@ static void testTickResetsAndCleanupDoesNotSuppressCleanUpOnTheSameCycleARealRes
 // merely coincidentally passing" standard the sibling tests apply.
 static void testTickResetsAndCleanupDoesNotSuppressCleanUpOnTheSameCycleARealResetFiredUnderDgdDialect() {
     ObjectVarHarness harness("dialect: dgd\n");
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/rc_both_dgd.c",
         "int resetCalls; int cleanUpCalls;\n"
@@ -24294,8 +24294,8 @@ static void testTickResetsAndCleanupDoesNotSuppressCleanUpOnTheSameCycleARealRes
 
     scheduler.tickResetsAndCleanup();
 
-    amlp::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
-    amlp::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
+    aemlpc::Value resetCalls = harness.vm.callFunction(obj, "queryResetCalls", {});
+    aemlpc::Value cleanUpCalls = harness.vm.callFunction(obj, "queryCleanUpCalls", {});
     assert(std::get<int64_t>(resetCalls.data) == 1);
     assert(std::get<int64_t>(cleanUpCalls.data) == 1); // NOT suppressed under DGD either. Only LDMud suppresses
     assert(obj->willCleanUp() == false);
@@ -24318,13 +24318,13 @@ static void testMIndicesReturnsMappingKeysSameOrderAsKeysEfun() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr->items.size() == 3);
     assert(std::get<std::string>(arr->items[0].data) == "a");
     assert(std::get<std::string>(arr->items[1].data) == "b");
@@ -24341,13 +24341,13 @@ static void testMValuesBareFormReturnsColumnZeroValues() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr->items.size() == 3);
     assert(std::get<int64_t>(arr->items[0].data) == 1);
     assert(std::get<int64_t>(arr->items[1].data) == 2);
@@ -24376,20 +24376,20 @@ static void testMValuesAcceptsExplicitColumnZeroButRejectsNonZeroWidth() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probeExplicitZero", {});
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = vm.callFunction(obj, "probeExplicitZero", {});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr->items.size() == 2);
     assert(std::get<int64_t>(arr->items[0].data) == 1);
 
     bool threw = false;
     try {
         vm.callFunction(obj, "probeNonZero", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         // VM::run() prefixes uncaught errors with filename::fn():
         assert(std::string(e.what()).find(
@@ -24430,28 +24430,28 @@ static void testLdmudWidthTwoMappingLiteralReadsAssignsAndMValuesColumnOne() {
     assert(obj != nullptr);
     harness.vm.callFunction(obj, "resetWall", {});
 
-    amlp::Value c0 = harness.vm.callFunction(obj, "col0", {});
+    aemlpc::Value c0 = harness.vm.callFunction(obj, "col0", {});
     assert(std::holds_alternative<std::string>(c0.data));
     assert(std::get<std::string>(c0.data) == "<missing>");
-    amlp::Value c0e = harness.vm.callFunction(obj, "col0Explicit", {});
+    aemlpc::Value c0e = harness.vm.callFunction(obj, "col0Explicit", {});
     assert(std::get<std::string>(c0e.data) == "<missing>");
-    amlp::Value c1 = harness.vm.callFunction(obj, "col1", {});
+    aemlpc::Value c1 = harness.vm.callFunction(obj, "col1", {});
     assert(std::holds_alternative<int64_t>(c1.data));
     assert(std::get<int64_t>(c1.data) == 1);
-    amlp::Value aegis = harness.vm.callFunction(obj, "aegisFlag", {});
+    aemlpc::Value aegis = harness.vm.callFunction(obj, "aegisFlag", {});
     assert(std::get<int64_t>(aegis.data) == 0);
 
     harness.vm.callFunction(obj, "place", {});
     assert(std::get<std::string>(harness.vm.callFunction(obj, "col0", {}).data) == "I am weak");
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 0);
 
-    amlp::Value flags = harness.vm.callFunction(obj, "flags", {});
-    auto flagArr = std::get<std::shared_ptr<amlp::Array>>(flags.data);
+    aemlpc::Value flags = harness.vm.callFunction(obj, "flags", {});
+    auto flagArr = std::get<std::shared_ptr<aemlpc::Array>>(flags.data);
     assert(flagArr->items.size() == 2);
     assert(std::get<int64_t>(flagArr->items[0].data) == 0); // weakness, after place()
     assert(std::get<int64_t>(flagArr->items[1].data) == 0); // aegis, still 0
-    amlp::Value texts = harness.vm.callFunction(obj, "texts", {});
-    auto textArr = std::get<std::shared_ptr<amlp::Array>>(texts.data);
+    aemlpc::Value texts = harness.vm.callFunction(obj, "texts", {});
+    auto textArr = std::get<std::shared_ptr<aemlpc::Array>>(texts.data);
     assert(std::get<std::string>(textArr->items[0].data) == "I am weak");
 
     std::cout << "testLdmudWidthTwoMappingLiteralReadsAssignsAndMValuesColumnOne OK\n";
@@ -24461,12 +24461,12 @@ static void testLdmudMappingLiteralRejectsInconsistentWidthWithRealMessage() {
     // real prolang.y:17246, exact message.
     bool threw = false;
     try {
-        amlp::Lexer lexer(
+        aemlpc::Lexer lexer(
             "mapping probe() { return ([\"a\": 1; 2, \"b\": 3]); }\n",
-            amlp::LpcDialect::LdMud);
-        amlp::Parser parser(lexer.tokenize(), amlp::LpcDialect::LdMud);
+            aemlpc::LpcDialect::LdMud);
+        aemlpc::Parser parser(lexer.tokenize(), aemlpc::LpcDialect::LdMud);
         parser.parseProgram();
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         assert(std::string(e.what()) == "Inconsistent number of values in mapping literal");
     }
@@ -24507,27 +24507,27 @@ static void testLdmudMapColumnOutOfRangeAndMissingKeyFollowRealIndexSemantics() 
     auto obj = harness.objects.cloneObject("/mw_idx");
     assert(obj != nullptr);
 
-    amlp::Value miss1 = harness.vm.callFunction(obj, "missingCol1", {});
+    aemlpc::Value miss1 = harness.vm.callFunction(obj, "missingCol1", {});
     assert(std::holds_alternative<int64_t>(miss1.data));
     assert(std::get<int64_t>(miss1.data) == 0);
 
-    amlp::Value miss0 = harness.vm.callFunction(obj, "missingCol0", {});
+    aemlpc::Value miss0 = harness.vm.callFunction(obj, "missingCol0", {});
     assert(miss0.isVoid());
 
     bool threw = false;
     try {
         harness.vm.callFunction(obj, "oob", {});
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         assert(std::string(e.what()).find(
             "Illegal sub-index 2, mapping width is 2.") != std::string::npos);
     }
     assert(threw);
 
-    amlp::Value ins0 = harness.vm.callFunction(obj, "insertedCol0", {});
+    aemlpc::Value ins0 = harness.vm.callFunction(obj, "insertedCol0", {});
     assert(std::holds_alternative<int64_t>(ins0.data));
     assert(std::get<int64_t>(ins0.data) == 0);
-    amlp::Value ins1 = harness.vm.callFunction(obj, "insertedCol1", {});
+    aemlpc::Value ins1 = harness.vm.callFunction(obj, "insertedCol1", {});
     assert(std::get<int64_t>(ins1.data) == 9);
 
     std::cout << "testLdmudMapColumnOutOfRangeAndMissingKeyFollowRealIndexSemantics OK\n";
@@ -24562,19 +24562,19 @@ static void testLdmudIncDecOnMapColumnMutatesTheCorrectColumnNotColumnZero() {
     // postfix ++ on column 1: returns the pre-mutation value (100), and
     // only column 1 changes. Column 0 must stay exactly 10, not the
     // pre-fix silently-column-0 behavior.
-    amlp::Value post = harness.vm.callFunction(obj, "postIncCol1", {});
+    aemlpc::Value post = harness.vm.callFunction(obj, "postIncCol1", {});
     assert(std::get<int64_t>(post.data) == 100);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 101);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col0", {}).data) == 10);
 
     // prefix ++ on column 1: returns the post-mutation value.
-    amlp::Value pre = harness.vm.callFunction(obj, "preIncCol1", {});
+    aemlpc::Value pre = harness.vm.callFunction(obj, "preIncCol1", {});
     assert(std::get<int64_t>(pre.data) == 102);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 102);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col0", {}).data) == 10);
 
     // postfix. On column 0 leaves column 1 untouched.
-    amlp::Value postDec = harness.vm.callFunction(obj, "postDecCol0", {});
+    aemlpc::Value postDec = harness.vm.callFunction(obj, "postDecCol0", {});
     assert(std::get<int64_t>(postDec.data) == 10);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col0", {}).data) == 9);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 102);
@@ -24583,7 +24583,7 @@ static void testLdmudIncDecOnMapColumnMutatesTheCorrectColumnNotColumnZero() {
     // the entry (same auto-insert as plain m[key, n] = value, already
     // covered above) with the other columns defaulted to 0, then the
     // increment applies to the requested column only.
-    amlp::Value inserted = harness.vm.callFunction(obj, "insertViaIncDec", {});
+    aemlpc::Value inserted = harness.vm.callFunction(obj, "insertViaIncDec", {});
     assert(std::get<int64_t>(inserted.data) == 1);
     assert(std::get<int64_t>(harness.vm.callFunction(obj, "insertedCol0", {}).data) == 0);
 
@@ -24594,25 +24594,25 @@ static void testFluffosMappingLiteralRejectsWidthTwoSemicolonSyntaxWhileLdmudAcc
     const char* src =
         "mapping probe() { return ([\"a\": 1; 2]); }\n";
     {
-        amlp::Lexer lexer(src);
-        amlp::Parser parser(lexer.tokenize());
+        aemlpc::Lexer lexer(src);
+        aemlpc::Parser parser(lexer.tokenize());
         bool threw = false;
         try {
             parser.parseProgram();
-        } catch (const amlp::LpcRuntimeError&) {
+        } catch (const aemlpc::LpcRuntimeError&) {
             threw = true;
         }
         assert(threw);
     }
     {
-        amlp::Lexer lexer(src, amlp::LpcDialect::LdMud);
-        amlp::Parser parser(lexer.tokenize(), amlp::LpcDialect::LdMud);
+        aemlpc::Lexer lexer(src, aemlpc::LpcDialect::LdMud);
+        aemlpc::Parser parser(lexer.tokenize(), aemlpc::LpcDialect::LdMud);
         auto program = parser.parseProgram();
         assert(program->functions.size() == 1);
-        auto* ret = dynamic_cast<amlp::ReturnStmt*>(
+        auto* ret = dynamic_cast<aemlpc::ReturnStmt*>(
             program->functions[0]->body->statements[0].get());
         assert(ret != nullptr);
-        auto* lit = dynamic_cast<amlp::MappingLiteralExpr*>(ret->expr.get());
+        auto* lit = dynamic_cast<aemlpc::MappingLiteralExpr*>(ret->expr.get());
         assert(lit != nullptr);
         assert(lit->entries.size() == 1);
         assert(lit->entries[0].second.size() == 2);
@@ -24666,9 +24666,9 @@ static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
 
     // Player into the room first, then the wand. The live-verified
     // path that actually fires the wand's own init() (leg 2 of
@@ -24684,7 +24684,7 @@ static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld
     std::string out = readAvailable(fds[1]);
     assert(out.find("You are not holding the wand of creation.") != std::string::npos);
 
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld OK\n";
 }
@@ -24717,10 +24717,10 @@ static void testWandOfCreationCloneAndPurgeWorkOnceGenuinelyHeld() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
     harness.vm.callFunction(player, "become_wizard", {});
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
 
     harness.vm.moveObject(player, room);
     harness.vm.moveObject(wand, room);   // fires init(), registers add_action
@@ -24739,10 +24739,10 @@ static void testWandOfCreationCloneAndPurgeWorkOnceGenuinelyHeld() {
     // cmd_purge only ever searches the room (also matching the
     // original's own cmd_purge_ob() exactly, confirmed live), so a
     // trinket left in inventory would never be a valid purge target.
-    amlp::Value found = harness.vm.callFunction(probe, "check",
-        {amlp::Value(std::string("trinket")), amlp::Value(player)});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(found.data));
-    auto trinket = std::get<std::shared_ptr<amlp::LpcObject>>(found.data);
+    aemlpc::Value found = harness.vm.callFunction(probe, "check",
+        {aemlpc::Value(std::string("trinket")), aemlpc::Value(player)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(found.data));
+    auto trinket = std::get<std::shared_ptr<aemlpc::LpcObject>>(found.data);
     assert(trinket != nullptr);
     harness.vm.moveObject(trinket, room);
 
@@ -24752,7 +24752,7 @@ static void testWandOfCreationCloneAndPurgeWorkOnceGenuinelyHeld() {
     assert(out.find("Purged: trinket") != std::string::npos);
     assert(trinket->isDestructed());
 
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationCloneAndPurgeWorkOnceGenuinelyHeld OK\n";
 }
@@ -24789,10 +24789,10 @@ static void testWandOfCreationCreateWritesCompilesAndPlacesARealNewObject() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
     harness.vm.callFunction(player, "become_wizard", {});
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
 
     harness.vm.moveObject(player, room);
     harness.vm.moveObject(wand, room);
@@ -24812,24 +24812,24 @@ static void testWandOfCreationCreateWritesCompilesAndPlacesARealNewObject() {
         "mixed check(string name, object where) { return present(name, where); }\n");
     auto probe = harness.objects.cloneObject("/probe");
     assert(probe != nullptr);
-    amlp::Value presentResult = harness.vm.callFunction(probe, "check",
-        {amlp::Value(std::string("gizmo")), amlp::Value(room)});
-    assert(std::holds_alternative<std::shared_ptr<amlp::LpcObject>>(presentResult.data));
-    auto gizmo = std::get<std::shared_ptr<amlp::LpcObject>>(presentResult.data);
+    aemlpc::Value presentResult = harness.vm.callFunction(probe, "check",
+        {aemlpc::Value(std::string("gizmo")), aemlpc::Value(room)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(presentResult.data));
+    auto gizmo = std::get<std::shared_ptr<aemlpc::LpcObject>>(presentResult.data);
     assert(gizmo != nullptr && !gizmo->isDestructed());
 
     // Track G / G1: the created object carries real inheritable
     // behaviour now, not just id/short/long. query_weight/query_value
     // come from /inherit/item and resolve to the skeleton's own
     // set_weight(1)/set_value(1).
-    amlp::Value w = harness.vm.callFunction(gizmo, "query_weight", {});
+    aemlpc::Value w = harness.vm.callFunction(gizmo, "query_weight", {});
     assert(std::holds_alternative<int64_t>(w.data));
     assert(std::get<int64_t>(w.data) == 1);
-    amlp::Value v = harness.vm.callFunction(gizmo, "query_value", {});
+    aemlpc::Value v = harness.vm.callFunction(gizmo, "query_value", {});
     assert(std::holds_alternative<int64_t>(v.data));
     assert(std::get<int64_t>(v.data) == 1);
 
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationCreateWritesCompilesAndPlacesARealNewObject OK\n";
 }
@@ -24861,24 +24861,24 @@ static void testInheritItemAddsWeightAndValueOverInheritObject() {
     assert(widget != nullptr);
 
     // Value path: the item layer's own accessors return what create() set.
-    amlp::Value w = harness.vm.callFunction(widget, "query_weight", {});
+    aemlpc::Value w = harness.vm.callFunction(widget, "query_weight", {});
     assert(std::holds_alternative<int64_t>(w.data));
     assert(std::get<int64_t>(w.data) == 7);
-    amlp::Value v = harness.vm.callFunction(widget, "query_value", {});
+    aemlpc::Value v = harness.vm.callFunction(widget, "query_value", {});
     assert(std::holds_alternative<int64_t>(v.data));
     assert(std::get<int64_t>(v.data) == 42);
 
     // /inherit/object behaviour underneath is unchanged: short/long/id
     // still resolve through the two-level chain.
-    amlp::Value shortV = harness.vm.callFunction(widget, "short", {});
+    aemlpc::Value shortV = harness.vm.callFunction(widget, "short", {});
     assert(std::holds_alternative<std::string>(shortV.data));
     assert(std::get<std::string>(shortV.data) == "a widget");
-    amlp::Value idV = harness.vm.callFunction(widget, "id",
-        {amlp::Value(std::string("widget"))});
+    aemlpc::Value idV = harness.vm.callFunction(widget, "id",
+        {aemlpc::Value(std::string("widget"))});
     assert(std::holds_alternative<int64_t>(idV.data));
     assert(std::get<int64_t>(idV.data) == 1);
-    amlp::Value idNo = harness.vm.callFunction(widget, "id",
-        {amlp::Value(std::string("nope"))});
+    aemlpc::Value idNo = harness.vm.callFunction(widget, "id",
+        {aemlpc::Value(std::string("nope"))});
     assert(std::holds_alternative<int64_t>(idNo.data));
     assert(std::get<int64_t>(idNo.data) == 0);
 
@@ -24887,7 +24887,7 @@ static void testInheritItemAddsWeightAndValueOverInheritObject() {
     harness.writeFile("/blank_item.c", "inherit \"/inherit/item\";\n");
     auto blank = harness.objects.cloneObject("/blank_item");
     assert(blank != nullptr);
-    amlp::Value bw = harness.vm.callFunction(blank, "query_weight", {});
+    aemlpc::Value bw = harness.vm.callFunction(blank, "query_weight", {});
     assert(std::holds_alternative<int64_t>(bw.data));
     assert(std::get<int64_t>(bw.data) == 0);
 
@@ -24916,24 +24916,24 @@ static void testLookCommandShowsRoomThenPresentObject() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.moveObject(player, room);
     harness.vm.moveObject(rock, room);
     harness.vm.pushCommandGiver(player);
     readAvailable(fds[1]);
 
-    harness.vm.callFunction(look, "main", {amlp::Value(std::string(""))});
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string(""))});
     std::string out = readAvailable(fds[1]);
     assert(out.find("A stone hall.") != std::string::npos);
 
-    harness.vm.callFunction(look, "main", {amlp::Value(std::string("rock"))});
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("rock"))});
     out = readAvailable(fds[1]);
     assert(out.find("A dull rock.") != std::string::npos);
 
     harness.vm.popCommandGiver();
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testLookCommandShowsRoomThenPresentObject OK\n";
 }
@@ -24965,10 +24965,10 @@ static void testWandOfCreationEditRoomAndExit() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(player);
     harness.vm.callFunction(player, "become_wizard", {});
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     harness.vm.moveObject(player, room);
     harness.vm.moveObject(wand, room);
     harness.vm.moveObject(wand, player);
@@ -24990,8 +24990,8 @@ static void testWandOfCreationEditRoomAndExit() {
     out = readAvailable(fds[1]);
     assert(out.find("Exit north now leads to /data/created/hall") != std::string::npos);
 
-    amlp::Value exits = harness.vm.callFunction(room, "exits", {});
-    auto* map = std::get_if<std::shared_ptr<amlp::Mapping>>(&exits.data);
+    aemlpc::Value exits = harness.vm.callFunction(room, "exits", {});
+    auto* map = std::get_if<std::shared_ptr<aemlpc::Mapping>>(&exits.data);
     assert(map && *map);
     bool foundNorth = false;
     for (const auto& entry : (*map)->entries) {
@@ -25002,7 +25002,7 @@ static void testWandOfCreationEditRoomAndExit() {
     }
     assert(foundNorth);
 
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationEditRoomAndExit OK\n";
 }
@@ -25197,9 +25197,9 @@ static void testCloneObjectKeepsServingLastCompiledProgramWhenSourceFileIsDelete
 }
 
 static void testFluffOsAndLdmudBootApiMasterUidApplyNamesReflectTheRealDialectDivergence() {
-    amlp::Config config;
-    amlp::FluffOsBootApi fluffApi(config);
-    amlp::LdmudBootApi ldmudApi(config);
+    aemlpc::Config config;
+    aemlpc::FluffOsBootApi fluffApi(config);
+    aemlpc::LdmudBootApi ldmudApi(config);
 
     // Real FluffOS: applies.h APPLY_GET_ROOT_UID, fired from master.c's
     // own "apply_master_ob(APPLY_GET_ROOT_UID, 0)".
@@ -25227,9 +25227,9 @@ static void testFluffOsAndLdmudBootApiMasterUidApplyNamesReflectTheRealDialectDi
 }
 
 static void testBootApiMasterFileAndSimulEfunFileReadThroughConfig() {
-    amlp::Config config;
-    amlp::FluffOsBootApi fluffApi(config);
-    amlp::LdmudBootApi ldmudApi(config);
+    aemlpc::Config config;
+    aemlpc::FluffOsBootApi fluffApi(config);
+    aemlpc::LdmudBootApi ldmudApi(config);
 
     // Config's own default masterFile_ ("/master") and empty
     // simulEfunFile_ (real semantics: empty means "no simul_efun tier
@@ -25259,8 +25259,8 @@ static void testQueryMasterUidCallsGetRootUidForFluffOsAndGetMasterUidForLdmudAt
             "string get_master_uid() { return \"WRONG-NAME-FOR-FLUFFOS\"; }\n");
         assert(harness.objects.loadMasterObject());
 
-        amlp::FluffOsBootApi fluffApi(harness.config);
-        auto uid = amlp::queryMasterUid(harness.vm, fluffApi);
+        aemlpc::FluffOsBootApi fluffApi(harness.config);
+        auto uid = aemlpc::queryMasterUid(harness.vm, fluffApi);
         assert(uid.has_value());
         assert(*uid == "ROOT-FLUFFOS");
     }
@@ -25272,8 +25272,8 @@ static void testQueryMasterUidCallsGetRootUidForFluffOsAndGetMasterUidForLdmudAt
             "string get_master_uid() { return \"ROOT-LDMUD\"; }\n");
         assert(harness.objects.loadMasterObject());
 
-        amlp::LdmudBootApi ldmudApi(harness.config);
-        auto uid = amlp::queryMasterUid(harness.vm, ldmudApi);
+        aemlpc::LdmudBootApi ldmudApi(harness.config);
+        auto uid = aemlpc::queryMasterUid(harness.vm, ldmudApi);
         assert(uid.has_value());
         assert(*uid == "ROOT-LDMUD");
     }
@@ -25288,11 +25288,11 @@ static void testQueryMasterUidReturnsNulloptWhenMasterDoesNotDefineTheApply() {
     harness.writeFile("/unused.c", "void create() {}\n");
     assert(harness.objects.loadMasterObject());
 
-    amlp::FluffOsBootApi fluffApi(harness.config);
-    assert(!amlp::queryMasterUid(harness.vm, fluffApi).has_value());
+    aemlpc::FluffOsBootApi fluffApi(harness.config);
+    assert(!aemlpc::queryMasterUid(harness.vm, fluffApi).has_value());
 
-    amlp::LdmudBootApi ldmudApi(harness.config);
-    assert(!amlp::queryMasterUid(harness.vm, ldmudApi).has_value());
+    aemlpc::LdmudBootApi ldmudApi(harness.config);
+    assert(!aemlpc::queryMasterUid(harness.vm, ldmudApi).has_value());
 
     std::cout << "testQueryMasterUidReturnsNulloptWhenMasterDoesNotDefineTheApply OK\n";
 }
@@ -25316,13 +25316,13 @@ static void testApplyInaugurateMasterCallsInaugurateMasterForLdmudOnlyNotFluffOs
             "mixed getCalledWithArg() { return calledWithArg; }\n");
         assert(harness.objects.loadMasterObject());
 
-        amlp::LdmudBootApi ldmudApi(harness.config);
-        amlp::applyInaugurateMaster(harness.vm, ldmudApi);
+        aemlpc::LdmudBootApi ldmudApi(harness.config);
+        aemlpc::applyInaugurateMaster(harness.vm, ldmudApi);
 
         auto master = harness.objects.masterObject();
         assert(master != nullptr);
-        amlp::Value wasCalled = harness.vm.callFunction(master, "getWasCalled", {});
-        amlp::Value arg = harness.vm.callFunction(master, "getCalledWithArg", {});
+        aemlpc::Value wasCalled = harness.vm.callFunction(master, "getWasCalled", {});
+        aemlpc::Value arg = harness.vm.callFunction(master, "getCalledWithArg", {});
         assert(std::get<int64_t>(wasCalled.data) == 1);
         assert(std::get<int64_t>(arg.data) == 0);
     }
@@ -25339,12 +25339,12 @@ static void testApplyInaugurateMasterCallsInaugurateMasterForLdmudOnlyNotFluffOs
             "mixed getWasCalled() { return wasCalled; }\n");
         assert(harness.objects.loadMasterObject());
 
-        amlp::FluffOsBootApi fluffApi(harness.config);
+        aemlpc::FluffOsBootApi fluffApi(harness.config);
         assert(!fluffApi.inaugurateMasterApply().has_value());
-        amlp::applyInaugurateMaster(harness.vm, fluffApi);
+        aemlpc::applyInaugurateMaster(harness.vm, fluffApi);
 
         auto master = harness.objects.masterObject();
-        amlp::Value wasCalled = harness.vm.callFunction(master, "getWasCalled", {});
+        aemlpc::Value wasCalled = harness.vm.callFunction(master, "getWasCalled", {});
         assert(std::get<int64_t>(wasCalled.data) == 0);
     }
 
@@ -25385,8 +25385,8 @@ static void testApplyInaugurateMasterInstallsHooksCsOwnH_MOVE_OBJECT0Automatical
 
     // The real boot-sequence call. This is the *only* set_driver_hook()
     // trigger anywhere in this test.
-    amlp::LdmudBootApi ldmudApi(harness.config);
-    amlp::applyInaugurateMaster(harness.vm, ldmudApi);
+    aemlpc::LdmudBootApi ldmudApi(harness.config);
+    aemlpc::applyInaugurateMaster(harness.vm, ldmudApi);
 
     auto master = harness.objects.masterObject();
     auto room = harness.objects.cloneObject("/mh_room");
@@ -25395,12 +25395,12 @@ static void testApplyInaugurateMasterInstallsHooksCsOwnH_MOVE_OBJECT0Automatical
     assert(room != nullptr);
     assert(mover != nullptr);
 
-    harness.vm.callFunction(mover, "doMove", {amlp::Value(room)});
+    harness.vm.callFunction(mover, "doMove", {aemlpc::Value(room)});
 
-    amlp::Value item = harness.vm.callFunction(master, "getLastItem", {});
-    amlp::Value dest = harness.vm.callFunction(master, "getLastDest", {});
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(item.data) == mover);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(dest.data) == room);
+    aemlpc::Value item = harness.vm.callFunction(master, "getLastItem", {});
+    aemlpc::Value dest = harness.vm.callFunction(master, "getLastDest", {});
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(item.data) == mover);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(dest.data) == room);
     assert(mover->environment().lock() == room);
     auto& roomInv = room->inventory();
     assert(std::find(roomInv.begin(), roomInv.end(), mover) != roomInv.end());
@@ -25439,9 +25439,9 @@ static void testMakeBootApiForConfigSelectsTheRightBootApiForARealQueryMasterUid
             "string get_root_uid() { return \"ROOT-DEFAULT\"; }\n");
         assert(harness.objects.loadMasterObject());
 
-        auto bootApi = amlp::makeBootApiForConfig(harness.config);
+        auto bootApi = aemlpc::makeBootApiForConfig(harness.config);
         assert(bootApi->masterUidApply() == "get_root_uid");
-        auto uid = amlp::queryMasterUid(harness.vm, *bootApi);
+        auto uid = aemlpc::queryMasterUid(harness.vm, *bootApi);
         assert(uid.has_value());
         assert(*uid == "ROOT-DEFAULT");
     }
@@ -25457,9 +25457,9 @@ static void testMakeBootApiForConfigSelectsTheRightBootApiForARealQueryMasterUid
             "string get_master_uid() { return \"ROOT-LDMUD-CONFIG\"; }\n");
         assert(harness.objects.loadMasterObject());
 
-        auto bootApi = amlp::makeBootApiForConfig(harness.config);
+        auto bootApi = aemlpc::makeBootApiForConfig(harness.config);
         assert(bootApi->masterUidApply() == "get_master_uid");
-        auto uid = amlp::queryMasterUid(harness.vm, *bootApi);
+        auto uid = aemlpc::queryMasterUid(harness.vm, *bootApi);
         assert(uid.has_value());
         assert(*uid == "ROOT-LDMUD-CONFIG");
     }
@@ -25475,8 +25475,8 @@ static void testMakeBootApiForConfigThrowsForDgdSinceDgdBootApiDoesNotExistYet()
 
     bool threw = false;
     try {
-        amlp::makeBootApiForConfig(harness.config);
-    } catch (const amlp::NotImplementedError&) {
+        aemlpc::makeBootApiForConfig(harness.config);
+    } catch (const aemlpc::NotImplementedError&) {
         threw = true;
     }
     assert(threw);
@@ -25500,14 +25500,14 @@ static void testParseAddRuleThrowsWhenParseInitWasNeverCalled() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     bool threw = false;
     try {
         vm.callFunction(obj, "probe", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -25524,13 +25524,13 @@ static void testParseInitAddRuleAndDumpRoundTripsAPlainObjRule() {
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "doInit", {});
     vm.callFunction(obj, "addRule", {});
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     const std::string& dump = std::get<std::string>(result.data);
     assert(dump.find("Verb zzzpush:\n") != std::string::npos);
@@ -25544,7 +25544,7 @@ static void testParseInitAddRuleAndDumpRoundTripsAPlainObjRule() {
     // not itself remove the rule either, so this only proves the call
     // itself didn't error or otherwise disturb existing state).
     vm.callFunction(obj, "doInit", {});
-    amlp::Value result2 = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result2 = vm.callFunction(obj, "probe", {});
     assert(std::get<std::string>(result2.data) == dump);
 
     std::cout << "testParseInitAddRuleAndDumpRoundTripsAPlainObjRule OK\n";
@@ -25563,16 +25563,16 @@ static void testParseAddRuleRejectsMoreThanTwoObjectTokensAndMoreThanOnePluralTo
         "}\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
     vm.callFunction(obj, "setup", {});
 
     // "OBJ OBJ OBJ" has no literal word, so it never needs the master's
     // own preposition list. Confirmed real grammar-only rejection
     // (real "Only two object tokens allowed per rule."), independent of
     // whatever literal set happens to be configured.
-    amlp::Value r1 = vm.callFunction(obj, "probeThreeObjects", {});
+    aemlpc::Value r1 = vm.callFunction(obj, "probeThreeObjects", {});
     assert(std::holds_alternative<int64_t>(r1.data));
     assert(std::get<int64_t>(r1.data) == 1);
 
@@ -25581,7 +25581,7 @@ static void testParseAddRuleRejectsMoreThanTwoObjectTokensAndMoreThanOnePluralTo
     // check. Still a real, correct rejection (tokenizeRule() throws
     // either way), just confirming catch() genuinely traps it rather
     // than the object silently accepting a malformed rule.
-    amlp::Value r2 = vm.callFunction(obj, "probeTwoPlurals", {});
+    aemlpc::Value r2 = vm.callFunction(obj, "probeTwoPlurals", {});
     assert(std::get<int64_t>(r2.data) == 1);
 
     std::cout << "testParseAddRuleRejectsMoreThanTwoObjectTokensAndMoreThanOnePluralToken OK\n";
@@ -25613,7 +25613,7 @@ static void testParseAddRuleTokenizesModifiersAndLiteralsAgainstMasterPrepositio
     assert(giver != nullptr);
 
     harness.vm.callFunction(giver, "setup", {});
-    amlp::Value result = harness.vm.callFunction(giver, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(giver, "probe", {});
     const std::string& dump = std::get<std::string>(result.data);
     // The literal "to" round-trips back through ruleString() using the
     // cached master preposition list; the "v" modifier (VIS_ONLY) does
@@ -25623,7 +25623,7 @@ static void testParseAddRuleTokenizesModifiersAndLiteralsAgainstMasterPrepositio
 
     // "toward" is not in the master's own preposition list. real
     // tokenize()'s own "Unknown token" rejection.
-    amlp::Value r2 = harness.vm.callFunction(giver, "probeUnknownLiteral", {});
+    aemlpc::Value r2 = harness.vm.callFunction(giver, "probeUnknownLiteral", {});
     assert(std::get<int64_t>(r2.data) == 1);
 
     std::cout << "testParseAddRuleTokenizesModifiersAndLiteralsAgainstMasterPrepositionList OK\n";
@@ -25640,9 +25640,9 @@ static void testParseRemoveDeletesOnlyTheCallingObjectsOwnRules() {
     auto objA = compileProgramObject(src);
     auto objB = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(objA, "setup", {});
     vm.callFunction(objB, "setup", {});
@@ -25666,12 +25666,12 @@ static void testParseRemoveDeletesOnlyTheCallingObjectsOwnRules() {
     };
 
     // Both objects registered the same verb. Two rule nodes present.
-    amlp::Value before = vm.callFunction(objA, "probe", {});
+    aemlpc::Value before = vm.callFunction(objA, "probe", {});
     assert(countObjRulesUnderZzzshared(std::get<std::string>(before.data)) == 2);
 
     // objA forgets its own rule; objB's own registration is untouched.
     vm.callFunction(objA, "forget", {});
-    amlp::Value after = vm.callFunction(objA, "probe", {});
+    aemlpc::Value after = vm.callFunction(objA, "probe", {});
     assert(countObjRulesUnderZzzshared(std::get<std::string>(after.data)) == 1);
 
     std::cout << "testParseRemoveDeletesOnlyTheCallingObjectsOwnRules OK\n";
@@ -25698,7 +25698,7 @@ static void testParseDumpShowsDestructedForARuleWhoseHandlerNoLongerExists() {
     harness.vm.destructObject(ghost);
     ghost.reset(); // drop this test's own last shared_ptr too
 
-    amlp::Value result = harness.vm.callFunction(observer, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(observer, "probe", {});
     const std::string& dump = std::get<std::string>(result.data);
     assert(dump.find("Verb zzzhaunt:\n") != std::string::npos);
     assert(dump.find("(destructed) OBJ\n") != std::string::npos);
@@ -25720,12 +25720,12 @@ static void testParseAddSynonymAliasFormMakesNewVerbResolveThroughToOldVerbsRule
         "string probe() { return parse_dump(); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     const std::string& dump = std::get<std::string>(result.data);
 
     // The underlying verb keeps its own real_name==match_name shape.
@@ -25762,9 +25762,9 @@ static void testParseAddSynonymThreeArgFormCopiesOnlyTheMatchingRuleAndChecksOwn
     auto objA = compileProgramObject(src);
     auto objB = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(objA, "setup", {});
 
@@ -25774,7 +25774,7 @@ static void testParseAddSynonymThreeArgFormCopiesOnlyTheMatchingRuleAndChecksOwn
     bool threwForWrongOwner = false;
     try {
         vm.callFunction(objB, "copyRule", {});
-    } catch (const amlp::LpcRuntimeError&) {
+    } catch (const aemlpc::LpcRuntimeError&) {
         threwForWrongOwner = true;
     }
     assert(threwForWrongOwner);
@@ -25783,7 +25783,7 @@ static void testParseAddSynonymThreeArgFormCopiesOnlyTheMatchingRuleAndChecksOwn
     // rule ("OBJ LIV") is copied, not the other one registered under the
     // same verb ("OBJ").
     vm.callFunction(objA, "copyRule", {});
-    amlp::Value result = vm.callFunction(objA, "probe", {});
+    aemlpc::Value result = vm.callFunction(objA, "probe", {});
     const std::string& dump = std::get<std::string>(result.data);
     assert(dump.find("Verb zzzsyndevour (zzzsyndine):\n  (program_object) OBJ LIV\n") != std::string::npos);
     // The copy is not a synonym entry (real code never sets VB_IS_SYN in
@@ -25815,19 +25815,19 @@ static void testParseAddSynonymCoexistsWithAPlainVerbOfTheSameNameAndParseRemove
         "string probe() { return parse_dump(); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
 
-    amlp::Value before = vm.callFunction(obj, "probe", {});
+    aemlpc::Value before = vm.callFunction(obj, "probe", {});
     const std::string& beforeDump = std::get<std::string>(before.data);
     assert(beforeDump.find("Verb zzzsynpush:\n  (program_object) OBJ\n") != std::string::npos);
     assert(beforeDump.find("Verb zzzsynpush (zzzsyncarry):\n  Synonym for: zzzsyncarry\n") != std::string::npos);
 
     vm.callFunction(obj, "forgetPlainRule", {});
-    amlp::Value after = vm.callFunction(obj, "probe", {});
+    aemlpc::Value after = vm.callFunction(obj, "probe", {});
     const std::string& afterDump = std::get<std::string>(after.data);
     // parse_remove() only ever touches non-synonym entries (see
     // ParserPackage::removeRules()'s own comment). The plain entry's
@@ -25874,13 +25874,13 @@ static void testParseFreeRealDestructEfunEagerlyRemovesTheDestructedHandlersOwnR
     auto observer = harness.objects.cloneObject("/zzzobserver2");
     assert(observer != nullptr);
 
-    amlp::Value before = harness.vm.callFunction(observer, "probe", {});
+    aemlpc::Value before = harness.vm.callFunction(observer, "probe", {});
     assert(std::get<std::string>(before.data).find("Verb zzzephemeral:\n  (/zzzephemeral) OBJ\n") !=
            std::string::npos);
 
     harness.vm.callFunction(handler, "selfDestruct", {});
 
-    amlp::Value after = harness.vm.callFunction(observer, "probe", {});
+    aemlpc::Value after = harness.vm.callFunction(observer, "probe", {});
     const std::string& afterDump = std::get<std::string>(after.data);
     // Real eager parse_free() cleanup: the rule node is gone entirely,
     // not merely shown as "(destructed)". The verb entry's own header
@@ -25916,7 +25916,7 @@ static void testParseRefreshThrowsWhenParseInitWasNeverCalledExceptForTheMasterO
                                              "}\n");
     auto ob = harness.objects.cloneObject("/zzzrefreshguard");
     assert(ob != nullptr);
-    amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
     assert(std::get<int64_t>(result.data) == 1);
 
     // real f_parse_refresh()'s own master_ob special case: "if
@@ -25953,15 +25953,15 @@ static void testParseAddRuleAndParseRefreshBothFireLivingsAreRemoteAndSetTheFlag
     // parse_add_rule() still fires the apply, but PI_REMOTE_LIVINGS
     // must stay unset.
     harness.vm.callFunction(ob, "setup", {});
-    assert((ob->parseInfoFlags() & amlp::ParserInfoFlag::VerbHandler) != 0);
-    assert((ob->parseInfoFlags() & amlp::ParserInfoFlag::RemoteLivings) == 0);
+    assert((ob->parseInfoFlags() & aemlpc::ParserInfoFlag::VerbHandler) != 0);
+    assert((ob->parseInfoFlags() & aemlpc::ParserInfoFlag::RemoteLivings) == 0);
 
     // Flip it truthy, then call parse_refresh(). Real code re-checks
     // livings_are_remote() there too (PI_VERB_HANDLER is set, so the
     // real "if (pi->flags & PI_VERB_HANDLER)" branch fires).
-    harness.vm.callFunction(ob, "setRemoteFlag", std::vector<amlp::Value>{amlp::Value(static_cast<int64_t>(1))});
+    harness.vm.callFunction(ob, "setRemoteFlag", std::vector<aemlpc::Value>{aemlpc::Value(static_cast<int64_t>(1))});
     harness.vm.callFunction(ob, "refresh", {});
-    assert((ob->parseInfoFlags() & amlp::ParserInfoFlag::RemoteLivings) != 0);
+    assert((ob->parseInfoFlags() & aemlpc::ParserInfoFlag::RemoteLivings) != 0);
 
     std::cout << "testParseAddRuleAndParseRefreshBothFireLivingsAreRemoteAndSetTheFlagWhenTruthy OK\n";
 }
@@ -25982,17 +25982,17 @@ static void testParseSentenceMatchesStrTokenAndInvokesDoFunctionUnderTheSimpleNa
         "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result =
-        vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("look around the room"))});
+    aemlpc::Value result =
+        vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("look around the room"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
-    amlp::Value probeResult = vm.callFunction(obj, "probe", {});
+    aemlpc::Value probeResult = vm.callFunction(obj, "probe", {});
     // real strput_words(): original casing/spacing preserved, trimmed.
     // "around the room", not the lowercased grammar-matching form.
     assert(std::get<std::string>(probeResult.data) == "around the room");
@@ -26010,12 +26010,12 @@ static void testParseSentenceMatchesWrdTokenExactlyOneWord() {
         "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("Drop SWORD"))});
+    aemlpc::Value result = vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("Drop SWORD"))});
     assert(std::get<int64_t>(result.data) == 1);
     // real WRD is exactly one word, original casing preserved.
     assert(std::get<std::string>(vm.callFunction(obj, "probe", {}).data) == "SWORD");
@@ -26041,8 +26041,8 @@ static void testParseSentenceMatchesLiteralPlusStrAgainstRealMasterPrepositionLi
     assert(ob != nullptr);
     harness.vm.callFunction(ob, "setup", {});
 
-    amlp::Value result =
-        harness.vm.callFunction(ob, "run", std::vector<amlp::Value>{amlp::Value(std::string("look at the Painting"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(ob, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("look at the Painting"))});
     assert(std::get<int64_t>(result.data) == 1);
     assert(std::get<std::string>(harness.vm.callFunction(ob, "probe", {}).data) == "the Painting");
 
@@ -26054,12 +26054,12 @@ static void testParseSentenceReturnsZeroWhenNoVerbRecognizedAtAll() {
                        "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("xyzzy"))});
+    aemlpc::Value result = vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("xyzzy"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -26077,12 +26077,12 @@ static void testParseSentenceReturnsNegativeOneWhenVerbRecognizedButGrammarNeeds
                        "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("look"))});
+    aemlpc::Value result = vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("look"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == -1);
 
@@ -26106,8 +26106,8 @@ static void testParseSentenceExplicitStringRejectionRoutesThroughMasterParserErr
     assert(ob != nullptr);
     harness.vm.callFunction(ob, "setup", {});
 
-    amlp::Value result =
-        harness.vm.callFunction(ob, "run", std::vector<amlp::Value>{amlp::Value(std::string("eat the cake"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(ob, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("eat the cake"))});
     assert(std::holds_alternative<std::string>(result.data));
     // real ERR_ALLOCATED == 6 (include/parser_error.h), confirmed the
     // real master apply actually received it, not a placeholder.
@@ -26122,12 +26122,12 @@ static void testParseSentenceExplicitRejectionReturnsZeroWhenMasterDoesNotDefine
                        "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("eat cake"))});
+    aemlpc::Value result = vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("eat cake"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 0);
 
@@ -26156,13 +26156,13 @@ static void testParseSentenceObjectRuleWithNoCandidatesFallsThroughToSiblingStrR
         "mixed run(string sentence) { return parse_sentence(sentence); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result =
-        vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the red apple"))});
+    aemlpc::Value result =
+        vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the red apple"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     assert(std::get<std::string>(vm.callFunction(obj, "probe", {}).data) == "the red apple");
@@ -26193,16 +26193,16 @@ static void testParseSentenceFallsBackToTheGenericDoVerbRuleNamingWhenTheSimpleN
         "mixed *probe() { return ({ got_verbName, got_ruleStr, got_strText, got_verbWord, got_strTextAgain }); }\n";
     auto obj = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(obj, "setup", {});
-    amlp::Value result = vm.callFunction(obj, "run", std::vector<amlp::Value>{amlp::Value(std::string("Toss the coin"))});
+    aemlpc::Value result = vm.callFunction(obj, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("Toss the coin"))});
     assert(std::get<int64_t>(result.data) == 1);
 
-    amlp::Value probe = vm.callFunction(obj, "probe", {});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(probe.data);
+    aemlpc::Value probe = vm.callFunction(obj, "probe", {});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(probe.data);
     assert(arr->items.size() == 5);
     assert(std::get<std::string>(arr->items[0].data) == "toss");   // real verb name (match_name)
     assert(std::get<std::string>(arr->items[1].data) == "STR");    // rule_string()
@@ -26227,9 +26227,9 @@ static void testParseSentenceRequiresParseInitAndRejectsATruthyDebugFlag() {
     auto objA = compileProgramObject(src); // never calls setup()/parse_init()
     auto objB = compileProgramObject(src);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     assert(std::get<int64_t>(vm.callFunction(objA, "probeNoInit", {}).data) == 1);
     assert(std::get<int64_t>(vm.callFunction(objB, "probeDebugFlag", {}).data) == 1);
@@ -26244,36 +26244,36 @@ static void testParseSentenceRequiresParseInitAndRejectsATruthyDebugFlag() {
 // slice). See LoadedObjectSet's own header comment (ParserPackage.hpp).
 
 static void testCheckSpecialWordMatchesFixedTableAndNumericOrdinalsWithTheTeenRule() {
-    using amlp::SpecialWordKind;
+    using aemlpc::SpecialWordKind;
 
-    assert(amlp::ParserPackage::checkSpecialWord("the").kind == SpecialWordKind::Article);
-    assert(amlp::ParserPackage::checkSpecialWord("me").kind == SpecialWordKind::Self);
-    assert(amlp::ParserPackage::checkSpecialWord("myself").kind == SpecialWordKind::Self);
-    assert(amlp::ParserPackage::checkSpecialWord("all").kind == SpecialWordKind::All);
-    assert(amlp::ParserPackage::checkSpecialWord("of").kind == SpecialWordKind::Of);
-    assert(amlp::ParserPackage::checkSpecialWord("and").kind == SpecialWordKind::And);
+    assert(aemlpc::ParserPackage::checkSpecialWord("the").kind == SpecialWordKind::Article);
+    assert(aemlpc::ParserPackage::checkSpecialWord("me").kind == SpecialWordKind::Self);
+    assert(aemlpc::ParserPackage::checkSpecialWord("myself").kind == SpecialWordKind::Self);
+    assert(aemlpc::ParserPackage::checkSpecialWord("all").kind == SpecialWordKind::All);
+    assert(aemlpc::ParserPackage::checkSpecialWord("of").kind == SpecialWordKind::Of);
+    assert(aemlpc::ParserPackage::checkSpecialWord("and").kind == SpecialWordKind::And);
 
-    auto second = amlp::ParserPackage::checkSpecialWord("second");
+    auto second = aemlpc::ParserPackage::checkSpecialWord("second");
     assert(second.kind == SpecialWordKind::Ordinal && second.arg == 2);
 
     // Numeric ordinals ("3rd", "21st", ...): the suffix must match the
     // real, digit-specific ending exactly.
-    auto third = amlp::ParserPackage::checkSpecialWord("3rd");
+    auto third = aemlpc::ParserPackage::checkSpecialWord("3rd");
     assert(third.kind == SpecialWordKind::Ordinal && third.arg == 3);
-    auto twentyFirst = amlp::ParserPackage::checkSpecialWord("21st");
+    auto twentyFirst = aemlpc::ParserPackage::checkSpecialWord("21st");
     assert(twentyFirst.kind == SpecialWordKind::Ordinal && twentyFirst.arg == 21);
 
     // Real check_special_word()'s own "a teen is always 'th'" rule:
     // "11th" is correct even though a bare trailing '1' would otherwise
     // suggest "st".
-    auto eleventh = amlp::ParserPackage::checkSpecialWord("11th");
+    auto eleventh = aemlpc::ParserPackage::checkSpecialWord("11th");
     assert(eleventh.kind == SpecialWordKind::Ordinal && eleventh.arg == 11);
-    assert(amlp::ParserPackage::checkSpecialWord("11st").kind == SpecialWordKind::None);
+    assert(aemlpc::ParserPackage::checkSpecialWord("11st").kind == SpecialWordKind::None);
 
     // A bare number with no ordinal suffix, and an ordinary word, match
     // nothing.
-    assert(amlp::ParserPackage::checkSpecialWord("42").kind == SpecialWordKind::None);
-    assert(amlp::ParserPackage::checkSpecialWord("sword").kind == SpecialWordKind::None);
+    assert(aemlpc::ParserPackage::checkSpecialWord("42").kind == SpecialWordKind::None);
+    assert(aemlpc::ParserPackage::checkSpecialWord("sword").kind == SpecialWordKind::None);
 
     std::cout << "testCheckSpecialWordMatchesFixedTableAndNumericOrdinalsWithTheTeenRule OK\n";
 }
@@ -26295,24 +26295,24 @@ static void testInterrogateObjectPopulatesTheNounPluralAdjCacheAndSkipsReInterro
     assert(thing != nullptr);
     harness.vm.callFunction(thing, "setup", {});
 
-    amlp::ParserPackage::interrogateObject(harness.vm, thing);
+    aemlpc::ParserPackage::interrogateObject(harness.vm, thing);
     assert(thing->parseNounIds().size() == 1 && thing->parseNounIds()[0] == "rock");
     assert(thing->parsePluralIds().size() == 1 && thing->parsePluralIds()[0] == "rocks");
     assert(thing->parseAdjIds().size() == 1 && thing->parseAdjIds()[0] == "heavy");
-    assert((thing->parseInfoFlags() & amlp::ParserInfoFlag::Setup) != 0);
-    assert((thing->parseInfoFlags() & amlp::ParserInfoFlag::Living) == 0);
-    assert((thing->parseInfoFlags() & amlp::ParserInfoFlag::InvAccessible) == 0);
-    assert((thing->parseInfoFlags() & amlp::ParserInfoFlag::InvVisible) != 0);
+    assert((thing->parseInfoFlags() & aemlpc::ParserInfoFlag::Setup) != 0);
+    assert((thing->parseInfoFlags() & aemlpc::ParserInfoFlag::Living) == 0);
+    assert((thing->parseInfoFlags() & aemlpc::ParserInfoFlag::InvAccessible) == 0);
+    assert((thing->parseInfoFlags() & aemlpc::ParserInfoFlag::InvVisible) != 0);
 
     // Cache hit: PI_SETUP is already set and PI_REFRESH is not, so a
     // second call must not re-invoke parse_command_id_list() at all.
-    amlp::ParserPackage::interrogateObject(harness.vm, thing);
+    aemlpc::ParserPackage::interrogateObject(harness.vm, thing);
     assert(std::get<int64_t>(harness.vm.callFunction(thing, "getNounCalls", {}).data) == 1);
 
     // real f_parse_refresh() clears PI_SETUP and sets PI_REFRESH. the
     // next interrogateObject() call must genuinely re-fetch.
     harness.vm.callFunction(thing, "refresh", {});
-    amlp::ParserPackage::interrogateObject(harness.vm, thing);
+    aemlpc::ParserPackage::interrogateObject(harness.vm, thing);
     assert(std::get<int64_t>(harness.vm.callFunction(thing, "getNounCalls", {}).data) == 2);
 
     std::cout << "testInterrogateObjectPopulatesTheNounPluralAdjCacheAndSkipsReInterrogationUntilRefreshed OK\n";
@@ -26370,11 +26370,11 @@ static void testLoadObjectsBuildsTheNumberedObjectUniverseFromAnEnvironmentTree(
     // into each child's own inventory immediately (depth-first), so
     // player's own carried sword is numbered right after player, before
     // the room's next sibling (rock) is even visited.
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(rock, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword, "go", std::vector<amlp::Value>{amlp::Value(player)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(rock, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword, "go", std::vector<aemlpc::Value>{aemlpc::Value(player)});
 
-    amlp::LoadedObjectSet result = amlp::ParserPackage::loadObjects(harness.vm, player);
+    aemlpc::LoadedObjectSet result = aemlpc::ParserPackage::loadObjects(harness.vm, player);
 
     assert(result.objects.size() == 4);
     assert(result.objects[0] == room);
@@ -26428,7 +26428,7 @@ static void testLoadObjectsCachesMasterUsersAndTheNumPeopleFallbackFindsAnOtherw
     // process would. Explicitly invalidate first so this test's own
     // first loadObjects() call below is guaranteed to be a genuine
     // fetch, not an accidental reuse of another test's own cache state.
-    amlp::ParserPackage::invalidateMasterUsersCache();
+    aemlpc::ParserPackage::invalidateMasterUsersCache();
 
     ObjectVarHarness harness;
     harness.writeFile("/unused.c",
@@ -26479,14 +26479,14 @@ static void testLoadObjectsCachesMasterUsersAndTheNumPeopleFallbackFindsAnOtherw
     assert(room && player && box && hidden);
     for (auto& ob : {room, player, box, hidden}) harness.vm.callFunction(ob, "setup", {});
 
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(box, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(hidden, "go", std::vector<amlp::Value>{amlp::Value(box)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(box, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(hidden, "go", std::vector<aemlpc::Value>{aemlpc::Value(box)});
 
-    harness.vm.callFunction(master, "addUser", std::vector<amlp::Value>{amlp::Value(player)});
-    harness.vm.callFunction(master, "addUser", std::vector<amlp::Value>{amlp::Value(hidden)});
+    harness.vm.callFunction(master, "addUser", std::vector<aemlpc::Value>{aemlpc::Value(player)});
+    harness.vm.callFunction(master, "addUser", std::vector<aemlpc::Value>{aemlpc::Value(hidden)});
 
-    amlp::LoadedObjectSet first = amlp::ParserPackage::loadObjects(harness.vm, player);
+    aemlpc::LoadedObjectSet first = aemlpc::ParserPackage::loadObjects(harness.vm, player);
     // room, box, player from the tree walk, plus hidden via the
     // num_people fallback. Not a duplicate of player, who was already
     // reached directly.
@@ -26503,13 +26503,13 @@ static void testLoadObjectsCachesMasterUsersAndTheNumPeopleFallbackFindsAnOtherw
 
     // A second loadObjects() call reuses the cached master()->
     // parse_command_users() result. No new call.
-    amlp::ParserPackage::loadObjects(harness.vm, player);
+    aemlpc::ParserPackage::loadObjects(harness.vm, player);
     assert(std::get<int64_t>(harness.vm.callFunction(master, "getUserCalls", {}).data) == 1);
 
     // parse_refresh() on master invalidates the cache. The next
     // loadObjects() call genuinely re-fetches.
     harness.vm.callFunction(master, "doRefresh", {});
-    amlp::ParserPackage::loadObjects(harness.vm, player);
+    aemlpc::ParserPackage::loadObjects(harness.vm, player);
     assert(std::get<int64_t>(harness.vm.callFunction(master, "getUserCalls", {}).data) == 2);
 
     std::cout << "testLoadObjectsCachesMasterUsersAndTheNumPeopleFallbackFindsAnOtherwiseUnreachableUser OK\n";
@@ -26565,17 +26565,17 @@ static void testParseObjResolvesASingleObjectEndToEndThroughCanDirectAndDo() {
     auto sword = harness.objects.cloneObject("/po_sword");
     assert(room && player && sword);
     for (auto& ob : {room, player, sword}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the sword"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the sword"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
     assert(std::get<int64_t>(harness.vm.callFunction(player, "probeSawCan", {}).data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDirect", {}).data) ==
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDirect", {}).data) ==
            sword);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) == sword);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) == sword);
 
     std::cout << "testParseObjResolvesASingleObjectEndToEndThroughCanDirectAndDo OK\n";
 }
@@ -26623,11 +26623,11 @@ static void testParseObjSingleCandidateRejectedByDirectFallsBackToGenericErrorMe
     auto sword = harness.objects.cloneObject("/po2_sword");
     assert(room && player && sword);
     for (auto& ob : {room, player, sword}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the sword"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the sword"))});
     assert(std::holds_alternative<std::string>(result.data));
     // real make_error_message()'s own OBJ-family branch: the object
     // token that just failed renders as "that " (real "cnt == which -
@@ -26685,21 +26685,21 @@ static void testParseObjTwoIndistinguishableCandidatesProduceErrAmbigWithBothObj
     auto sword2 = harness.objects.cloneObject("/po3_sword");
     assert(room && player && sword1 && sword2);
     for (auto& ob : {room, player, sword1, sword2}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword2, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the sword"))});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the sword"))});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr && *arrPtr && (*arrPtr)->items.size() == 3);
     assert(std::get<int64_t>((*arrPtr)->items[0].data) == 4); // ERR_AMBIG
     assert(std::get<int64_t>((*arrPtr)->items[1].data) == 0); // push_undefined() -> int 0
-    auto* objArr = std::get_if<std::shared_ptr<amlp::Array>>(&(*arrPtr)->items[2].data);
+    auto* objArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*arrPtr)->items[2].data);
     assert(objArr && *objArr && (*objArr)->items.size() == 2);
     // Real descending object-index order: sword2 (the higher index) first.
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*objArr)->items[0].data) == sword2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*objArr)->items[1].data) == sword1);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*objArr)->items[0].data) == sword2);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*objArr)->items[1].data) == sword1);
 
     std::cout << "testParseObjTwoIndistinguishableCandidatesProduceErrAmbigWithBothObjects OK\n";
 }
@@ -26751,14 +26751,14 @@ static void testParseObjAdjectiveChainNarrowsToTheCorrectlyAdjectivedCandidate()
     auto blueSword = harness.objects.cloneObject("/po4_bluesword");
     assert(room && player && redSword && blueSword);
     for (auto& ob : {room, player, redSword, blueSword}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(redSword, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(blueSword, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(redSword, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(blueSword, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the red sword"))});
+    aemlpc::Value result = harness.vm.callFunction(
+        player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the red sword"))});
     assert(std::get<int64_t>(result.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
            redSword);
 
     std::cout << "testParseObjAdjectiveChainNarrowsToTheCorrectlyAdjectivedCandidate OK\n";
@@ -26802,18 +26802,18 @@ static void testParseObjOrdinalResolvesToTheNthAcceptedCandidate() {
     auto sword3 = harness.objects.cloneObject("/po5_sword");
     assert(room && player && sword1 && sword2 && sword3);
     for (auto& ob : {room, player, sword1, sword2, sword3}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
     // Object index order: room(0) player(1) sword1(2) sword2(3) sword3(4)
     // "the second sword" must resolve to sword2, the second-lowest-
     // indexed match, not sword1 or sword3.
-    harness.vm.callFunction(sword1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword2, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword3, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(sword1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword3, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get the second sword"))});
+    aemlpc::Value result = harness.vm.callFunction(
+        player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get the second sword"))});
     assert(std::get<int64_t>(result.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
            sword2);
 
     std::cout << "testParseObjOrdinalResolvesToTheNthAcceptedCandidate OK\n";
@@ -26872,14 +26872,14 @@ static void testParseObjLivModifierOnlyMatchesLivingCandidates() {
     auto guard = harness.objects.cloneObject("/po6_guard");
     assert(room && player && statue && guard);
     for (auto& ob : {room, player, statue, guard}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(statue, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(guard, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(statue, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(guard, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("eye the target"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("eye the target"))});
     assert(std::get<int64_t>(result.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) == guard);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) == guard);
 
     std::cout << "testParseObjLivModifierOnlyMatchesLivingCandidates OK\n";
 }
@@ -26946,20 +26946,20 @@ static void testParseObjAllOfPluralResolvesToTheAcceptedCandidatesOnly() {
     auto sword2 = harness.objects.cloneObject("/po7_sword");
     assert(room && player && sword1 && sword2);
     for (auto& ob : {room, player, sword1, sword2}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
     // Object index order: room(0) player(1) sword1(2) sword2(3).
     // rejectNext fires on the first candidate probed (sword1, the lower
     // index), leaving only sword2 in the final array.
-    harness.vm.callFunction(sword1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword2, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(sword1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get all of the swords"))});
+    aemlpc::Value result = harness.vm.callFunction(
+        player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get all of the swords"))});
     assert(std::get<int64_t>(result.data) == 1);
-    amlp::Value probe = harness.vm.callFunction(player, "probeDo", {});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&probe.data);
+    aemlpc::Value probe = harness.vm.callFunction(player, "probeDo", {});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&probe.data);
     assert(arrPtr && *arrPtr && (*arrPtr)->items.size() == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*arrPtr)->items[0].data) == sword2);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*arrPtr)->items[0].data) == sword2);
 
     std::cout << "testParseObjAllOfPluralResolvesToTheAcceptedCandidatesOnly OK\n";
 }
@@ -27002,14 +27002,14 @@ static void testParseObjMyAdjectiveResolvesToThePlayersOwnCarriedItem() {
     auto carriedSword = harness.objects.cloneObject("/po8_sword");
     assert(room && player && roomSword && carriedSword);
     for (auto& ob : {room, player, roomSword, carriedSword}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(roomSword, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(carriedSword, "go", std::vector<amlp::Value>{amlp::Value(player)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(roomSword, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(carriedSword, "go", std::vector<aemlpc::Value>{aemlpc::Value(player)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("get my sword"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get my sword"))});
     assert(std::get<int64_t>(result.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probeDo", {}).data) ==
            carriedSword);
 
     std::cout << "testParseObjMyAdjectiveResolvesToThePlayersOwnCarriedItem OK\n";
@@ -27099,21 +27099,21 @@ static void testParseObjTwoSingularObjectTokenRuleResolvesTheRealPairEndToEnd() 
     auto chest = harness.objects.cloneObject("/po9_chest");
     assert(room && player && sword1 && sword2 && chest);
     for (auto& ob : {room, player, sword1, sword2, chest}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword2, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(chest, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(chest, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("put sword chest"))});
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("put sword chest"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
-    amlp::Value probe = harness.vm.callFunction(player, "probe", {});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(probe.data);
+    aemlpc::Value probe = harness.vm.callFunction(player, "probe", {});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(probe.data);
     assert(arr->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(arr->items[0].data) == sword1); // NOT sword2
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(arr->items[1].data) == chest);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(arr->items[0].data) == sword1); // NOT sword2
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(arr->items[1].data) == chest);
 
     std::cout << "testParseObjTwoSingularObjectTokenRuleResolvesTheRealPairEndToEnd OK\n";
 }
@@ -27239,27 +27239,27 @@ static void testParseObjTwoObjectTokenRulePluralDirectSingularIndirectResolvesTh
     auto guard = harness.objects.cloneObject("/po9d_guard");
     assert(room && player && coin1 && coin2 && coin3 && guard);
     for (auto& ob : {room, player, coin1, coin2, coin3, guard}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(coin1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(coin2, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(coin3, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(guard, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(coin1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(coin2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(coin3, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(guard, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        player, "run", std::vector<amlp::Value>{amlp::Value(std::string("give coins guard"))});
+    aemlpc::Value result = harness.vm.callFunction(
+        player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("give coins guard"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
-    amlp::Value probe = harness.vm.callFunction(player, "probe", {});
-    auto pr = std::get<std::shared_ptr<amlp::Array>>(probe.data);
+    aemlpc::Value probe = harness.vm.callFunction(player, "probe", {});
+    auto pr = std::get<std::shared_ptr<aemlpc::Array>>(probe.data);
     assert(pr->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(pr->items[1].data) == guard);
-    auto items = std::get<std::shared_ptr<amlp::Array>>(pr->items[0].data);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(pr->items[1].data) == guard);
+    auto items = std::get<std::shared_ptr<aemlpc::Array>>(pr->items[0].data);
     // Real descending object-index order, coin3 excluded (its own
     // direct_give_obj_liv() rejected it).
     assert(items->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(items->items[0].data) == coin2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(items->items[1].data) == coin1);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(items->items[0].data) == coin2);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(items->items[1].data) == coin1);
 
     std::cout << "testParseObjTwoObjectTokenRulePluralDirectSingularIndirectResolvesTheFilteredArray OK\n";
 }
@@ -27332,23 +27332,23 @@ static void testParseObjTwoObjectTokenRuleSingularDirectPluralIndirectResolvesTh
     auto guard = harness.objects.cloneObject("/po9e_guard");
     assert(room && player && coin1 && coin2 && guard);
     for (auto& ob : {room, player, coin1, coin2, guard}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(coin1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(coin2, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(guard, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(coin1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(coin2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(guard, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result = harness.vm.callFunction(
-        player, "run", std::vector<amlp::Value>{amlp::Value(std::string("give guard coins"))});
+    aemlpc::Value result = harness.vm.callFunction(
+        player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("give guard coins"))});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
 
-    amlp::Value probe = harness.vm.callFunction(player, "probe", {});
-    auto pr = std::get<std::shared_ptr<amlp::Array>>(probe.data);
+    aemlpc::Value probe = harness.vm.callFunction(player, "probe", {});
+    auto pr = std::get<std::shared_ptr<aemlpc::Array>>(probe.data);
     assert(pr->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(pr->items[0].data) == guard);
-    auto items = std::get<std::shared_ptr<amlp::Array>>(pr->items[1].data);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(pr->items[0].data) == guard);
+    auto items = std::get<std::shared_ptr<aemlpc::Array>>(pr->items[1].data);
     assert(items->items.size() == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(items->items[0].data) == coin1);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(items->items[0].data) == coin1);
 
     std::cout << "testParseObjTwoObjectTokenRuleSingularDirectPluralIndirectResolvesTheFilteredArray OK\n";
 }
@@ -27404,26 +27404,26 @@ static void testParseSentenceExplicitEnvArrayOverridesTheOrdinaryEnvironmentWalk
     auto lamp = harness.objects.cloneObject("/pe_lamp");
     assert(roomA && roomB && player && lamp);
     for (auto& ob : {roomA, roomB, player, lamp}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(roomA)});
-    harness.vm.callFunction(lamp, "go", std::vector<amlp::Value>{amlp::Value(roomB)}); // NOT roomA
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(roomA)});
+    harness.vm.callFunction(lamp, "go", std::vector<aemlpc::Value>{aemlpc::Value(roomB)}); // NOT roomA
 
     // Without an env override: the lamp is unreachable from the
     // player's own actual room, so the match genuinely fails.
-    amlp::Value plainResult =
-        harness.vm.callFunction(player, "runPlain", std::vector<amlp::Value>{amlp::Value(std::string("get lamp"))});
+    aemlpc::Value plainResult =
+        harness.vm.callFunction(player, "runPlain", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get lamp"))});
     assert(std::holds_alternative<int64_t>(plainResult.data));
     assert(std::get<int64_t>(plainResult.data) != 1);
 
     // With an explicit env array naming the lamp directly: the match
     // succeeds, resolving to the real lamp object, even though it is
     // still physically sitting in roomB.
-    auto envArr = std::make_shared<amlp::Array>();
-    envArr->items.push_back(amlp::Value(lamp));
-    amlp::Value envResult = harness.vm.callFunction(
-        player, "runWithEnv", std::vector<amlp::Value>{amlp::Value(std::string("get lamp")), amlp::Value(envArr)});
+    auto envArr = std::make_shared<aemlpc::Array>();
+    envArr->items.push_back(aemlpc::Value(lamp));
+    aemlpc::Value envResult = harness.vm.callFunction(
+        player, "runWithEnv", std::vector<aemlpc::Value>{aemlpc::Value(std::string("get lamp")), aemlpc::Value(envArr)});
     assert(std::holds_alternative<int64_t>(envResult.data));
     assert(std::get<int64_t>(envResult.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probe", {}).data) == lamp);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probe", {}).data) == lamp);
 
     std::cout << "testParseSentenceExplicitEnvArrayOverridesTheOrdinaryEnvironmentWalk OK\n";
 }
@@ -27472,17 +27472,17 @@ static void testParseSentenceNicknameResolvesToAnAlreadyLoadedObject() {
     auto widget = harness.objects.cloneObject("/nk_widget");
     assert(room && player && widget);
     for (auto& ob : {room, player, widget}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(widget, "go", std::vector<amlp::Value>{amlp::Value(room)}); // same room as the player
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(widget, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)}); // same room as the player
 
-    auto nicks = std::make_shared<amlp::Mapping>();
-    nicks->entries.emplace_back(amlp::Value(std::string("sam")), amlp::Value(widget));
-    amlp::Value result = harness.vm.callFunction(
+    auto nicks = std::make_shared<aemlpc::Mapping>();
+    nicks->entries.emplace_back(aemlpc::Value(std::string("sam")), aemlpc::Value(widget));
+    aemlpc::Value result = harness.vm.callFunction(
         player, "runWithNicks",
-        std::vector<amlp::Value>{amlp::Value(std::string("get sam")), amlp::Value(nicks)});
+        std::vector<aemlpc::Value>{aemlpc::Value(std::string("get sam")), aemlpc::Value(nicks)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>(harness.vm.callFunction(player, "probe", {}).data) == widget);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>(harness.vm.callFunction(player, "probe", {}).data) == widget);
 
     std::cout << "testParseSentenceNicknameResolvesToAnAlreadyLoadedObject OK\n";
 }
@@ -27538,14 +27538,14 @@ static void testParseSentenceNicknamePresentButObjectNotYetLoadedDoesNotResolve(
     auto widget = harness.objects.cloneObject("/nk2_widget");
     assert(roomA && roomB && player && widget);
     for (auto& ob : {roomA, roomB, player, widget}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(roomA)});
-    harness.vm.callFunction(widget, "go", std::vector<amlp::Value>{amlp::Value(roomB)}); // NOT roomA. unreachable
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(roomA)});
+    harness.vm.callFunction(widget, "go", std::vector<aemlpc::Value>{aemlpc::Value(roomB)}); // NOT roomA. unreachable
 
-    auto nicks = std::make_shared<amlp::Mapping>();
-    nicks->entries.emplace_back(amlp::Value(std::string("sam")), amlp::Value(widget));
-    amlp::Value result = harness.vm.callFunction(
+    auto nicks = std::make_shared<aemlpc::Mapping>();
+    nicks->entries.emplace_back(aemlpc::Value(std::string("sam")), aemlpc::Value(widget));
+    aemlpc::Value result = harness.vm.callFunction(
         player, "runWithNicks",
-        std::vector<amlp::Value>{amlp::Value(std::string("get sam")), amlp::Value(nicks)});
+        std::vector<aemlpc::Value>{aemlpc::Value(std::string("get sam")), aemlpc::Value(nicks)});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) != 1); // correctly does not resolve
     // do_get_obj() never ran, so gotIt stays its default-initialized real
@@ -27611,21 +27611,21 @@ static void testParseObjTwoSingularObjectTokenRuleWithTwoValidDirectCandidatesPr
     auto chest = harness.objects.cloneObject("/po9c_chest");
     assert(room && player && sword1 && sword2 && chest);
     for (auto& ob : {room, player, sword1, sword2, chest}) harness.vm.callFunction(ob, "setup", {});
-    harness.vm.callFunction(player, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword1, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(sword2, "go", std::vector<amlp::Value>{amlp::Value(room)});
-    harness.vm.callFunction(chest, "go", std::vector<amlp::Value>{amlp::Value(room)});
+    harness.vm.callFunction(player, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword1, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(sword2, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
+    harness.vm.callFunction(chest, "go", std::vector<aemlpc::Value>{aemlpc::Value(room)});
 
-    amlp::Value result =
-        harness.vm.callFunction(player, "run", std::vector<amlp::Value>{amlp::Value(std::string("put sword chest"))});
-    auto* arrPtr = std::get_if<std::shared_ptr<amlp::Array>>(&result.data);
+    aemlpc::Value result =
+        harness.vm.callFunction(player, "run", std::vector<aemlpc::Value>{aemlpc::Value(std::string("put sword chest"))});
+    auto* arrPtr = std::get_if<std::shared_ptr<aemlpc::Array>>(&result.data);
     assert(arrPtr && *arrPtr && (*arrPtr)->items.size() == 3);
     assert(std::get<int64_t>((*arrPtr)->items[0].data) == 4); // ERR_AMBIG
     assert(std::get<int64_t>((*arrPtr)->items[1].data) == 0); // push_undefined() -> int 0
-    auto* objArr = std::get_if<std::shared_ptr<amlp::Array>>(&(*arrPtr)->items[2].data);
+    auto* objArr = std::get_if<std::shared_ptr<aemlpc::Array>>(&(*arrPtr)->items[2].data);
     assert(objArr && *objArr && (*objArr)->items.size() == 2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*objArr)->items[0].data) == sword2);
-    assert(std::get<std::shared_ptr<amlp::LpcObject>>((*objArr)->items[1].data) == sword1);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*objArr)->items[0].data) == sword2);
+    assert(std::get<std::shared_ptr<aemlpc::LpcObject>>((*objArr)->items[1].data) == sword1);
 
     std::cout << "testParseObjTwoSingularObjectTokenRuleWithTwoValidDirectCandidatesProducesErrAmbig OK\n";
 }
@@ -27667,16 +27667,16 @@ static void testParseMyRulesRestrictsMatchingToTheCallersOwnRegisteredRulesOnly(
     auto objA = compileProgramObject(srcA);
     auto objB = compileProgramObject(srcB);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(user, "setup", {});
     vm.callFunction(objA, "setup", {});
     vm.callFunction(objB, "setup", {});
 
-    amlp::Value resultAVal = vm.callFunction(
-        objA, "run", std::vector<amlp::Value>{amlp::Value(user), amlp::Value(std::string("zzzmyrule hello there"))});
+    aemlpc::Value resultAVal = vm.callFunction(
+        objA, "run", std::vector<aemlpc::Value>{aemlpc::Value(user), aemlpc::Value(std::string("zzzmyrule hello there"))});
     assert(std::get<int64_t>(resultAVal.data) == 1);
     assert(std::get<std::string>(vm.callFunction(objA, "probe", {}).data) == "hello there");
     // resultB was never assigned. An uninitialized object variable
@@ -27684,8 +27684,8 @@ static void testParseMyRulesRestrictsMatchingToTheCallersOwnRegisteredRulesOnly(
     // Value(int64_t{0}) fill), not "".
     assert(std::get<int64_t>(vm.callFunction(objB, "probe", {}).data) == 0);
 
-    amlp::Value resultBVal = vm.callFunction(
-        objB, "run", std::vector<amlp::Value>{amlp::Value(user), amlp::Value(std::string("zzzmyrule hello there"))});
+    aemlpc::Value resultBVal = vm.callFunction(
+        objB, "run", std::vector<aemlpc::Value>{aemlpc::Value(user), aemlpc::Value(std::string("zzzmyrule hello there"))});
     assert(std::get<int64_t>(resultBVal.data) != 1);
     assert(std::get<int64_t>(vm.callFunction(objB, "probe", {}).data) == 0);
 
@@ -27707,16 +27707,16 @@ static void testParseMyRulesDefaultFlagReturnsVerbRuleArgsArrayWithoutCallingAny
         "int probeCallCount() { return callCount; }\n";
     auto handler = compileProgramObject(handlerSrc);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(user, "setup", {});
     vm.callFunction(handler, "setup", {});
 
-    amlp::Value result = vm.callFunction(
-        handler, "run", std::vector<amlp::Value>{amlp::Value(user), amlp::Value(std::string("Zzzinspect the widget"))});
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    aemlpc::Value result = vm.callFunction(
+        handler, "run", std::vector<aemlpc::Value>{aemlpc::Value(user), aemlpc::Value(std::string("Zzzinspect the widget"))});
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     // Same real "verb_rule" (try==3) shape already confirmed exactly by
     // testParseSentenceFallsBackToTheGenericDoVerbRuleNamingWhenTheSimpleNameIsNotDefined
     // make_function()'s own try==3 code path is shared, not
@@ -27748,19 +27748,19 @@ static void testParseMyRulesRequiresParseInitOnBothTheUserAndTheCallingObject() 
     auto initedHandler = compileProgramObject(handlerSrc);
     auto uninitHandler = compileProgramObject(handlerSrc); // setup() never called
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(initedUser, "setup", {});
     vm.callFunction(initedHandler, "setup", {});
 
     // real "(sp-2)->u.ob->pinfo" check. The `user` argument itself
     // never called parse_init().
-    assert(std::get<int64_t>(vm.callFunction(initedHandler, "probe", {amlp::Value(uninitUser)}).data) == 1);
+    assert(std::get<int64_t>(vm.callFunction(initedHandler, "probe", {aemlpc::Value(uninitUser)}).data) == 1);
     // real "current_object->pinfo" check. The calling object itself
     // never called parse_init(), even though `user` did.
-    assert(std::get<int64_t>(vm.callFunction(uninitHandler, "probe", {amlp::Value(initedUser)}).data) == 1);
+    assert(std::get<int64_t>(vm.callFunction(uninitHandler, "probe", {aemlpc::Value(initedUser)}).data) == 1);
 
     std::cout << "testParseMyRulesRequiresParseInitOnBothTheUserAndTheCallingObject OK\n";
 }
@@ -27785,15 +27785,15 @@ static void testParseMyRulesRejectsARecursiveCallWhileOneIsAlreadyInProgress() {
         "int probeNestedThrew() { return nestedThrew; }\n";
     auto handler = compileProgramObject(handlerSrc);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     vm.callFunction(user, "setup", {});
     vm.callFunction(handler, "setup", {});
 
-    amlp::Value outer = vm.callFunction(
-        handler, "run", std::vector<amlp::Value>{amlp::Value(user), amlp::Value(std::string("zzzguard hi there"))});
+    aemlpc::Value outer = vm.callFunction(
+        handler, "run", std::vector<aemlpc::Value>{aemlpc::Value(user), aemlpc::Value(std::string("zzzguard hi there"))});
     // The outer call itself succeeds normally. Only the NESTED call
     // made from within its own do_ callback is rejected.
     assert(std::get<int64_t>(outer.data) == 1);
@@ -27816,7 +27816,7 @@ static void testParseMyRulesRejectsARecursiveCallWhileOneIsAlreadyInProgress() {
 static void testSigpipeIsIgnoredSoAWriteAfterThePeerClosesDoesNotCrashTheProcess() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     ::close(fds[1]); // the peer disappears
 
     // Before main()'s own std::signal(SIGPIPE, SIG_IGN) (replicated at
@@ -28282,7 +28282,7 @@ static const char* kLoginTestStartRoomC = "void create() {}\n";
 
 struct LoginTestHarness {
     ObjectVarHarness harness;
-    std::shared_ptr<amlp::LpcObject> accountD;
+    std::shared_ptr<aemlpc::LpcObject> accountD;
 
     LoginTestHarness() {
         // ObjectVarHarness::writeFile() only ever ofstream()s straight
@@ -28314,7 +28314,7 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
     // Each step below extracts the pending handler's own name via
@@ -28328,19 +28328,19 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
     // not something this login-flow test needs to re-prove, and taking
     // the registration here to assert its name would otherwise leave
     // nothing for a later dispatchLine call to find.
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     t.harness.vm.callFunction(loginObj, "got_account_name",
-        {amlp::Value(std::string("newuser"))});
+        {aemlpc::Value(std::string("newuser"))});
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_new_password"));
 
     t.harness.vm.callFunction(loginObj, "got_new_password",
-        {amlp::Value(std::string("goodpass123"))});
+        {aemlpc::Value(std::string("goodpass123"))});
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_confirm_password"));
 
     t.harness.vm.callFunction(loginObj, "got_confirm_password",
-        {amlp::Value(std::string("goodpass123"))});
+        {aemlpc::Value(std::string("goodpass123"))});
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_character_name"));
 
@@ -28348,8 +28348,8 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
     // account now names its own character explicitly, rather than the
     // account name being reused unasked.
     t.harness.vm.callFunction(loginObj, "got_character_name",
-        {amlp::Value(std::string("newusercharacter"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("newusercharacter"))});
+    aemlpc::OutputContext::set(nullptr);
 
     // enter_game() ran all the way through (new(USER_OB), exec(),
     // setup(), move(), then destruct(this_object())) without an
@@ -28357,8 +28357,8 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
     // isDestructed() precedent elsewhere in this suite relies on.
     assert(loginObj->isDestructed());
 
-    amlp::Value exists = t.harness.vm.callFunction(t.accountD, "account_exists",
-        {amlp::Value(std::string("newuser"))});
+    aemlpc::Value exists = t.harness.vm.callFunction(t.accountD, "account_exists",
+        {aemlpc::Value(std::string("newuser"))});
     assert(std::get<int64_t>(exists.data) == 1);
 
     std::ifstream accountFile(t.harness.tempDir + "/accounts/n/newuser.o");
@@ -28372,8 +28372,8 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
     // 1-3's create_account() alone still would.
     assert(contents.find("newusercharacter") != std::string::npos);
 
-    amlp::Value charExists = t.harness.vm.callFunction(t.accountD, "character_name_available",
-        {amlp::Value(std::string("newusercharacter"))});
+    aemlpc::Value charExists = t.harness.vm.callFunction(t.accountD, "character_name_available",
+        {aemlpc::Value(std::string("newusercharacter"))});
     assert(std::get<int64_t>(charExists.data) == 0);
 
     ::close(fds[1]);
@@ -28383,8 +28383,8 @@ static void testLoginAccountCreationFlowEndToEndCreatesRealAccountFile() {
 static void testLoginExistingAccountCorrectPasswordOnASecondConnectionSucceeds() {
     LoginTestHarness t;
 
-    amlp::Value created = t.harness.vm.callFunction(t.accountD, "create_account",
-        {amlp::Value(std::string("returningplayer")), amlp::Value(std::string("realpass1"))});
+    aemlpc::Value created = t.harness.vm.callFunction(t.accountD, "create_account",
+        {aemlpc::Value(std::string("returningplayer")), aemlpc::Value(std::string("realpass1"))});
     assert(std::get<int64_t>(created.data) == 1);
 
     // A second, independent connection/login clone, matching the real
@@ -28395,18 +28395,18 @@ static void testLoginExistingAccountCorrectPasswordOnASecondConnectionSucceeds()
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     t.harness.vm.callFunction(loginObj, "got_account_name",
-        {amlp::Value(std::string("returningplayer"))});
+        {aemlpc::Value(std::string("returningplayer"))});
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_login_password"));
 
     t.harness.vm.callFunction(loginObj, "got_login_password",
-        {amlp::Value(std::string("realpass1"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("realpass1"))});
+    aemlpc::OutputContext::set(nullptr);
 
     assert(loginObj->isDestructed());
     assert(!conn.hasPendingInputTo());
@@ -28419,46 +28419,46 @@ static void testLoginWrongPasswordRejectedAndDisconnectsAfterMaxLoginTries() {
     LoginTestHarness t;
 
     t.harness.vm.callFunction(t.accountD, "create_account",
-        {amlp::Value(std::string("targetacct")), amlp::Value(std::string("correcthorse"))});
+        {aemlpc::Value(std::string("targetacct")), aemlpc::Value(std::string("correcthorse"))});
 
     auto loginObj = t.harness.objects.cloneObject("/clone/login");
     assert(loginObj != nullptr);
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     t.harness.vm.callFunction(loginObj, "got_account_name",
-        {amlp::Value(std::string("targetacct"))});
+        {aemlpc::Value(std::string("targetacct"))});
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_login_password"));
 
     // MAX_LOGIN_TRIES is 3: two wrong passwords must each leave the
     // connection alive with another password prompt pending, only the
     // third disconnects.
     t.harness.vm.callFunction(loginObj, "got_login_password",
-        {amlp::Value(std::string("wrongpass1"))});
+        {aemlpc::Value(std::string("wrongpass1"))});
     assert(!loginObj->isDestructed());
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_login_password"));
 
     t.harness.vm.callFunction(loginObj, "got_login_password",
-        {amlp::Value(std::string("wrongpass2"))});
+        {aemlpc::Value(std::string("wrongpass2"))});
     assert(!loginObj->isDestructed());
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_login_password"));
 
     t.harness.vm.callFunction(loginObj, "got_login_password",
-        {amlp::Value(std::string("wrongpass3"))});
+        {aemlpc::Value(std::string("wrongpass3"))});
     assert(loginObj->isDestructed());
 
-    amlp::OutputContext::set(nullptr);
+    aemlpc::OutputContext::set(nullptr);
 
     // The account itself must survive three failed guesses unharmed.
     // The real password still checks out afterward.
-    amlp::Value stillOk = t.harness.vm.callFunction(t.accountD, "check_password",
-        {amlp::Value(std::string("targetacct")), amlp::Value(std::string("correcthorse"))});
+    aemlpc::Value stillOk = t.harness.vm.callFunction(t.accountD, "check_password",
+        {aemlpc::Value(std::string("targetacct")), aemlpc::Value(std::string("correcthorse"))});
     assert(std::get<int64_t>(stillOk.data) == 1);
 
     ::close(fds[1]);
@@ -28472,13 +28472,13 @@ static void testLoginInvalidAccountNameWithSlashReprompts() {
 
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     t.harness.vm.callFunction(loginObj, "got_account_name",
-        {amlp::Value(std::string("bad/name"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("bad/name"))});
+    aemlpc::OutputContext::set(nullptr);
 
     // Rejected before ever touching account_d: reprompted for another
     // name, not disconnected, not treated as a real (nonexistent)
@@ -28515,18 +28515,18 @@ static void testCharacterLoginCountPersistsAcrossReconnectViaNetDead() {
     assert(login1 != nullptr);
     int fds1[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds1) == 0);
-    amlp::Connection conn1(fds1[0]);
+    aemlpc::Connection conn1(fds1[0]);
     conn1.attach(login1);
 
-    amlp::OutputContext::set(&conn1);
+    aemlpc::OutputContext::set(&conn1);
     t.harness.vm.callFunction(login1, "got_account_name",
-        {amlp::Value(std::string("returningplayer"))});
+        {aemlpc::Value(std::string("returningplayer"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_new_password"));
     t.harness.vm.callFunction(login1, "got_new_password",
-        {amlp::Value(std::string("goodpass123"))});
+        {aemlpc::Value(std::string("goodpass123"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_confirm_password"));
     t.harness.vm.callFunction(login1, "got_confirm_password",
-        {amlp::Value(std::string("goodpass123"))});
+        {aemlpc::Value(std::string("goodpass123"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_character_name"));
     // Same string as the account name, item 4's own got_character_name()
     // step, so the rest of this test's own on-disk-path assertions below
@@ -28536,13 +28536,13 @@ static void testCharacterLoginCountPersistsAcrossReconnectViaNetDead() {
     // character naming (already covered by
     // testLoginAccountCreationFlowEndToEndCreatesRealAccountFile).
     t.harness.vm.callFunction(login1, "got_character_name",
-        {amlp::Value(std::string("returningplayer"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("returningplayer"))});
+    aemlpc::OutputContext::set(nullptr);
 
     assert(login1->isDestructed());
     auto user1 = conn1.boundObject();
     assert(user1 != nullptr);
-    amlp::Value count1 = t.harness.vm.callFunction(user1, "query_login_count", {});
+    aemlpc::Value count1 = t.harness.vm.callFunction(user1, "query_login_count", {});
     assert(std::get<int64_t>(count1.data) == 1);
 
     // Simulate link death: the real driver's own net_dead() apply,
@@ -28565,21 +28565,21 @@ static void testCharacterLoginCountPersistsAcrossReconnectViaNetDead() {
     assert(login2 != nullptr);
     int fds2[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds2) == 0);
-    amlp::Connection conn2(fds2[0]);
+    aemlpc::Connection conn2(fds2[0]);
     conn2.attach(login2);
 
-    amlp::OutputContext::set(&conn2);
+    aemlpc::OutputContext::set(&conn2);
     t.harness.vm.callFunction(login2, "got_account_name",
-        {amlp::Value(std::string("returningplayer"))});
+        {aemlpc::Value(std::string("returningplayer"))});
     assert(functionNameIs(conn2.takePendingInputTo()->function, "got_login_password"));
     t.harness.vm.callFunction(login2, "got_login_password",
-        {amlp::Value(std::string("goodpass123"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("goodpass123"))});
+    aemlpc::OutputContext::set(nullptr);
 
     assert(login2->isDestructed());
     auto user2 = conn2.boundObject();
     assert(user2 != nullptr);
-    amlp::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
+    aemlpc::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
     assert(std::get<int64_t>(count2.data) == 2);
 
     ::close(fds2[1]);
@@ -28601,22 +28601,22 @@ static void testCharacterLoginCountPersistsThroughRemoveNotOnlyNetDead() {
     assert(login1 != nullptr);
     int fds1[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds1) == 0);
-    amlp::Connection conn1(fds1[0]);
+    aemlpc::Connection conn1(fds1[0]);
     conn1.attach(login1);
 
-    amlp::OutputContext::set(&conn1);
+    aemlpc::OutputContext::set(&conn1);
     t.harness.vm.callFunction(login1, "got_account_name",
-        {amlp::Value(std::string("questsmith"))});
+        {aemlpc::Value(std::string("questsmith"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_new_password"));
     t.harness.vm.callFunction(login1, "got_new_password",
-        {amlp::Value(std::string("anotherpass1"))});
+        {aemlpc::Value(std::string("anotherpass1"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_confirm_password"));
     t.harness.vm.callFunction(login1, "got_confirm_password",
-        {amlp::Value(std::string("anotherpass1"))});
+        {aemlpc::Value(std::string("anotherpass1"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_character_name"));
     t.harness.vm.callFunction(login1, "got_character_name",
-        {amlp::Value(std::string("questsmith"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("questsmith"))});
+    aemlpc::OutputContext::set(nullptr);
 
     auto user1 = conn1.boundObject();
     assert(user1 != nullptr);
@@ -28632,20 +28632,20 @@ static void testCharacterLoginCountPersistsThroughRemoveNotOnlyNetDead() {
     assert(login2 != nullptr);
     int fds2[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds2) == 0);
-    amlp::Connection conn2(fds2[0]);
+    aemlpc::Connection conn2(fds2[0]);
     conn2.attach(login2);
 
-    amlp::OutputContext::set(&conn2);
+    aemlpc::OutputContext::set(&conn2);
     t.harness.vm.callFunction(login2, "got_account_name",
-        {amlp::Value(std::string("questsmith"))});
+        {aemlpc::Value(std::string("questsmith"))});
     assert(functionNameIs(conn2.takePendingInputTo()->function, "got_login_password"));
     t.harness.vm.callFunction(login2, "got_login_password",
-        {amlp::Value(std::string("anotherpass1"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("anotherpass1"))});
+    aemlpc::OutputContext::set(nullptr);
 
     auto user2 = conn2.boundObject();
     assert(user2 != nullptr);
-    amlp::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
+    aemlpc::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
     assert(std::get<int64_t>(count2.data) == 2);
 
     ::close(fds2[1]);
@@ -28667,25 +28667,25 @@ static void testGotCharacterNameRejectsANameAlreadyTakenByAnotherAccount() {
     assert(login1 != nullptr);
     int fds1[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds1) == 0);
-    amlp::Connection conn1(fds1[0]);
+    aemlpc::Connection conn1(fds1[0]);
     conn1.attach(login1);
 
-    amlp::OutputContext::set(&conn1);
+    aemlpc::OutputContext::set(&conn1);
     t.harness.vm.callFunction(login1, "got_account_name",
-        {amlp::Value(std::string("firstaccount"))});
+        {aemlpc::Value(std::string("firstaccount"))});
     t.harness.vm.callFunction(login1, "got_new_password",
-        {amlp::Value(std::string("firstpass12"))});
+        {aemlpc::Value(std::string("firstpass12"))});
     t.harness.vm.callFunction(login1, "got_confirm_password",
-        {amlp::Value(std::string("firstpass12"))});
+        {aemlpc::Value(std::string("firstpass12"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_character_name"));
     t.harness.vm.callFunction(login1, "got_character_name",
-        {amlp::Value(std::string("heroname"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("heroname"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login1->isDestructed());
     ::close(fds1[1]);
 
-    amlp::Value taken = t.harness.vm.callFunction(t.accountD, "character_name_available",
-        {amlp::Value(std::string("heroname"))});
+    aemlpc::Value taken = t.harness.vm.callFunction(t.accountD, "character_name_available",
+        {aemlpc::Value(std::string("heroname"))});
     assert(std::get<int64_t>(taken.data) == 0);
 
     // A second, unrelated account tries to claim the identical character
@@ -28695,20 +28695,20 @@ static void testGotCharacterNameRejectsANameAlreadyTakenByAnotherAccount() {
     assert(login2 != nullptr);
     int fds2[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds2) == 0);
-    amlp::Connection conn2(fds2[0]);
+    aemlpc::Connection conn2(fds2[0]);
     conn2.attach(login2);
 
-    amlp::OutputContext::set(&conn2);
+    aemlpc::OutputContext::set(&conn2);
     t.harness.vm.callFunction(login2, "got_account_name",
-        {amlp::Value(std::string("secondaccount"))});
+        {aemlpc::Value(std::string("secondaccount"))});
     t.harness.vm.callFunction(login2, "got_new_password",
-        {amlp::Value(std::string("secondpass1"))});
+        {aemlpc::Value(std::string("secondpass1"))});
     t.harness.vm.callFunction(login2, "got_confirm_password",
-        {amlp::Value(std::string("secondpass1"))});
+        {aemlpc::Value(std::string("secondpass1"))});
     assert(functionNameIs(conn2.takePendingInputTo()->function, "got_character_name"));
 
     t.harness.vm.callFunction(login2, "got_character_name",
-        {amlp::Value(std::string("heroname"))});
+        {aemlpc::Value(std::string("heroname"))});
     // Rejected: reprompted for another name, not disconnected, not
     // silently allowed to overwrite the first account's own character.
     assert(!login2->isDestructed());
@@ -28717,8 +28717,8 @@ static void testGotCharacterNameRejectsANameAlreadyTakenByAnotherAccount() {
 
     // A genuinely different name succeeds normally.
     t.harness.vm.callFunction(login2, "got_character_name",
-        {amlp::Value(std::string("heroname2"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("heroname2"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login2->isDestructed());
 
     ::close(fds2[1]);
@@ -28741,21 +28741,21 @@ static void testExistingAccountLoginLoadsItsOwnChosenCharacterNameNotTheAccountN
     assert(login1 != nullptr);
     int fds1[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds1) == 0);
-    amlp::Connection conn1(fds1[0]);
+    aemlpc::Connection conn1(fds1[0]);
     conn1.attach(login1);
 
-    amlp::OutputContext::set(&conn1);
+    aemlpc::OutputContext::set(&conn1);
     t.harness.vm.callFunction(login1, "got_account_name",
-        {amlp::Value(std::string("distinctaccount"))});
+        {aemlpc::Value(std::string("distinctaccount"))});
     t.harness.vm.callFunction(login1, "got_new_password",
-        {amlp::Value(std::string("distinctpass"))});
+        {aemlpc::Value(std::string("distinctpass"))});
     t.harness.vm.callFunction(login1, "got_confirm_password",
-        {amlp::Value(std::string("distinctpass"))});
+        {aemlpc::Value(std::string("distinctpass"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_character_name"));
     // Deliberately a different string from the account name.
     t.harness.vm.callFunction(login1, "got_character_name",
-        {amlp::Value(std::string("wanderingblade"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("wanderingblade"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login1->isDestructed());
 
     // Persist this first login's own login_count (1) to disk before the
@@ -28783,26 +28783,26 @@ static void testExistingAccountLoginLoadsItsOwnChosenCharacterNameNotTheAccountN
     assert(login2 != nullptr);
     int fds2[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds2) == 0);
-    amlp::Connection conn2(fds2[0]);
+    aemlpc::Connection conn2(fds2[0]);
     conn2.attach(login2);
 
-    amlp::OutputContext::set(&conn2);
+    aemlpc::OutputContext::set(&conn2);
     t.harness.vm.callFunction(login2, "got_account_name",
-        {amlp::Value(std::string("distinctaccount"))});
+        {aemlpc::Value(std::string("distinctaccount"))});
     assert(functionNameIs(conn2.takePendingInputTo()->function, "got_login_password"));
     t.harness.vm.callFunction(login2, "got_login_password",
-        {amlp::Value(std::string("distinctpass"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("distinctpass"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login2->isDestructed());
 
     auto user2 = conn2.boundObject();
     assert(user2 != nullptr);
-    amlp::Value name2 = t.harness.vm.callFunction(user2, "query_name", {});
+    aemlpc::Value name2 = t.harness.vm.callFunction(user2, "query_name", {});
     assert(std::get<std::string>(name2.data) == "wanderingblade");
     // A second login for the same character: login_count keeps
     // advancing (2), proving the same character file was loaded again,
     // not a fresh one silently created under some other name.
-    amlp::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
+    aemlpc::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
     assert(std::get<int64_t>(count2.data) == 2);
 
     ::close(fds2[1]);
@@ -28829,26 +28829,26 @@ static void testGotLoginPasswordShowsMenuAndLoadsTheChosenCharacter() {
     LoginTestHarness t;
 
     t.harness.vm.callFunction(t.accountD, "create_account",
-        {amlp::Value(std::string("multichar")), amlp::Value(std::string("multipass1"))});
+        {aemlpc::Value(std::string("multichar")), aemlpc::Value(std::string("multipass1"))});
     t.harness.vm.callFunction(t.accountD, "add_character",
-        {amlp::Value(std::string("multichar")), amlp::Value(std::string("Warrior"))});
+        {aemlpc::Value(std::string("multichar")), aemlpc::Value(std::string("Warrior"))});
     t.harness.vm.callFunction(t.accountD, "add_character",
-        {amlp::Value(std::string("multichar")), amlp::Value(std::string("Mage"))});
+        {aemlpc::Value(std::string("multichar")), aemlpc::Value(std::string("Mage"))});
 
     // First connection: log in, then choose character 1 ("Warrior").
     auto login1 = t.harness.objects.cloneObject("/clone/login");
     assert(login1 != nullptr);
     int fds1[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds1) == 0);
-    amlp::Connection conn1(fds1[0]);
+    aemlpc::Connection conn1(fds1[0]);
     conn1.attach(login1);
 
-    amlp::OutputContext::set(&conn1);
+    aemlpc::OutputContext::set(&conn1);
     t.harness.vm.callFunction(login1, "got_account_name",
-        {amlp::Value(std::string("multichar"))});
+        {aemlpc::Value(std::string("multichar"))});
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_login_password"));
     t.harness.vm.callFunction(login1, "got_login_password",
-        {amlp::Value(std::string("multipass1"))});
+        {aemlpc::Value(std::string("multipass1"))});
     // A real menu, not enter_game() directly: still connected, still
     // pending, a real new input_to registered for the choice itself.
     assert(!login1->isDestructed());
@@ -28856,13 +28856,13 @@ static void testGotLoginPasswordShowsMenuAndLoadsTheChosenCharacter() {
     assert(functionNameIs(conn1.takePendingInputTo()->function, "got_character_selection"));
 
     t.harness.vm.callFunction(login1, "got_character_selection",
-        {amlp::Value(std::string("1"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("1"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login1->isDestructed());
 
     auto user1 = conn1.boundObject();
     assert(user1 != nullptr);
-    amlp::Value name1 = t.harness.vm.callFunction(user1, "query_name", {});
+    aemlpc::Value name1 = t.harness.vm.callFunction(user1, "query_name", {});
     assert(std::get<std::string>(name1.data) == "Warrior");
 
     ::close(fds1[1]);
@@ -28874,28 +28874,28 @@ static void testGotLoginPasswordShowsMenuAndLoadsTheChosenCharacter() {
     assert(login2 != nullptr);
     int fds2[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds2) == 0);
-    amlp::Connection conn2(fds2[0]);
+    aemlpc::Connection conn2(fds2[0]);
     conn2.attach(login2);
 
-    amlp::OutputContext::set(&conn2);
+    aemlpc::OutputContext::set(&conn2);
     t.harness.vm.callFunction(login2, "got_account_name",
-        {amlp::Value(std::string("multichar"))});
+        {aemlpc::Value(std::string("multichar"))});
     t.harness.vm.callFunction(login2, "got_login_password",
-        {amlp::Value(std::string("multipass1"))});
+        {aemlpc::Value(std::string("multipass1"))});
     assert(functionNameIs(conn2.takePendingInputTo()->function, "got_character_selection"));
 
     t.harness.vm.callFunction(login2, "got_character_selection",
-        {amlp::Value(std::string("2"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("2"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(login2->isDestructed());
 
     auto user2 = conn2.boundObject();
     assert(user2 != nullptr);
-    amlp::Value name2 = t.harness.vm.callFunction(user2, "query_name", {});
+    aemlpc::Value name2 = t.harness.vm.callFunction(user2, "query_name", {});
     assert(std::get<std::string>(name2.data) == "Mage");
     // Each character has its own independent login_count. Mage's own
     // first login, not Warrior's count carried over.
-    amlp::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
+    aemlpc::Value count2 = t.harness.vm.callFunction(user2, "query_login_count", {});
     assert(std::get<int64_t>(count2.data) == 1);
 
     ::close(fds2[1]);
@@ -28906,43 +28906,43 @@ static void testGotCharacterSelectionRejectsOutOfRangeAndNonNumericChoices() {
     LoginTestHarness t;
 
     t.harness.vm.callFunction(t.accountD, "create_account",
-        {amlp::Value(std::string("pickytest")), amlp::Value(std::string("pickypass1"))});
+        {aemlpc::Value(std::string("pickytest")), aemlpc::Value(std::string("pickypass1"))});
     t.harness.vm.callFunction(t.accountD, "add_character",
-        {amlp::Value(std::string("pickytest")), amlp::Value(std::string("Rogue"))});
+        {aemlpc::Value(std::string("pickytest")), aemlpc::Value(std::string("Rogue"))});
     t.harness.vm.callFunction(t.accountD, "add_character",
-        {amlp::Value(std::string("pickytest")), amlp::Value(std::string("Cleric"))});
+        {aemlpc::Value(std::string("pickytest")), aemlpc::Value(std::string("Cleric"))});
 
     auto loginObj = t.harness.objects.cloneObject("/clone/login");
     assert(loginObj != nullptr);
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
-    amlp::Connection conn(fds[0]);
+    aemlpc::Connection conn(fds[0]);
     conn.attach(loginObj);
 
-    amlp::OutputContext::set(&conn);
+    aemlpc::OutputContext::set(&conn);
     t.harness.vm.callFunction(loginObj, "got_account_name",
-        {amlp::Value(std::string("pickytest"))});
+        {aemlpc::Value(std::string("pickytest"))});
     t.harness.vm.callFunction(loginObj, "got_login_password",
-        {amlp::Value(std::string("pickypass1"))});
+        {aemlpc::Value(std::string("pickypass1"))});
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_character_selection"));
 
     // Zero: below range.
     t.harness.vm.callFunction(loginObj, "got_character_selection",
-        {amlp::Value(std::string("0"))});
+        {aemlpc::Value(std::string("0"))});
     assert(!loginObj->isDestructed());
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_character_selection"));
 
     // Three: above range (only 2 characters exist).
     t.harness.vm.callFunction(loginObj, "got_character_selection",
-        {amlp::Value(std::string("3"))});
+        {aemlpc::Value(std::string("3"))});
     assert(!loginObj->isDestructed());
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_character_selection"));
 
     // Non-numeric: sscanf() matches nothing at all.
     t.harness.vm.callFunction(loginObj, "got_character_selection",
-        {amlp::Value(std::string("banana"))});
+        {aemlpc::Value(std::string("banana"))});
     assert(!loginObj->isDestructed());
     assert(conn.hasPendingInputTo());
     assert(functionNameIs(conn.takePendingInputTo()->function, "got_character_selection"));
@@ -28951,13 +28951,13 @@ static void testGotCharacterSelectionRejectsOutOfRangeAndNonNumericChoices() {
     // normally. The repeated invalid input did not corrupt
     // pending_characters.
     t.harness.vm.callFunction(loginObj, "got_character_selection",
-        {amlp::Value(std::string("2"))});
-    amlp::OutputContext::set(nullptr);
+        {aemlpc::Value(std::string("2"))});
+    aemlpc::OutputContext::set(nullptr);
     assert(loginObj->isDestructed());
 
     auto user = conn.boundObject();
     assert(user != nullptr);
-    amlp::Value name = t.harness.vm.callFunction(user, "query_name", {});
+    aemlpc::Value name = t.harness.vm.callFunction(user, "query_name", {});
     assert(std::get<std::string>(name.data) == "Cleric");
 
     ::close(fds[1]);
@@ -28984,7 +28984,7 @@ static void testGotCharacterSelectionRejectsOutOfRangeAndNonNumericChoices() {
 // close. Exercises db_handles() mid-connection too (open, populated;
 // gone after close()).
 static void testDbConnectExecFetchCloseRoundTripAgainstARealScratchSqliteFile() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c",
         "void create() {}\n"
@@ -29001,63 +29001,63 @@ static void testDbConnectExecFetchCloseRoundTripAgainstARealScratchSqliteFile() 
 
     std::string dbPath = harness.tempDir + "/scratch.sqlite";
 
-    amlp::Value connResult = harness.vm.callFunction(ob, "do_connect", {amlp::Value(dbPath)});
+    aemlpc::Value connResult = harness.vm.callFunction(ob, "do_connect", {aemlpc::Value(dbPath)});
     int handle = static_cast<int>(std::get<int64_t>(connResult.data));
     assert(handle > 0);
 
     // db_handles() sees the open connection.
-    amlp::Value handlesAfterConnect = harness.vm.callFunction(ob, "do_handles", {});
-    auto handlesArr = std::get<std::shared_ptr<amlp::Array>>(handlesAfterConnect.data);
+    aemlpc::Value handlesAfterConnect = harness.vm.callFunction(ob, "do_handles", {});
+    auto handlesArr = std::get<std::shared_ptr<aemlpc::Array>>(handlesAfterConnect.data);
     assert(handlesArr->items.size() == 1);
     assert(std::get<int64_t>(handlesArr->items[0].data) == handle);
 
     // DDL: no result columns, executed immediately, returns the handle.
-    amlp::Value createResult = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("create table t (name text, age integer)"))});
+    aemlpc::Value createResult = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("create table t (name text, age integer)"))});
     assert(std::get<int64_t>(createResult.data) == handle);
 
-    amlp::Value insert1 = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("insert into t values ('alice', 30)"))});
+    aemlpc::Value insert1 = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("insert into t values ('alice', 30)"))});
     assert(std::get<int64_t>(insert1.data) == handle);
 
-    amlp::Value insert2 = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("insert into t values ('bob', 25)"))});
+    aemlpc::Value insert2 = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("insert into t values ('bob', 25)"))});
     assert(std::get<int64_t>(insert2.data) == handle);
 
     // SELECT: has result columns, leaves a pending row-walk for fetch().
-    amlp::Value selectResult = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("select name, age from t order by name"))});
+    aemlpc::Value selectResult = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("select name, age from t order by name"))});
     assert(std::get<int64_t>(selectResult.data) == handle);
 
     // Real f_db_fetch(): every column comes back as text, even the
     // integer "age" column. Matching real mysql_fetch_row()'s own
     // all-text convention (see DbRegistry.hpp's own fetch() comment).
-    amlp::Value row1 = harness.vm.callFunction(ob, "do_fetch", {amlp::Value(static_cast<int64_t>(handle))});
-    auto row1Arr = std::get<std::shared_ptr<amlp::Array>>(row1.data);
+    aemlpc::Value row1 = harness.vm.callFunction(ob, "do_fetch", {aemlpc::Value(static_cast<int64_t>(handle))});
+    auto row1Arr = std::get<std::shared_ptr<aemlpc::Array>>(row1.data);
     assert(row1Arr->items.size() == 2);
     assert(std::get<std::string>(row1Arr->items[0].data) == "alice");
     assert(std::get<std::string>(row1Arr->items[1].data) == "30");
 
-    amlp::Value row2 = harness.vm.callFunction(ob, "do_fetch", {amlp::Value(static_cast<int64_t>(handle))});
-    auto row2Arr = std::get<std::shared_ptr<amlp::Array>>(row2.data);
+    aemlpc::Value row2 = harness.vm.callFunction(ob, "do_fetch", {aemlpc::Value(static_cast<int64_t>(handle))});
+    auto row2Arr = std::get<std::shared_ptr<aemlpc::Array>>(row2.data);
     assert(row2Arr->items.size() == 2);
     assert(std::get<std::string>(row2Arr->items[0].data) == "bob");
     assert(std::get<std::string>(row2Arr->items[1].data) == "25");
 
     // Real "no more results -> 0": the pending walk is exhausted.
-    amlp::Value row3 = harness.vm.callFunction(ob, "do_fetch", {amlp::Value(static_cast<int64_t>(handle))});
+    aemlpc::Value row3 = harness.vm.callFunction(ob, "do_fetch", {aemlpc::Value(static_cast<int64_t>(handle))});
     assert(row3.isVoid());
 
-    amlp::Value closeResult = harness.vm.callFunction(ob, "do_close", {amlp::Value(static_cast<int64_t>(handle))});
+    aemlpc::Value closeResult = harness.vm.callFunction(ob, "do_close", {aemlpc::Value(static_cast<int64_t>(handle))});
     assert(std::get<int64_t>(closeResult.data) == handle);
 
     // db_handles() no longer sees it.
-    amlp::Value handlesAfterClose = harness.vm.callFunction(ob, "do_handles", {});
-    auto handlesArrAfter = std::get<std::shared_ptr<amlp::Array>>(handlesAfterClose.data);
+    aemlpc::Value handlesAfterClose = harness.vm.callFunction(ob, "do_handles", {});
+    auto handlesArrAfter = std::get<std::shared_ptr<aemlpc::Array>>(handlesAfterClose.data);
     assert(handlesArrAfter->items.empty());
 
     ::unlink(dbPath.c_str());
@@ -29069,7 +29069,7 @@ static void testDbConnectExecFetchCloseRoundTripAgainstARealScratchSqliteFile() 
 // for a genuine SQL syntax error, matching real "just an error in the
 // SQL-statement" -> put_number(sp, 0), not raise_db_error().
 static void testDbErrorReturnsZeroOnSuccessAndTheMessageAfterABadStatement() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c",
         "void create() {}\n"
@@ -29083,21 +29083,21 @@ static void testDbErrorReturnsZeroOnSuccessAndTheMessageAfterABadStatement() {
     assert(ob != nullptr);
 
     std::string dbPath = harness.tempDir + "/err_scratch.sqlite";
-    amlp::Value connResult = harness.vm.callFunction(ob, "do_connect", {amlp::Value(dbPath)});
+    aemlpc::Value connResult = harness.vm.callFunction(ob, "do_connect", {aemlpc::Value(dbPath)});
     int handle = static_cast<int>(std::get<int64_t>(connResult.data));
 
-    amlp::Value createResult = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("create table t (x integer)"))});
+    aemlpc::Value createResult = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("create table t (x integer)"))});
     assert(std::get<int64_t>(createResult.data) == handle);
-    amlp::Value errAfterGood = harness.vm.callFunction(ob, "do_error", {amlp::Value(static_cast<int64_t>(handle))});
+    aemlpc::Value errAfterGood = harness.vm.callFunction(ob, "do_error", {aemlpc::Value(static_cast<int64_t>(handle))});
     assert(errAfterGood.isVoid());
 
-    amlp::Value badResult = harness.vm.callFunction(ob, "do_exec",
-        {amlp::Value(static_cast<int64_t>(handle)),
-         amlp::Value(std::string("this is not valid sql at all"))});
+    aemlpc::Value badResult = harness.vm.callFunction(ob, "do_exec",
+        {aemlpc::Value(static_cast<int64_t>(handle)),
+         aemlpc::Value(std::string("this is not valid sql at all"))});
     assert(std::get<int64_t>(badResult.data) == 0);
-    amlp::Value errAfterBad = harness.vm.callFunction(ob, "do_error", {amlp::Value(static_cast<int64_t>(handle))});
+    aemlpc::Value errAfterBad = harness.vm.callFunction(ob, "do_error", {aemlpc::Value(static_cast<int64_t>(handle))});
     assert(std::holds_alternative<std::string>(errAfterBad.data));
     assert(!std::get<std::string>(errAfterBad.data).empty());
 
@@ -29112,7 +29112,7 @@ static void testDbErrorReturnsZeroOnSuccessAndTheMessageAfterABadStatement() {
 // having no check_privilege() call at all. Exercised here with no
 // master privilege_violation() lfun defined, proving that.
 static void testDbConvStringDoublesSingleQuotesAndIsNotPrivilegeGated() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c", "void create() {}\n"); // no privilege_violation() lfun at all
     assert(harness.objects.loadMasterObject());
@@ -29121,8 +29121,8 @@ static void testDbConvStringDoublesSingleQuotesAndIsNotPrivilegeGated() {
     auto ob = harness.objects.cloneObject("/db_conv_probe");
     assert(ob != nullptr);
 
-    amlp::Value result = harness.vm.callFunction(ob, "do_conv",
-        {amlp::Value(std::string("O'Brien's"))});
+    aemlpc::Value result = harness.vm.callFunction(ob, "do_conv",
+        {aemlpc::Value(std::string("O'Brien's"))});
     assert(std::get<std::string>(result.data) == "O''Brien''s");
 
     std::cout << "testDbConvStringDoublesSingleQuotesAndIsNotPrivilegeGated OK\n";
@@ -29133,7 +29133,7 @@ static void testDbConvStringDoublesSingleQuotesAndIsNotPrivilegeGated() {
 // explicitly denies "mysql" hard-errors, it does not silently no-op the
 // way some other privilege_violation()-gated efuns in this driver do.
 static void testDbConnectDeniedByPrivilegeViolationThrows() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c",
         "void create() {}\n"
@@ -29147,8 +29147,8 @@ static void testDbConnectDeniedByPrivilegeViolationThrows() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "do_connect",
-            {amlp::Value(harness.tempDir + "/denied.sqlite")});
-    } catch (const amlp::LpcRuntimeError&) {
+            {aemlpc::Value(harness.tempDir + "/denied.sqlite")});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -29161,7 +29161,7 @@ static void testDbConnectDeniedByPrivilegeViolationThrows() {
 // privilege_violation() lfun at all is a hard error too, not a silent
 // grant.
 static void testDbConnectWithNoMasterPrivilegeViolationLfunHardErrors() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c", "void create() {}\n"); // no privilege_violation() lfun at all
     assert(harness.objects.loadMasterObject());
@@ -29173,8 +29173,8 @@ static void testDbConnectWithNoMasterPrivilegeViolationLfunHardErrors() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "do_connect",
-            {amlp::Value(harness.tempDir + "/nomaster.sqlite")});
-    } catch (const amlp::LpcRuntimeError&) {
+            {aemlpc::Value(harness.tempDir + "/nomaster.sqlite")});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -29186,7 +29186,7 @@ static void testDbConnectWithNoMasterPrivilegeViolationLfunHardErrors() {
 // real db_* call site in pkg-mysql.c: an unknown/already-closed handle
 // is always a hard error, never a soft 0/false return.
 static void testDbExecOnAnUnknownHandleThrowsIllegalHandle() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/unused.c",
         "void create() {}\n"
@@ -29200,8 +29200,8 @@ static void testDbExecOnAnUnknownHandleThrowsIllegalHandle() {
     bool threw = false;
     try {
         harness.vm.callFunction(ob, "do_exec",
-            {amlp::Value(static_cast<int64_t>(999)), amlp::Value(std::string("select 1"))});
-    } catch (const amlp::LpcRuntimeError&) {
+            {aemlpc::Value(static_cast<int64_t>(999)), aemlpc::Value(std::string("select 1"))});
+    } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
@@ -29230,7 +29230,7 @@ static void testDbExecOnAnUnknownHandleThrowsIllegalHandle() {
 // "dialect: fluffos"/"dialect: dgd" rejection side specifically.
 
 static void testDbConnectThrowsCleanlyUnderFluffosDialectInsteadOfSilentlyMisinterpretingArguments() {
-    amlp::DbRegistry::resetForTests();
+    aemlpc::DbRegistry::resetForTests();
     ObjectVarHarness harness; // default dialect: fluffos, this driver's own default
     harness.writeFile("/unused.c",
         "void create() {}\n"
@@ -29250,8 +29250,8 @@ static void testDbConnectThrowsCleanlyUnderFluffosDialectInsteadOfSilentlyMisint
         // database name and "db_value" as the LDMud-shaped user.
         // Wrong, not an error. It must now throw instead.
         harness.vm.callFunction(ob, "do_connect",
-            {amlp::Value(std::string("host_value")), amlp::Value(std::string("db_value"))});
-    } catch (const amlp::LpcRuntimeError& e) {
+            {aemlpc::Value(std::string("host_value")), aemlpc::Value(std::string("db_value"))});
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         message = e.what();
     }
@@ -29264,7 +29264,7 @@ static void testDbConnectThrowsCleanlyUnderFluffosDialectInsteadOfSilentlyMisint
 
 static void testAllSevenDbEfunsThrowTheDialectGateUnderFluffosAndDgd() {
     for (const char* dialectCfg : {"dialect: fluffos\n", "dialect: dgd\n", ""}) {
-        amlp::DbRegistry::resetForTests();
+        aemlpc::DbRegistry::resetForTests();
         ObjectVarHarness harness(dialectCfg);
         harness.writeFile("/unused.c",
             "void create() {}\n"
@@ -29286,7 +29286,7 @@ static void testAllSevenDbEfunsThrowTheDialectGateUnderFluffosAndDgd() {
             bool threw = false;
             try {
                 harness.vm.callFunction(ob, fn, {});
-            } catch (const amlp::LpcRuntimeError&) {
+            } catch (const aemlpc::LpcRuntimeError&) {
                 threw = true;
             }
             assert(threw);
@@ -29308,30 +29308,30 @@ static void testAllSevenDbEfunsThrowTheDialectGateUnderFluffosAndDgd() {
 // OpCode::Suspend/FunctionEntry::isAsync comments for the full design.
 
 static void testAsyncFunctionSuspendsOnAwaitAndResumesWithLocalStatePreserved() {
-    amlp::CompiledProgram program;
-    amlp::FunctionEntry entry;
+    aemlpc::CompiledProgram program;
+    aemlpc::FunctionEntry entry;
     entry.name = "probe";
     entry.entryPoint = 0;
     entry.numLocals = 1;
     entry.isAsync = true;
     // async int probe() { int x = 42; await 0; return x; }
     program.code = {
-        {amlp::OpCode::PushInt, 42, 0},
-        {amlp::OpCode::StoreLocal, 0, 0},
-        {amlp::OpCode::PushInt, 0, 0},    // delay = 0 seconds
-        {amlp::OpCode::Suspend, 0, 0},
-        {amlp::OpCode::PushLocal, 0, 0},
-        {amlp::OpCode::Return, 0, 0},
+        {aemlpc::OpCode::PushInt, 42, 0},
+        {aemlpc::OpCode::StoreLocal, 0, 0},
+        {aemlpc::OpCode::PushInt, 0, 0},    // delay = 0 seconds
+        {aemlpc::OpCode::Suspend, 0, 0},
+        {aemlpc::OpCode::PushLocal, 0, 0},
+        {aemlpc::OpCode::Return, 0, 0},
     };
     program.functions = {entry};
-    auto compiled = std::make_shared<amlp::CompiledProgram>(std::move(program));
-    auto obj = std::make_shared<amlp::LpcObject>("async_probe_object", compiled);
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(std::move(program));
+    auto obj = std::make_shared<aemlpc::LpcObject>("async_probe_object", compiled);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Task<amlp::Value> task = vm.runAsync(*compiled, compiled->functions[0], {}, obj);
+    aemlpc::Task<aemlpc::Value> task = vm.runAsync(*compiled, compiled->functions[0], {}, obj);
     task.resume();
     // Must have genuinely suspended at the Suspend opcode, not run
     // straight through to Return. If this were false, the rest of
@@ -29341,7 +29341,7 @@ static void testAsyncFunctionSuspendsOnAwaitAndResumesWithLocalStatePreserved() 
     vm.resumeReadyAsyncTasks(std::chrono::steady_clock::now() + std::chrono::seconds(1));
     assert(task.done());
 
-    amlp::Value result = task.takeResult();
+    aemlpc::Value result = task.takeResult();
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -29363,20 +29363,20 @@ static void testOrdinarySynchronousFunctionUnaffectedByAsyncMachineryExistingInT
         "    int x = 42;\n"
         "    return x + 1000;\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto astProgram = parser.parseProgram();
-    amlp::CodeGen codegen;
-    auto compiled = std::make_shared<amlp::CompiledProgram>(codegen.generate(*astProgram));
+    aemlpc::CodeGen codegen;
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(codegen.generate(*astProgram));
     assert(!compiled->functions.empty());
     assert(compiled->functions[0].isAsync == false);
 
-    auto obj = std::make_shared<amlp::LpcObject>("sync_probe_object", compiled);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    auto obj = std::make_shared<aemlpc::LpcObject>("sync_probe_object", compiled);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Value result = vm.callFunction(obj, "probe", {});
+    aemlpc::Value result = vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1042);
 
@@ -29397,35 +29397,35 @@ static void testAwaitReachedThroughANestedPlainCallPropagatesSuspendCorrectly() 
     // VM::runAsync()'s own Call handling already does. Proving this
     // is exactly what makes this design correct where the old sketch
     // was not.
-    amlp::CompiledProgram program;
+    aemlpc::CompiledProgram program;
 
     // b(): int y = 7; await 0; return y + 100;  (-> 107)
-    std::vector<amlp::Instruction> bCode = {
-        {amlp::OpCode::PushInt, 7, 0},
-        {amlp::OpCode::StoreLocal, 0, 0},
-        {amlp::OpCode::PushInt, 0, 0},
-        {amlp::OpCode::Suspend, 0, 0},
-        {amlp::OpCode::PushLocal, 0, 0},
-        {amlp::OpCode::PushInt, 100, 0},
-        {amlp::OpCode::Add, 0, 0},
-        {amlp::OpCode::Return, 0, 0},
+    std::vector<aemlpc::Instruction> bCode = {
+        {aemlpc::OpCode::PushInt, 7, 0},
+        {aemlpc::OpCode::StoreLocal, 0, 0},
+        {aemlpc::OpCode::PushInt, 0, 0},
+        {aemlpc::OpCode::Suspend, 0, 0},
+        {aemlpc::OpCode::PushLocal, 0, 0},
+        {aemlpc::OpCode::PushInt, 100, 0},
+        {aemlpc::OpCode::Add, 0, 0},
+        {aemlpc::OpCode::Return, 0, 0},
     };
     // a(): return b() + 1000;. An ordinary call, not itself an
     // await/Suspend of any kind.
-    std::vector<amlp::Instruction> aCode = {
-        {amlp::OpCode::Call, 0, 0},   // operand 0 -> stringPool[0] == "b", argCount 0
-        {amlp::OpCode::PushInt, 1000, 0},
-        {amlp::OpCode::Add, 0, 0},
-        {amlp::OpCode::Return, 0, 0},
+    std::vector<aemlpc::Instruction> aCode = {
+        {aemlpc::OpCode::Call, 0, 0},   // operand 0 -> stringPool[0] == "b", argCount 0
+        {aemlpc::OpCode::PushInt, 1000, 0},
+        {aemlpc::OpCode::Add, 0, 0},
+        {aemlpc::OpCode::Return, 0, 0},
     };
 
-    amlp::FunctionEntry fnB;
+    aemlpc::FunctionEntry fnB;
     fnB.name = "b";
     fnB.entryPoint = 0;
     fnB.numLocals = 1;
     fnB.isAsync = true;
 
-    amlp::FunctionEntry fnA;
+    aemlpc::FunctionEntry fnA;
     fnA.name = "a";
     fnA.entryPoint = static_cast<uint32_t>(bCode.size());
     fnA.isAsync = true;
@@ -29435,14 +29435,14 @@ static void testAwaitReachedThroughANestedPlainCallPropagatesSuspendCorrectly() 
     program.code.insert(program.code.end(), aCode.begin(), aCode.end());
     program.functions = {fnB, fnA};
 
-    auto compiled = std::make_shared<amlp::CompiledProgram>(std::move(program));
-    auto obj = std::make_shared<amlp::LpcObject>("nested_await_object", compiled);
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(std::move(program));
+    auto obj = std::make_shared<aemlpc::LpcObject>("nested_await_object", compiled);
 
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
-    amlp::Task<amlp::Value> task = vm.runAsync(*compiled, compiled->functions[1], {}, obj);
+    aemlpc::Task<aemlpc::Value> task = vm.runAsync(*compiled, compiled->functions[1], {}, obj);
     task.resume();
     // a() itself never executed a literal Suspend. The suspension is
     // entirely b()'s own, reached through a()'s ordinary Call. yet
@@ -29453,7 +29453,7 @@ static void testAwaitReachedThroughANestedPlainCallPropagatesSuspendCorrectly() 
     vm.resumeReadyAsyncTasks(std::chrono::steady_clock::now() + std::chrono::seconds(1));
     assert(task.done());
 
-    amlp::Value result = task.takeResult();
+    aemlpc::Value result = task.takeResult();
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 1107);
 
@@ -29472,7 +29472,7 @@ static void testParkedAsyncTaskAndAnOrdinaryCallOutCoexistAcrossTheSameTickSeque
     // correctly across the same tick sequence rather than only ever
     // being exercised in isolation from each other.
     ObjectVarHarness harness;
-    amlp::Scheduler scheduler(harness.vm);
+    aemlpc::Scheduler scheduler(harness.vm);
     harness.vm.setScheduler(&scheduler);
     harness.writeFile("/coexist_probe.c",
         "int fired = 0;\n"
@@ -29483,24 +29483,24 @@ static void testParkedAsyncTaskAndAnOrdinaryCallOutCoexistAcrossTheSameTickSeque
     assert(ob != nullptr);
     harness.vm.callFunction(ob, "start", {});
 
-    amlp::CompiledProgram program;
-    amlp::FunctionEntry entry;
+    aemlpc::CompiledProgram program;
+    aemlpc::FunctionEntry entry;
     entry.name = "probe";
     entry.entryPoint = 0;
     entry.numLocals = 1;
     entry.isAsync = true;
     program.code = {
-        {amlp::OpCode::PushInt, 42, 0},
-        {amlp::OpCode::StoreLocal, 0, 0},
-        {amlp::OpCode::PushInt, 0, 0},
-        {amlp::OpCode::Suspend, 0, 0},
-        {amlp::OpCode::PushLocal, 0, 0},
-        {amlp::OpCode::Return, 0, 0},
+        {aemlpc::OpCode::PushInt, 42, 0},
+        {aemlpc::OpCode::StoreLocal, 0, 0},
+        {aemlpc::OpCode::PushInt, 0, 0},
+        {aemlpc::OpCode::Suspend, 0, 0},
+        {aemlpc::OpCode::PushLocal, 0, 0},
+        {aemlpc::OpCode::Return, 0, 0},
     };
     program.functions = {entry};
-    auto compiled = std::make_shared<amlp::CompiledProgram>(std::move(program));
-    auto asyncObj = std::make_shared<amlp::LpcObject>("coexist_async_object", compiled);
-    amlp::Task<amlp::Value> task =
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(std::move(program));
+    auto asyncObj = std::make_shared<aemlpc::LpcObject>("coexist_async_object", compiled);
+    aemlpc::Task<aemlpc::Value> task =
         harness.vm.runAsync(*compiled, compiled->functions[0], {}, asyncObj);
     task.resume();
     assert(!task.done());
@@ -29511,12 +29511,12 @@ static void testParkedAsyncTaskAndAnOrdinaryCallOutCoexistAcrossTheSameTickSeque
     scheduler.tickCallOuts();
     harness.vm.resumeReadyAsyncTasks(std::chrono::steady_clock::now() + std::chrono::seconds(1));
 
-    amlp::Value firedResult = harness.vm.callFunction(ob, "was_fired", {});
+    aemlpc::Value firedResult = harness.vm.callFunction(ob, "was_fired", {});
     assert(std::holds_alternative<int64_t>(firedResult.data));
     assert(std::get<int64_t>(firedResult.data) == 1);
 
     assert(task.done());
-    amlp::Value result = task.takeResult();
+    aemlpc::Value result = task.takeResult();
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 42);
 
@@ -29536,17 +29536,17 @@ static void testParkedAsyncTaskAndAnOrdinaryCallOutCoexistAcrossTheSameTickSeque
 // synthesized "probe()" function: fullSource defines every function
 // itself, including its own "probe()" entry point, called the same way
 // runProbe() calls its synthesized one.
-static amlp::Value runProbeMulti(const std::string& fullSource) {
-    amlp::Lexer lexer(fullSource);
-    amlp::Parser parser(lexer.tokenize());
+static aemlpc::Value runProbeMulti(const std::string& fullSource) {
+    aemlpc::Lexer lexer(fullSource);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
-    auto compiled = std::make_shared<amlp::CompiledProgram>(codegen.generate(*program));
+    aemlpc::CodeGen codegen;
+    auto compiled = std::make_shared<aemlpc::CompiledProgram>(codegen.generate(*program));
 
-    auto obj = std::make_shared<amlp::LpcObject>("probe_multi_object", compiled);
-    amlp::Config config;
-    amlp::ObjectManager objects(config);
-    amlp::VM vm(objects, config);
+    auto obj = std::make_shared<aemlpc::LpcObject>("probe_multi_object", compiled);
+    aemlpc::Config config;
+    aemlpc::ObjectManager objects(config);
+    aemlpc::VM vm(objects, config);
 
     return vm.callFunction(obj, "probe", {});
 }
@@ -29556,7 +29556,7 @@ static amlp::Value runProbeMulti(const std::string& fullSource) {
 // parameter's own position binds it to a real empty array (real
 // "arr = &the_null_array;"), not undefined/0.
 static void testVarargsRestParamCaptureWithZeroExtraArgumentsBindsEmptyArray() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "mixed rest(mixed first, mixed args...) {\n"
         "    return sizeof(args);\n"
         "}\n"
@@ -29573,7 +29573,7 @@ static void testVarargsRestParamCaptureWithZeroExtraArgumentsBindsEmptyArray() {
 // (exactly one argument lands at the rest-parameter's own position)
 // still wraps it in a real one-element array, not the bare value.
 static void testVarargsRestParamCaptureWithOneExtraArgumentBindsSingleElementArray() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "mixed rest(mixed first, mixed args...) {\n"
         "    return sizeof(args);\n"
         "}\n"
@@ -29589,7 +29589,7 @@ static void testVarargsRestParamCaptureWithOneExtraArgumentBindsSingleElementArr
 // Checks contents, not just count: every actual argument at or past the
 // rest-parameter's own position lands in it, in call order.
 static void testVarargsRestParamCaptureWithManyExtraArgumentsBindsThemInOrder() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "mixed rest(mixed first, mixed args...) {\n"
         "    return args[0] + args[1] + args[2];\n"
         "}\n"
@@ -29606,7 +29606,7 @@ static void testVarargsRestParamCaptureWithManyExtraArgumentsBindsThemInOrder() 
 // spread element contributing zero elements removes that slot entirely
 // rather than leaving a hole or an undefined value.
 static void testArrayLiteralSpreadOfEmptyArrayContributesNoElements() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *empty;\n"
         "mixed *a;\n"
         "empty = ({});\n"
@@ -29621,7 +29621,7 @@ static void testArrayLiteralSpreadOfEmptyArrayContributesNoElements() {
 // Real interpret.c:2702-2703's own F_EXPAND_VARARGS single-element case:
 // the one array element replaces the spread slot directly.
 static void testArrayLiteralSpreadOfSingleElementArraySplicesThatOneValue() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *one;\n"
         "mixed *a;\n"
         "one = ({ 42 });\n"
@@ -29640,7 +29640,7 @@ static void testArrayLiteralSpreadOfSingleElementArraySplicesThatOneValue() {
 // order, matching real generate_expr_list()'s own static-offset
 // invariant, see Bytecode.hpp's OpCode::ExpandVarargs comment).
 static void testArrayLiteralSpreadOfMultiElementArraySplicesAllInOrder() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *xs;\n"
         "mixed *a;\n"
         "xs = ({ 5, 6, 7 });\n"
@@ -29657,7 +29657,7 @@ static void testArrayLiteralSpreadOfMultiElementArraySplicesAllInOrder() {
 // call spreading a real array across a fixed-arity function's own
 // parameters.
 static void testCallArgumentSpreadThroughAPlainCallExpandsIntoParameters() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "int sum3(int a, int b, int c) {\n"
         "    return a * 100 + b * 10 + c;\n"
         "}\n"
@@ -29678,7 +29678,7 @@ static void testCallArgumentSpreadThroughAPlainCallExpandsIntoParameters() {
 // wrappers use to forward a captured varargs array (see the end-to-end
 // test below).
 static void testCallArgumentSpreadThroughEfunColonColonFormExpandsIntoEfunArgs() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed *xs;\n"
         "string s;\n"
         "xs = ({ \"%d-%d\", 7, 9 });\n"
@@ -29707,17 +29707,17 @@ static void testCallArgumentSpreadThroughParentCallFormEmitsExpandVarargsBeforeC
         "    xs = ({ 1, 2 });\n"
         "    return ::probe(xs...);\n"
         "}\n";
-    amlp::Lexer lexer(src);
-    amlp::Parser parser(lexer.tokenize());
+    aemlpc::Lexer lexer(src);
+    aemlpc::Parser parser(lexer.tokenize());
     auto program = parser.parseProgram();
-    amlp::CodeGen codegen;
+    aemlpc::CodeGen codegen;
     auto compiled = codegen.generate(*program);
 
     bool sawExpandThenCallParent = false;
     for (size_t i = 0; i + 1 < compiled.code.size(); ++i) {
-        if (compiled.code[i].op == amlp::OpCode::ExpandVarargs &&
+        if (compiled.code[i].op == aemlpc::OpCode::ExpandVarargs &&
             compiled.code[i].operand == 0 &&
-            compiled.code[i + 1].op == amlp::OpCode::CallParent) {
+            compiled.code[i + 1].op == aemlpc::OpCode::CallParent) {
             sawExpandThenCallParent = true;
         }
     }
@@ -29750,7 +29750,7 @@ static void testCallOtherArrowFormArgumentSpreadExpandsIntoTargetFunction() {
 
     auto caster = harness.objects.cloneObject("/spellcaster");
     assert(caster != nullptr);
-    amlp::Value result = harness.vm.callFunction(caster, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caster, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 123);
 
@@ -29779,7 +29779,7 @@ static void testCallOtherLiteralFormArgumentSpreadExpandsIntoTrailingArgs() {
 
     auto caller = harness.objects.cloneObject("/caller2");
     assert(caller != nullptr);
-    amlp::Value result = harness.vm.callFunction(caller, "probe", {});
+    aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
     assert(std::holds_alternative<int64_t>(result.data));
     assert(std::get<int64_t>(result.data) == 123);
 
@@ -29801,7 +29801,7 @@ static void testCallOtherSpreadOnTargetOrFunctionArgumentStillThrows() {
             "    xs = ({ \"/x\" });\n"
             "    return ({ call_other(xs..., \"greet\") });\n"
             "}\n");
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("call_other: the target/function argument cannot be spread") !=
@@ -29820,7 +29820,7 @@ static void testCallOtherSpreadOnTargetOrFunctionArgumentStillThrows() {
 // prerequisite (Step 1) and the spread primitive itself (Steps 2/3)
 // end to end.
 static void testVarargsCapturedRestParamImmediatelySpreadIntoAnotherCallMatchesSefunCShape() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "int inner(int a, int b, int c) {\n"
         "    return a * 100 + b * 10 + c;\n"
         "}\n"
@@ -29848,11 +29848,11 @@ static void testVarargsCapturedRestParamImmediatelySpreadIntoAnotherCallMatchesS
 // source, not just FluffOS alone.
 static void testNeverAssignedLocalIsUndefinedpAndNullpTrueUnderFluffosFalseUnderLdmud() {
     {
-        amlp::Value result = runProbe(
+        aemlpc::Value result = runProbe(
             "mixed ret;\n"
             "return ({ undefinedp(ret), nullp(ret) });");
-        assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+        assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
         assert(arr != nullptr && arr->items.size() == 2);
         assert(std::get<int64_t>(arr->items[0].data) == 1);
         assert(std::get<int64_t>(arr->items[1].data) == 1);
@@ -29867,8 +29867,8 @@ static void testNeverAssignedLocalIsUndefinedpAndNullpTrueUnderFluffosFalseUnder
             "}\n");
         auto ob = harness.objects.loadObject("/tundef_local_ldmud");
         assert(ob != nullptr);
-        amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+        aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
         assert(arr != nullptr && arr->items.size() == 2);
         assert(std::get<int64_t>(arr->items[0].data) == 0);
         assert(std::get<int64_t>(arr->items[1].data) == 0);
@@ -29885,7 +29885,7 @@ static void testNeverAssignedLocalIsUndefinedpAndNullpTrueUnderFluffosFalseUnder
 // either way.
 static void testExplicitlyAssignedZeroLocalIsUndefinedpFalseUnderFluffosAndLdmud() {
     {
-        amlp::Value result = runProbe(
+        aemlpc::Value result = runProbe(
             "mixed ret;\n"
             "ret = 0;\n"
             "return undefinedp(ret);");
@@ -29902,7 +29902,7 @@ static void testExplicitlyAssignedZeroLocalIsUndefinedpFalseUnderFluffosAndLdmud
             "}\n");
         auto ob = harness.objects.loadObject("/tundef_zero_ldmud");
         assert(ob != nullptr);
-        amlp::Value result = harness.vm.callFunction(ob, "probe", {});
+        aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
         assert(std::get<int64_t>(result.data) == 0);
     }
 
@@ -29919,7 +29919,7 @@ static void testExplicitlyAssignedZeroLocalIsUndefinedpFalseUnderFluffosAndLdmud
 // plain, freshly-assigned 0, both funneled through the real Add/Sub/
 // Eq/Lt/Not opcodes.
 static void testUndefinedLocalArithmeticComparisonAndTruthinessAllMatchPlainZeroUnderFluffos() {
-    amlp::Value result = runProbe(
+    aemlpc::Value result = runProbe(
         "mixed u;\n"
         "int plain;\n"
         "plain = 0;\n"
@@ -29937,8 +29937,8 @@ static void testUndefinedLocalArithmeticComparisonAndTruthinessAllMatchPlainZero
         "    !u,\n"
         "    \"n=\" + u\n"
         "});");
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr && arr->items.size() == 12);
     assert(std::get<int64_t>(arr->items[0].data) == 1);   // u + 1
     assert(std::get<int64_t>(arr->items[1].data) == 1);   // 1 - u
@@ -29965,10 +29965,10 @@ static void testUndefinedLocalArithmeticComparisonAndTruthinessAllMatchPlainZero
 // same session's scoping report named as equally affected.
 static void testNeverAssignedObjectVariableIsUndefinedpTrueUnderFluffosFalseUnderLdmud() {
     {
-        amlp::Value result = runProbeMulti(
+        aemlpc::Value result = runProbeMulti(
             "mixed ret;\n"
             "mixed *probe() { return ({ undefinedp(ret), nullp(ret) }); }\n");
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
         assert(arr != nullptr && arr->items.size() == 2);
         assert(std::get<int64_t>(arr->items[0].data) == 1);
         assert(std::get<int64_t>(arr->items[1].data) == 1);
@@ -29981,8 +29981,8 @@ static void testNeverAssignedObjectVariableIsUndefinedpTrueUnderFluffosFalseUnde
             "mixed *probe() { return ({ undefinedp(ret), nullp(ret) }); }\n");
         auto ob = harness.objects.loadObject("/tundef_objvar_ldmud");
         assert(ob != nullptr);
-        amlp::Value result = harness.vm.callFunction(ob, "probe", {});
-        auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+        aemlpc::Value result = harness.vm.callFunction(ob, "probe", {});
+        auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
         assert(arr != nullptr && arr->items.size() == 2);
         assert(std::get<int64_t>(arr->items[0].data) == 0);
         assert(std::get<int64_t>(arr->items[1].data) == 0);
@@ -30011,7 +30011,7 @@ static void testClassDeclarationFullAndPartialConstructionAndMemberRead() {
     // testMemberAccessOnAMixedTypedVariableThrowsRatherThanGuessing
     // below for the "mixed"-declared case's own confirmed, deliberate
     // clear-error behavior instead of a silent guess.
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class death { int Date; string Enemy; }\n"
         "mixed *probe() {\n"
         "    class death full;\n"
@@ -30020,8 +30020,8 @@ static void testClassDeclarationFullAndPartialConstructionAndMemberRead() {
         "    partial = new(class death Enemy: \"goblin\");\n"
         "    return ({ full->Date, full->Enemy, partial->Date, partial->Enemy });\n"
         "}\n");
-    assert(std::holds_alternative<std::shared_ptr<amlp::Array>>(result.data));
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::Array>>(result.data));
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr && arr->items.size() == 4);
     assert(std::get<int64_t>(arr->items[0].data) == 5);
     assert(std::get<std::string>(arr->items[1].data) == "orc");
@@ -30054,7 +30054,7 @@ static void testMemberAccessOnAMixedTypedVariableThrowsRatherThanGuessing() {
             "    inst = new(class death Date: 5);\n"
             "    return ({ inst->Date });\n"
             "}\n");
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("cannot resolve \"->Date\"") != std::string::npos);
@@ -30070,7 +30070,7 @@ static void testMemberAccessOnAMixedTypedVariableThrowsRatherThanGuessing() {
 // construction ("new(class Name)", no field initializers), then member
 // *write* filling in fields one at a time, read back afterward.
 static void testClassTypedVariableEmptyConstructionThenMemberWrite() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class service { int PortOffset; int SocketType; string SocketClass; }\n"
         "mixed *probe() {\n"
         "    class service s;\n"
@@ -30079,7 +30079,7 @@ static void testClassTypedVariableEmptyConstructionThenMemberWrite() {
         "    s->SocketClass = \"tcp\";\n"
         "    return ({ s->PortOffset, s->SocketClass, s->SocketType });\n"
         "}\n");
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr && arr->items.size() == 3);
     assert(std::get<int64_t>(arr->items[0].data) == 5);
     assert(std::get<std::string>(arr->items[1].data) == "tcp");
@@ -30094,7 +30094,7 @@ static void testClassTypedVariableEmptyConstructionThenMemberWrite() {
 // for an ordinary number, matching real "sp->type == T_CLASS" exactly
 // (this driver's own Value::isClassInstance).
 static void testClasspDistinguishesAClassInstanceFromAPlainArrayAndANumber() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class death { int Date; }\n"
         "mixed *probe() {\n"
         "    mixed inst;\n"
@@ -30103,7 +30103,7 @@ static void testClasspDistinguishesAClassInstanceFromAPlainArrayAndANumber() {
         "    arr = ({ 1 });\n"
         "    return ({ classp(inst), classp(arr), classp(5) });\n"
         "}\n");
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr && arr->items.size() == 3);
     assert(std::get<int64_t>(arr->items[0].data) == 1);
     assert(std::get<int64_t>(arr->items[1].data) == 0);
@@ -30123,7 +30123,7 @@ static void testClasspDistinguishesAClassInstanceFromAPlainArrayAndANumber() {
 // first rather than chaining a second "->" directly off the index
 // result.
 static void testClassInstanceStoredAsMappingValueRetrievedThroughMemberThenIndexChain() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class rule { string cmd; int cost; }\n"
         "class emote { mapping Rules; }\n"
         "mixed *probe() {\n"
@@ -30135,7 +30135,7 @@ static void testClassInstanceStoredAsMappingValueRetrievedThroughMemberThenIndex
         "    r = e->Rules[\"wave\"];\n"
         "    return ({ r->cmd, r->cost });\n"
         "}\n");
-    auto arr = std::get<std::shared_ptr<amlp::Array>>(result.data);
+    auto arr = std::get<std::shared_ptr<aemlpc::Array>>(result.data);
     assert(arr != nullptr && arr->items.size() == 2);
     assert(std::get<std::string>(arr->items[0].data) == "wave hand");
     assert(std::get<int64_t>(arr->items[1].data) == 1);
@@ -30152,7 +30152,7 @@ static void testClassTypedForeachValueVariableMemberReadInsideLoopBody() {
     // service s" reference resolves against a real, populated
     // classDefs_ entry. runProbeMulti(), not runProbe() (which only
     // ever synthesizes a bare "int probe() { ... }" alone).
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class service { int PortOffset; }\n"
         "int probe() {\n"
         "    mapping services;\n"
@@ -30200,7 +30200,7 @@ static void testClassDeclarationUnderLdmudFailsWithACleanParseErrorNotSilentMisb
 // Runtime no-op; the type is kept so ->member on an indexed result
 // resolves. Exact interactive.c shape: ((class marriage)Marriages[0])->Spouse.
 static void testClassCastOnIndexedArrayElementThenMemberRead() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class marriage { string Spouse; int DivorceDate; }\n"
         "string probe() {\n"
         "    class marriage *Marriages;\n"
@@ -30218,7 +30218,7 @@ static void testClassCastOnIndexedArrayElementThenMemberRead() {
 // "(class Name *)expr" is the same cast production's optional_star
 // form. No ->member on the array itself, so this stays a no-op strip.
 static void testClassStarCastIsARuntimeNoOpLikeStringStarCast() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class marriage { string Spouse; }\n"
         "int probe() {\n"
         "    class marriage *Marriages;\n"
@@ -30242,7 +30242,7 @@ static void testClassStarCastIsARuntimeNoOpLikeStringStarCast() {
 // case (no cast, plain indexed array element) out for lack of a real
 // corpus site.
 static void testIndexedClassArrayElementMemberReadWithNoCast() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class protection { int time; int absorb; }\n"
         "int probe() {\n"
         "    class protection *Protection;\n"
@@ -30260,7 +30260,7 @@ static void testIndexedClassArrayElementMemberReadWithNoCast() {
 // ("Protection[i]->absorb -= damage", body.c:721) rather than only
 // reading one.
 static void testIndexedClassArrayElementMemberWriteWithNoCast() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "class protection { int time; }\n"
         "int probe() {\n"
         "    class protection *Protection;\n"
@@ -30287,7 +30287,7 @@ static void testIndexedPlainArrayElementMemberAccessStillThrows() {
             "    plain = ({ 1, 2, 3 });\n"
             "    return ({ plain[0]->time });\n"
             "}\n");
-    } catch (const amlp::LpcRuntimeError& e) {
+    } catch (const aemlpc::LpcRuntimeError& e) {
         threw = true;
         std::string msg = e.what();
         assert(msg.find("cannot resolve \"->time\"") != std::string::npos);
@@ -30300,7 +30300,7 @@ static void testIndexedPlainArrayElementMemberAccessStillThrows() {
 // grammar.y:2450 L_RETURN comma_expr, race.c:206
 // "return (Race = extra), race;". Last expr0 is the returned value.
 static void testReturnCommaExprYieldsRightmostValueAfterAssignmentSideEffect() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "int Race;\n"
         "int set_and_return() {\n"
         "    int extra, race;\n"
@@ -30323,7 +30323,7 @@ static void testReturnCommaExprYieldsRightmostValueAfterAssignmentSideEffect() {
 // '(' comma_expr ')' (grammar.y:2969) is how a comma operator is
 // passed as a single argument.
 static void testCallArgsStaySeparateWhileParenthesizedCommaExprIsOneArg() {
-    amlp::Value result = runProbeMulti(
+    aemlpc::Value result = runProbeMulti(
         "int add(int a, int b) { return a + 10 * b; }\n"
         "int id(int x) { return x; }\n"
         "int probe() {\n"
@@ -30354,7 +30354,7 @@ int main() {
     // test binary, so the VM-level tests below can call them. Names like
     // "nonexistent_marker_efun" used by the short-circuit tests are not
     // among them, and stay correctly undefined.
-    amlp::registerCoreEfuns();
+    aemlpc::registerCoreEfuns();
 
     testBasicTokenize();
     testArrowTokenizes();

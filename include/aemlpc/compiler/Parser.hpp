@@ -1,10 +1,10 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include "amlp/compiler/Lexer.hpp"
-#include "amlp/compiler/Ast.hpp"
+#include "aemlpc/compiler/Lexer.hpp"
+#include "aemlpc/compiler/Ast.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class Parser {
 public:
@@ -177,4 +177,4 @@ private:
     std::vector<std::vector<AstPtr>> lambdaBoundValuesStack_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

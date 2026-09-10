@@ -5,10 +5,10 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "amlp/object/LpcObject.hpp"
-#include "amlp/security/UidModel.hpp"
+#include "aemlpc/object/LpcObject.hpp"
+#include "aemlpc/security/UidModel.hpp"
 
-namespace amlp {
+namespace aemlpc {
 
 class Config;
 class VM;
@@ -335,4 +335,4 @@ private:
     std::unordered_set<std::string> virtualCompiling_;
 };
 
-} // namespace amlp
+} // namespace aemlpc

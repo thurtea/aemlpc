@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace amlp {
+namespace aemlpc {
 
 class Connection;
 
@@ -12,4 +12,4 @@ public:
     static void send(Connection& conn, const std::string& package);
 };
 
-} // namespace amlp
+} // namespace aemlpc
