@@ -1,6 +1,6 @@
 # STATUS
 
-**2026-09-10: aemlpc is the canonical C++20 LPC driver tree. Copied from the crysis backup into `/home/thurtea/aemlpc` (headers under `include/aemlpc/`). `https://github.com/thurtea/aemlpc` is the live remote. amlp and crysis stop being the live line. Namespace, include prefix, and binary name are still `amlp`; rename is later work. No build or test run this turn.**
+**2026-09-10: aemlpc is the canonical live C++20 LPC driver tree. The names amlp and crysis are historical only. Copied from the crysis backup into `/home/thurtea/aemlpc` (headers under `include/aemlpc/`). `https://github.com/thurtea/aemlpc` is the live remote. Namespace, include prefix, and binary name are still `amlp`; rename is later work. No build or test run this turn.**
 
 **2026-09-07: two cleanups. (1) Removed invented Long Burn / Stonewick backstory from the mudlib. MOTD, rooms, and Old Mabb are plain functional text; no replacement lore. (2) CURSOR.md rule 2 now bans double hyphen as an em-dash stand-in; punctuation `--` across the tree rewritten as real grammar. Flags, decrement, and end-of-options left alone. Historical STATUS entries that named the 2026-08-23 reflavor stay as record. Build clean, suite green (922, 0 fail). git add only.**
 

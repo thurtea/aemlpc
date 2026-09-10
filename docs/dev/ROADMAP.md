@@ -1,4 +1,7 @@
-# AMLP - World-Class LPC Driver Roadmap
+# aemlpc LPC Driver Roadmap
+
+aemlpc is the canonical live tree. The names AMLP and crysis in this
+file are historical only.
 
 Goal: transform AMLP from a single-mudlib FluffOS-targeting driver into
 the best LPC runtime available - a FluffOS/LDMud-level driver, done
