@@ -24654,6 +24654,47 @@ void writeWorldkitHeader(ObjectVarHarness& harness) {
     assert(!hdr.empty());
     harness.writeFile("/worldkit.h", hdr);
 }
+
+void writeKitDomainTree(ObjectVarHarness& harness) {
+    writeWorldkitHeader(harness);
+    ::mkdir((harness.tempDir + "/single").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/kit").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/kit/rooms").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/kit/items").c_str(), 0755);
+    harness.writeFile("/single/domain_d.c", readMudlibFile("/single/domain_d.c"));
+    harness.writeFile("/single/domain_graph.c", readMudlibFile("/single/domain_graph.c"));
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/room.c", readMudlibFile("/inherit/room.c"));
+    harness.writeFile("/domains/kit/rooms/hall.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() {\n"
+        "    set_short(\"a hall\");\n"
+        "    set_long(\"A hall.\\n\");\n"
+        "    set_exits(([]));\n"
+        "    set_light(1);\n"
+        "}\n");
+    harness.writeFile("/domains/kit/rooms/yard.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() {\n"
+        "    set_short(\"a yard\");\n"
+        "    set_long(\"A yard.\\n\");\n"
+        "    set_exits(([]));\n"
+        "    set_light(1);\n"
+        "}\n");
+    harness.writeFile("/domains/kit/items/statue.c",
+        "inherit \"/inherit/item\";\n"
+        "void create() {\n"
+        "    set_short(\"a statue\");\n"
+        "    set_long(\"A stone statue, weathered.\\n\");\n"
+        "    set_ids(({ \"statue\" }));\n"
+        "    set_prevent_get(1);\n"
+        "    set_weight(1);\n"
+        "    set_value(1);\n"
+        "}\n");
+}
 }  // namespace
 
 static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld() {
@@ -25375,6 +25416,79 @@ static void testWandDomainTargetsCreatePaths() {
     aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandDomainTargetsCreatePaths OK\n";
+}
+
+static void testDomainGraphSaveRestoresExitsSceneryAndPlacedObject() {
+    ObjectVarHarness first;
+    writeKitDomainTree(first);
+    first.writeFile("/builder.c",
+        "int setup() {\n"
+        "    object hall, yard, statue;\n"
+        "    hall = load_object(\"/domains/kit/rooms/hall\");\n"
+        "    yard = load_object(\"/domains/kit/rooms/yard\");\n"
+        "    if (!hall || !yard) return 0;\n"
+        "    hall->set_exits(([\"east\": \"/domains/kit/rooms/yard\"]));\n"
+        "    yard->add_item(\"hearth\", \"A cold hearth.\\n\");\n"
+        "    statue = clone_object(\"/domains/kit/items/statue\");\n"
+        "    if (!statue) return 0;\n"
+        "    statue->move(yard);\n"
+        "    return \"/single/domain_d\"->save_domain(\"kit\");\n"
+        "}\n");
+
+    auto builder = first.objects.cloneObject("/builder");
+    assert(builder);
+    aemlpc::Value saved = first.vm.callFunction(builder, "setup", {});
+    assert(std::holds_alternative<int64_t>(saved.data));
+    assert(std::get<int64_t>(saved.data) == 1);
+
+    std::ifstream graphIn(first.tempDir + "/domains/kit/graph.o");
+    std::ostringstream graphBuf;
+    graphBuf << graphIn.rdbuf();
+    assert(!graphBuf.str().empty());
+
+    ObjectVarHarness second;
+    writeKitDomainTree(second);
+    second.writeFile("/domains/kit/graph.o", graphBuf.str());
+    second.writeFile("/probe.c",
+        "string east() {\n"
+        "    return load_object(\"/domains/kit/rooms/hall\")->query_exits()[\"east\"];\n"
+        "}\n"
+        "string hearth() {\n"
+        "    return load_object(\"/domains/kit/rooms/yard\")->query_items()[\"hearth\"];\n"
+        "}\n"
+        "string statue_short() {\n"
+        "    object ob;\n"
+        "    ob = present(\"statue\", load_object(\"/domains/kit/rooms/yard\"));\n"
+        "    return ob ? ob->short() : \"\";\n"
+        "}\n"
+        "string statue_long() {\n"
+        "    object ob;\n"
+        "    ob = present(\"statue\", load_object(\"/domains/kit/rooms/yard\"));\n"
+        "    return ob ? ob->long() : \"\";\n"
+        "}\n");
+
+    auto daemon = second.objects.loadObject("/single/domain_d");
+    assert(daemon);
+    auto probe = second.objects.cloneObject("/probe");
+    assert(probe);
+
+    aemlpc::Value east = second.vm.callFunction(probe, "east", {});
+    assert(std::holds_alternative<std::string>(east.data));
+    assert(std::get<std::string>(east.data) == "/domains/kit/rooms/yard");
+
+    aemlpc::Value hearth = second.vm.callFunction(probe, "hearth", {});
+    assert(std::holds_alternative<std::string>(hearth.data));
+    assert(std::get<std::string>(hearth.data) == "A cold hearth.\n");
+
+    aemlpc::Value statueShort = second.vm.callFunction(probe, "statue_short", {});
+    assert(std::holds_alternative<std::string>(statueShort.data));
+    assert(std::get<std::string>(statueShort.data) == "a statue");
+
+    aemlpc::Value statueLong = second.vm.callFunction(probe, "statue_long", {});
+    assert(std::holds_alternative<std::string>(statueLong.data));
+    assert(std::get<std::string>(statueLong.data) == "A stone statue, weathered.\n");
+
+    std::cout << "testDomainGraphSaveRestoresExitsSceneryAndPlacedObject OK\n";
 }
 
 static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
@@ -31629,6 +31743,7 @@ int main() {
     testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt();
     testWandOfCreationEditRoomAndExit();
     testWandDomainTargetsCreatePaths();
+    testDomainGraphSaveRestoresExitsSceneryAndPlacedObject();
     testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();

@@ -5,6 +5,11 @@
 // /inherit/master/valid.c contains all the valid_* functions
 inherit "/inherit/master/valid";
 
+// This driver does not call epilog(), so restore the domain graph here.
+void create() {
+    catch(load_object(DOMAIN_D));
+}
+
 void flag(string str) {
     switch (str) {
     // "test" case dropped along with command/tests.c and the rest of

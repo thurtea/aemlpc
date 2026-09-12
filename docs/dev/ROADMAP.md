@@ -90,9 +90,9 @@ touched. Never stall TLS or the wand for a cleanup pass.
 Each source directory carries an `instruct.md` that owns the detailed task
 list for that subsystem. This file is the master sequencing reference.
 
-### Track G breakdown (scoped 2026-09-06; G1-G4 done 2026-09-12)
+### Track G breakdown (scoped 2026-09-06; G1-G5 done 2026-09-12)
 
-G1 through G4 landed 2026-09-12. G5+ not started. This turns the
+G1 through G5 landed 2026-09-12. G6 not started. This turns the
 prose "world kit next" direction (item / room / NPC inheritables, domain
 folders, `save_object` persistence, then Rifts content) into ordered
 sub-items with a checkable definition of done each, matching the rigor
@@ -176,7 +176,7 @@ had.
   target paths; the Library boots clean with an example domain folder
   present.
 
-- **G5. `save_object` persistence of the created world graph.** A
+- **G5. `save_object` persistence of the created world graph.** [x] 2026-09-12. A
   domain-level save file (one per domain) recording, for each rod-built
   room, its exit mapping, its `add_item` scenery, and the paths of the
   non-portable objects placed in it, plus per-object edited state (the

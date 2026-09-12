@@ -32,3 +32,4 @@ worktable, and handed to you automatically when you arrive):
   room <name>    write a new room (domain or /data/created/)
   exit <dir> <path> link this room to another
   domain [name]  set or show the active domain (none clears)
+  save           write the active domain world graph

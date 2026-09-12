@@ -1,5 +1,16 @@
 # STATUS
 
+**2026-09-12: Track G G5 finished. Domain graph is strings and arrays
+only (paths, not live objects); Track A save_object is unchanged.
+`/single/domain_graph` + `/single/domain_d` write `/domains/<name>/graph.o`
+(exits, scenery, prevent_get placements). Edit long-desc stays in the
+rewritten `.c`. Trigger: wand `save`, and auto-save after `exit` when
+a domain is set. Boot restore is master `create()` loading domain_d
+(this driver does not call `epilog()`). Portable/NPC positions not
+saved. Tests: second harness restores exit, scenery, placed statue.
+Suite green (928, 0 fail). Live-verified across a restart. git add
+only. G6 not started.**
+
 **2026-09-12: Track G G4 finished. `worldkit.h` names ITEM_INH /
 ROOM_INH / NPC_INH plus CREATED_DIR and DOMAINS_DIR. Domain state
 lives on the wand: `domain <name>` selects, `domain` reports,

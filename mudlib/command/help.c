@@ -39,6 +39,7 @@ main(string arg)
         "  room <name>    write a new room (domain or /data/created/)\n"
         "  exit <dir> <path> link this room to another\n"
         "  domain [name]  set or show the active domain (none clears)\n"
+        "  save           write the active domain world graph\n"
     );
     return 1;
 }

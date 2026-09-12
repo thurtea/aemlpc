@@ -17,5 +17,10 @@ With no domain set, those verbs still write the legacy path
 Inheritables used by generated files are named in worldkit.h
 (ITEM_INH, ROOM_INH, NPC_INH).
 
+Each domain may also have graph.o, a save_object snapshot of room
+exits, scenery, and non-portable placed objects. Wand `save` writes
+it; `exit` writes it too when a domain is set. Master create() loads
+/single/domain_d, which restores every domain that has a graph.o.
+
 domains/example/ is an empty stub so the tree is present at boot.
 It holds no content.

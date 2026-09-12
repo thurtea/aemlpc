@@ -34,7 +34,7 @@ string long() {
         "build new ones, and link rooms together. Usable only while held.\n"
         "Commands: clone <path>, purge <id>, create <name>,\n"
         "          edit <id> <text>, room <name>, exit <dir> <path>,\n"
-        "          npc <name>, domain [name]\n";
+        "          npc <name>, domain [name], save\n";
 }
 
 string query_domain() {
@@ -88,6 +88,12 @@ static string write_path(string fname, string kind) {
     return write_dir(kind) + "/" + fname;
 }
 
+static void maybe_save() {
+    if (active_domain && sizeof(active_domain)) {
+        catch(DOMAIN_D->save_domain(active_domain));
+    }
+}
+
 static string created_source_path(object ob) {
     string leaf, dom, kind;
 
@@ -112,6 +118,7 @@ void init() {
     add_action("cmd_exit", "exit");
     add_action("cmd_npc", "npc");
     add_action("cmd_domain", "domain");
+    add_action("cmd_save", "save");
 }
 
 int cmd_domain(string str) {
@@ -139,6 +146,22 @@ int cmd_domain(string str) {
     active_domain = str;
     ensure_domain_dirs(str);
     write("Active domain: " + str + ".\n");
+    return 1;
+}
+
+int cmd_save(string str) {
+    if (!may_use()) {
+        return 1;
+    }
+    if (!active_domain || !sizeof(active_domain)) {
+        write("No domain set.\n");
+        return 1;
+    }
+    if (DOMAIN_D->save_domain(active_domain)) {
+        write("Saved domain " + active_domain + ".\n");
+    } else {
+        write("Save failed.\n");
+    }
     return 1;
 }
 
@@ -367,6 +390,7 @@ int cmd_exit(string str) {
     m[dir] = dest;
     room->set_exits(m);
     room->init();
+    maybe_save();
     write("Exit " + dir + " now leads to " + dest + ".\n");
     return 1;
 }

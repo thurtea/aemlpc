@@ -12,4 +12,8 @@
 #define DOMAIN_ROOMS "rooms"
 #define DOMAIN_NPCS  "npcs"
 
+#define DOMAIN_D     "/single/domain_d"
+#define DOMAIN_GRAPH "/single/domain_graph"
+#define DOMAIN_SAVE  "graph"
+
 #endif
