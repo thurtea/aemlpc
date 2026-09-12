@@ -90,9 +90,9 @@ touched. Never stall TLS or the wand for a cleanup pass.
 Each source directory carries an `instruct.md` that owns the detailed task
 list for that subsystem. This file is the master sequencing reference.
 
-### Track G breakdown (scoped 2026-09-06; G1-G3 done 2026-09-12)
+### Track G breakdown (scoped 2026-09-06; G1-G4 done 2026-09-12)
 
-G1, G2, and G3 landed 2026-09-12. G4+ not started. This turns the
+G1 through G4 landed 2026-09-12. G5+ not started. This turns the
 prose "world kit next" direction (item / room / NPC inheritables, domain
 folders, `save_object` persistence, then Rifts content) into ordered
 sub-items with a checkable definition of done each, matching the rigor
@@ -162,7 +162,7 @@ had.
   navigable (they opt into the new setters or keep their hand-rolled
   `short()` / `long()`, whichever needs less churn, verified live).
 
-- **G4. Domain folder layout + rod domain targeting.**
+- **G4. Domain folder layout + rod domain targeting.** [x] 2026-09-12.
   `mudlib/domains/<domain>/{rooms,items,npcs}/` convention with a
   `mudlib/domains/README` documenting it, and `mudlib/include/worldkit.h`
   defining `ITEM_INH` / `ROOM_INH` / `NPC_INH` paths and shared defines.

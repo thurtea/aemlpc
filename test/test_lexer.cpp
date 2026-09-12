@@ -24648,6 +24648,12 @@ std::string readMudlibFile(const std::string& relPath) {
     }
     return std::string();
 }
+
+void writeWorldkitHeader(ObjectVarHarness& harness) {
+    std::string hdr = readMudlibFile("/include/worldkit.h");
+    assert(!hdr.empty());
+    harness.writeFile("/worldkit.h", hdr);
+}
 }  // namespace
 
 static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld() {
@@ -24656,6 +24662,7 @@ static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld
 
     ObjectVarHarness harness;
     harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
     harness.writeFile("/room.c", "void create() {}\n");
     harness.writeFile("/player.c", "void create() { enable_commands(); }\n");
 
@@ -24695,6 +24702,7 @@ static void testWandOfCreationCloneAndPurgeWorkOnceGenuinelyHeld() {
 
     ObjectVarHarness harness;
     harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
     harness.writeFile("/room.c", "void create() {}\n");
     harness.writeFile("/player.c",
         "void create() { enable_commands(); }\n"
@@ -24763,6 +24771,7 @@ static void testWandOfCreationCreateWritesCompilesAndPlacesARealNewObject() {
 
     ObjectVarHarness harness;
     harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
     harness.writeFile("/room.c", "void create() {}\n");
     harness.writeFile("/player.c",
         "void create() { enable_commands(); }\n"
@@ -25130,6 +25139,7 @@ static void testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt() {
 
     ObjectVarHarness harness;
     harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
     harness.writeFile("/room.c", "void create() {}\n");
     harness.writeFile("/player.c",
         "void create() { enable_commands(); }\n"
@@ -25202,6 +25212,7 @@ static void testWandOfCreationEditRoomAndExit() {
 
     ObjectVarHarness harness;
     harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
     harness.writeFile("/room.c",
         "inherit \"/inherit/room\";\n"
         "void create() { set_exits(([])); }\n"
@@ -25272,6 +25283,98 @@ static void testWandOfCreationEditRoomAndExit() {
     aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationEditRoomAndExit OK\n";
+}
+
+static void testWandDomainTargetsCreatePaths() {
+    std::string wandSrc = readMudlibFile("/clone/wand_of_creation.c");
+    assert(!wandSrc.empty());
+
+    ObjectVarHarness harness;
+    harness.writeFile("/wand_of_creation.c", wandSrc);
+    writeWorldkitHeader(harness);
+    harness.writeFile("/room.c", "void create() {}\n");
+    harness.writeFile("/player.c",
+        "void create() { enable_commands(); }\n"
+        "void become_wizard() { enable_wizard(); }\n");
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/room.c", readMudlibFile("/inherit/room.c"));
+    harness.writeFile("/inherit/npc.c", readMudlibFile("/inherit/npc.c"));
+    ::mkdir((harness.tempDir + "/data").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/data/created").c_str(), 0755);
+
+    auto room = harness.objects.cloneObject("/room");
+    auto player = harness.objects.cloneObject("/player");
+    auto wand = harness.objects.cloneObject("/wand_of_creation");
+    assert(room && player && wand);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    harness.vm.callFunction(player, "become_wizard", {});
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, room);
+    harness.vm.moveObject(wand, room);
+    harness.vm.moveObject(wand, player);
+    readAvailable(fds[1]);
+
+    assert(harness.vm.dispatchCommand(player, "create sword"));
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("Created and placed here: sword") != std::string::npos);
+    {
+        std::ifstream f(harness.tempDir + "/data/created/sword.c");
+        assert(f.good());
+    }
+
+    assert(harness.vm.dispatchCommand(player, "domain rifts"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Active domain: rifts.") != std::string::npos);
+
+    assert(harness.vm.dispatchCommand(player, "create sword"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Created and placed here: sword") != std::string::npos);
+    {
+        std::ifstream f(harness.tempDir + "/domains/rifts/items/sword.c");
+        assert(f.good());
+    }
+
+    assert(harness.vm.dispatchCommand(player, "room yard"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Room ready at /domains/rifts/rooms/yard") != std::string::npos);
+    {
+        std::ifstream f(harness.tempDir + "/domains/rifts/rooms/yard.c");
+        assert(f.good());
+    }
+
+    assert(harness.vm.dispatchCommand(player, "npc sentry"));
+    out = readAvailable(fds[1]);
+    assert(out.find("NPC created and placed here: sentry") != std::string::npos);
+    {
+        std::ifstream f(harness.tempDir + "/domains/rifts/npcs/sentry.c");
+        assert(f.good());
+    }
+
+    assert(harness.vm.dispatchCommand(player, "domain"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Active domain: rifts.") != std::string::npos);
+
+    assert(harness.vm.dispatchCommand(player, "domain none"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Domain cleared.") != std::string::npos);
+
+    assert(harness.vm.dispatchCommand(player, "create pebble"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Created and placed here: pebble") != std::string::npos);
+    {
+        std::ifstream f(harness.tempDir + "/data/created/pebble.c");
+        assert(f.good());
+    }
+
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testWandDomainTargetsCreatePaths OK\n";
 }
 
 static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
@@ -31525,6 +31628,7 @@ int main() {
     testInheritNpcIsLivingVisibleAndWandersOnce();
     testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt();
     testWandOfCreationEditRoomAndExit();
+    testWandDomainTargetsCreatePaths();
     testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();

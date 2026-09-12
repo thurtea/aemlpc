@@ -29,14 +29,16 @@
 #define ROOT_UID     "Root"
 #define BACKBONE_UID "Backbone"
 
+#include <worldkit.h>
+
 #define BASE            "/inherit/base"
 #define STD_OBJECT      "/inherit/object"
-#define STD_ITEM        "/inherit/item"
-#define STD_NPC         "/inherit/npc"
+#define STD_ITEM        ITEM_INH
+#define STD_NPC         NPC_INH
 #define OVERRIDES_FILE  "/single/simul_efun"
 
 // 2x2 from START_LOC: watch room north, sunken court east, granary loft from either.
-#define ROOM_BASE          "/inherit/room"
+#define ROOM_BASE          ROOM_INH
 #define ROOM_WATCH_ROOM    "/single/watch_room"
 #define ROOM_SUNKEN_COURT  "/single/sunken_court"
 #define ROOM_GRANARY_LOFT  "/single/granary_loft"

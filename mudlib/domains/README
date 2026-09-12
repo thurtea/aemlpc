@@ -1,0 +1,21 @@
+Domain layout for the Library world kit.
+
+Each domain is a folder under /domains/<name>/ with three subfolders:
+
+  items/   portable objects from the wand `create` verb
+  rooms/   rooms from the wand `room` verb
+  npcs/    living NPCs from the wand `npc` verb
+
+Set the active domain with the wand: `domain <name>`. `create`,
+`room`, `npc`, `edit`, and `exit` then write under that domain.
+`domain` with no argument reports the current domain. `domain none`
+clears it.
+
+With no domain set, those verbs still write the legacy path
+/data/created/<name>.c.
+
+Inheritables used by generated files are named in worldkit.h
+(ITEM_INH, ROOM_INH, NPC_INH).
+
+domains/example/ is an empty stub so the tree is present at boot.
+It holds no content.

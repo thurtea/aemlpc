@@ -1,5 +1,17 @@
 # STATUS
 
+**2026-09-12: Track G G4 finished. `worldkit.h` names ITEM_INH /
+ROOM_INH / NPC_INH plus CREATED_DIR and DOMAINS_DIR. Domain state
+lives on the wand: `domain <name>` selects, `domain` reports,
+`domain none` clears. create / room / npc / edit write under
+`/domains/<name>/items|rooms|npcs/` when set, else `/data/created/`.
+Bare `exit` dests resolve into the active rooms dir. Empty
+`domains/example/` stub so the tree boots; rifts stays empty of
+content (G6). Tests: both create target paths. Suite green (927,
+0 fail). Live-verified: no domain writes `/data/created/`,
+`domain rifts` then `create sword` writes
+`/domains/rifts/items/sword.c`. git add only. G5+ not started.**
+
 **2026-09-12: Track G G3 finished. `/inherit/room`: `set_short` /
 `set_long`, `set_light` / `query_light`, `add_item` / `query_items`.
 Wand `room` writes those setters. `look` prints Exits and Contents;

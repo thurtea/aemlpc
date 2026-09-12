@@ -36,8 +36,9 @@ main(string arg)
         "  create <name>  build something new\n"
         "  npc <name>     create a living NPC in this room\n"
         "  edit <id> <text> rewrite a created object's description\n"
-        "  room <name>    write a new room file under /data/created/\n"
+        "  room <name>    write a new room (domain or /data/created/)\n"
         "  exit <dir> <path> link this room to another\n"
+        "  domain [name]  set or show the active domain (none clears)\n"
     );
     return 1;
 }

@@ -1,7 +1,9 @@
 // mudlib:  library
 // file:    /clone/wand_of_creation.c
 // purpose: the wand of creation. A held, wizard-gated in-game builder.
-//          clone/purge/create/edit/room/exit/npc. Real efuns only.
+//          clone/purge/create/edit/room/exit/npc/domain. Real efuns only.
+
+#include <worldkit.h>
 
 // "->" call_other never falls back to the move_object() efun, so a
 // placed object must define its own move(); this file and the create
@@ -11,6 +13,7 @@ int move(mixed dest) {
 }
 
 string *wand_ids;
+string active_domain;
 
 void create() {
     wand_ids = ({ "wand", "wand of creation", "creation wand" });
@@ -31,7 +34,11 @@ string long() {
         "build new ones, and link rooms together. Usable only while held.\n"
         "Commands: clone <path>, purge <id>, create <name>,\n"
         "          edit <id> <text>, room <name>, exit <dir> <path>,\n"
-        "          npc <name>\n";
+        "          npc <name>, domain [name]\n";
+}
+
+string query_domain() {
+    return active_domain;
 }
 
 static int held() {
@@ -50,6 +57,49 @@ static int may_use() {
     return 1;
 }
 
+static int valid_domain_name(string name) {
+    if (!name || !sizeof(name)) {
+        return 0;
+    }
+    if (strsrch(name, "/") != -1) {
+        return 0;
+    }
+    return 1;
+}
+
+static void ensure_domain_dirs(string name) {
+    mkdir(DOMAINS_DIR);
+    mkdir(DOMAINS_DIR + "/" + name);
+    mkdir(DOMAINS_DIR + "/" + name + "/" + DOMAIN_ITEMS);
+    mkdir(DOMAINS_DIR + "/" + name + "/" + DOMAIN_ROOMS);
+    mkdir(DOMAINS_DIR + "/" + name + "/" + DOMAIN_NPCS);
+}
+
+// Domain set: /domains/<name>/<kind>/. Otherwise the legacy created dir.
+static string write_dir(string kind) {
+    if (active_domain && sizeof(active_domain)) {
+        ensure_domain_dirs(active_domain);
+        return DOMAINS_DIR + "/" + active_domain + "/" + kind;
+    }
+    return CREATED_DIR;
+}
+
+static string write_path(string fname, string kind) {
+    return write_dir(kind) + "/" + fname;
+}
+
+static string created_source_path(object ob) {
+    string leaf, dom, kind;
+
+    if (sscanf(file_name(ob), CREATED_DIR "/%s", leaf) == 1) {
+        return CREATED_DIR "/" + leaf;
+    }
+    if (sscanf(file_name(ob), DOMAINS_DIR "/%s/%s/%s", dom, kind, leaf) == 3) {
+        return DOMAINS_DIR "/" + dom + "/" + kind + "/" + leaf;
+    }
+    return 0;
+}
+
 // Registered unconditionally: colocation with a player is the one moment
 // this driver calls init() on a plain item. held() is re-checked per
 // command instead.
@@ -61,6 +111,35 @@ void init() {
     add_action("cmd_room", "room");
     add_action("cmd_exit", "exit");
     add_action("cmd_npc", "npc");
+    add_action("cmd_domain", "domain");
+}
+
+int cmd_domain(string str) {
+    if (!may_use()) {
+        return 1;
+    }
+    if (!str || !sizeof(str)) {
+        if (active_domain && sizeof(active_domain)) {
+            write("Active domain: " + active_domain + ".\n");
+        } else {
+            write("No domain set. Writes go to " + CREATED_DIR + ".\n");
+        }
+        return 1;
+    }
+    if (str == "none") {
+        active_domain = 0;
+        write("Domain cleared. Writes go to " + CREATED_DIR + ".\n");
+        return 1;
+    }
+    str = replace_string(str, " ", "_");
+    if (!valid_domain_name(str)) {
+        write("Not a valid domain name.\n");
+        return 1;
+    }
+    active_domain = str;
+    ensure_domain_dirs(str);
+    write("Active domain: " + str + ".\n");
+    return 1;
 }
 
 // clone <path>: living things go to the room, everything else prefers
@@ -128,8 +207,7 @@ int cmd_purge(string str) {
     return 1;
 }
 
-// create <name>: write raw LPC to /data/created/<name>.c, then
-// load/clone/place it. Same write-then-load idiom as command/eval.c.
+// create <name>: write raw LPC, then load/clone/place it.
 int cmd_create(string str) {
     string fname, path, body;
     object ob, room;
@@ -142,15 +220,13 @@ int cmd_create(string str) {
         return 1;
     }
     fname = replace_string(str, " ", "_");
-    path = "/data/created/" + fname;
+    path = write_path(fname, DOMAIN_ITEMS);
 
     if (file_size(path + ".c") != -1) rm(path + ".c");
     if (find_object(path)) destruct(find_object(path));
 
-    // Generated files inherit /inherit/item (weight + value over
-    // /inherit/object); both default to 1, no verb tunes them yet.
     body = "// made by the wand of creation\n"
-        "inherit \"/inherit/item\";\n"
+        "inherit \"" ITEM_INH "\";\n"
         "void create() {\n"
         "    set_short(\"" + str + "\");\n"
         "    set_long(\"" + str + ", freshly made by the wand of creation.\\n\");\n"
@@ -184,7 +260,7 @@ int cmd_create(string str) {
 }
 
 int cmd_edit(string str) {
-    string id, rest, leaf, path, body, old_short;
+    string id, rest, path, body, old_short;
     object ob;
 
     if (!may_use()) {
@@ -206,19 +282,17 @@ int cmd_edit(string str) {
         write("Cannot edit living objects.\n");
         return 1;
     }
-    if (sscanf(file_name(ob), "/data/created/%s", leaf) != 1) {
+    path = created_source_path(ob);
+    if (!path) {
         write("Only created objects can be edited.\n");
         return 1;
     }
-    path = "/data/created/" + leaf;
     old_short = ob->short();
     if (!old_short || old_short == "") {
         old_short = id;
     }
-    // Keep the item skeleton so edit does not downgrade it to a bare
-    // object; weight/value reset to the create default.
     body = "// made by the wand of creation\n"
-        "inherit \"/inherit/item\";\n"
+        "inherit \"" ITEM_INH "\";\n"
         "void create() {\n"
         "    set_short(\"" + old_short + "\");\n"
         "    set_long(\"" + rest + "\\n\");\n"
@@ -244,9 +318,9 @@ int cmd_room(string str) {
         return 1;
     }
     fname = replace_string(str, " ", "_");
-    path = "/data/created/" + fname;
+    path = write_path(fname, DOMAIN_ROOMS);
     body = "// room made by the wand of creation\n"
-        "inherit \"/inherit/room\";\n"
+        "inherit \"" ROOM_INH "\";\n"
         "void create() {\n"
         "    set_exits(([]));\n"
         "    set_short(\"" + str + "\");\n"
@@ -283,6 +357,9 @@ int cmd_exit(string str) {
         write("You are nowhere.\n");
         return 1;
     }
+    if (dest[0..0] != "/") {
+        dest = write_dir(DOMAIN_ROOMS) + "/" + dest;
+    }
     m = room->query_exits();
     if (!m) {
         m = ([]);
@@ -306,13 +383,13 @@ int cmd_npc(string str) {
         return 1;
     }
     fname = replace_string(str, " ", "_");
-    path = "/data/created/" + fname;
+    path = write_path(fname, DOMAIN_NPCS);
 
     if (file_size(path + ".c") != -1) rm(path + ".c");
     if (find_object(path)) destruct(find_object(path));
 
     body = "// made by the wand of creation\n"
-        "inherit \"/inherit/npc\";\n"
+        "inherit \"" NPC_INH "\";\n"
         "void create() {\n"
         "    npc::create();\n"
         "    set_name(\"" + str + "\");\n"
