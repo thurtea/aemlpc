@@ -24867,6 +24867,14 @@ static void testInheritItemAddsWeightAndValueOverInheritObject() {
     aemlpc::Value v = harness.vm.callFunction(widget, "query_value", {});
     assert(std::holds_alternative<int64_t>(v.data));
     assert(std::get<int64_t>(v.data) == 42);
+    aemlpc::Value pg = harness.vm.callFunction(widget, "query_prevent_get", {});
+    assert(std::holds_alternative<int64_t>(pg.data));
+    assert(std::get<int64_t>(pg.data) == 0);
+    harness.vm.callFunction(widget, "set_prevent_get",
+        {aemlpc::Value(static_cast<int64_t>(1))});
+    pg = harness.vm.callFunction(widget, "query_prevent_get", {});
+    assert(std::holds_alternative<int64_t>(pg.data));
+    assert(std::get<int64_t>(pg.data) == 1);
 
     // /inherit/object behaviour underneath is unchanged: short/long/id
     // still resolve through the two-level chain.
@@ -24890,6 +24898,9 @@ static void testInheritItemAddsWeightAndValueOverInheritObject() {
     aemlpc::Value bw = harness.vm.callFunction(blank, "query_weight", {});
     assert(std::holds_alternative<int64_t>(bw.data));
     assert(std::get<int64_t>(bw.data) == 0);
+    aemlpc::Value bpg = harness.vm.callFunction(blank, "query_prevent_get", {});
+    assert(std::holds_alternative<int64_t>(bpg.data));
+    assert(std::get<int64_t>(bpg.data) == 0);
 
     std::cout << "testInheritItemAddsWeightAndValueOverInheritObject OK\n";
 }
@@ -24927,6 +24938,7 @@ static void testLookCommandShowsRoomThenPresentObject() {
     harness.vm.callFunction(look, "main", {aemlpc::Value(std::string(""))});
     std::string out = readAvailable(fds[1]);
     assert(out.find("A stone hall.") != std::string::npos);
+    assert(out.find("a rock") != std::string::npos);
 
     harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("rock"))});
     out = readAvailable(fds[1]);
@@ -24936,6 +24948,252 @@ static void testLookCommandShowsRoomThenPresentObject() {
     aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testLookCommandShowsRoomThenPresentObject OK\n";
+}
+
+static void testTakeDropAndGetAliasHonourPreventGet() {
+    ObjectVarHarness harness;
+    harness.writeFile("/command.h", "#define COMMAND_PREFIX \"/command/\"\n");
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/command").c_str(), 0755);
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/command/take.c", readMudlibFile("/command/take.c"));
+    harness.writeFile("/command/get.c", readMudlibFile("/command/get.c"));
+    harness.writeFile("/command/drop.c", readMudlibFile("/command/drop.c"));
+    harness.writeFile("/room.c", "void create() {}\n");
+    harness.writeFile("/player.c", "void create() { enable_commands(); }\n");
+    harness.writeFile("/pebble.c",
+        "inherit \"/inherit/item\";\n"
+        "void create() {\n"
+        "    set_short(\"a pebble\");\n"
+        "    set_long(\"A small pebble.\\n\");\n"
+        "    set_ids(({ \"pebble\" }));\n"
+        "    set_weight(1);\n"
+        "    set_value(1);\n"
+        "}\n");
+
+    auto room = harness.objects.cloneObject("/room");
+    auto player = harness.objects.cloneObject("/player");
+    auto pebble = harness.objects.cloneObject("/pebble");
+    auto take = harness.objects.cloneObject("/command/take");
+    auto get = harness.objects.cloneObject("/command/get");
+    auto drop = harness.objects.cloneObject("/command/drop");
+    assert(room && player && pebble && take && get && drop);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, room);
+    harness.vm.moveObject(pebble, room);
+    harness.vm.pushCommandGiver(player);
+    readAvailable(fds[1]);
+
+    harness.vm.callFunction(take, "main", {aemlpc::Value(std::string("pebble"))});
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("You take a pebble.") != std::string::npos);
+    assert(pebble->environment().lock() == player);
+
+    harness.vm.callFunction(drop, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You drop a pebble.") != std::string::npos);
+    assert(pebble->environment().lock() == room);
+
+    harness.vm.callFunction(get, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You take a pebble.") != std::string::npos);
+    assert(pebble->environment().lock() == player);
+
+    harness.vm.callFunction(drop, "main", {aemlpc::Value(std::string("pebble"))});
+    readAvailable(fds[1]);
+    assert(pebble->environment().lock() == room);
+
+    harness.vm.callFunction(pebble, "set_prevent_get",
+        {aemlpc::Value(static_cast<int64_t>(1))});
+    harness.vm.callFunction(take, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You cannot take that.") != std::string::npos);
+    assert(pebble->environment().lock() == room);
+
+    harness.vm.callFunction(get, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You cannot take that.") != std::string::npos);
+    assert(pebble->environment().lock() == room);
+
+    harness.vm.callFunction(take, "main", {aemlpc::Value(std::string("nope"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You do not see that here.") != std::string::npos);
+
+    harness.vm.callFunction(drop, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You are not carrying that.") != std::string::npos);
+    assert(pebble->environment().lock() == room);
+
+    harness.vm.popCommandGiver();
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testTakeDropAndGetAliasHonourPreventGet OK\n";
+}
+
+static void testInheritNpcIsLivingVisibleAndWandersOnce() {
+    ObjectVarHarness harness;
+    harness.writeFile("/command.h", "");
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/room.c", readMudlibFile("/inherit/room.c"));
+    harness.writeFile("/inherit/npc.c", readMudlibFile("/inherit/npc.c"));
+    harness.writeFile("/look.c", readMudlibFile("/command/look.c"));
+    harness.writeFile("/room_a.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() { set_exits(([\"east\": \"/room_b\"])); }\n"
+        "string short() { return \"room a\"; }\n"
+        "string long() { return \"Room A.\\n\"; }\n");
+    harness.writeFile("/room_b.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() { set_exits(([\"west\": \"/room_a\"])); }\n"
+        "string short() { return \"room b\"; }\n"
+        "string long() { return \"Room B.\\n\"; }\n");
+    harness.writeFile("/watchman.c",
+        "inherit \"/inherit/npc\";\n"
+        "void create() {\n"
+        "    npc::create();\n"
+        "    set_name(\"watchman\");\n"
+        "    set_short(\"a watchman\");\n"
+        "    set_long(\"A watchman.\\n\");\n"
+        "    set_ids(({ \"watchman\" }));\n"
+        "    set_move_zone(({ \"/room_a\", \"/room_b\" }));\n"
+        "}\n");
+    harness.writeFile("/pebble.c",
+        "inherit \"/inherit/item\";\n"
+        "void create() {\n"
+        "    set_short(\"a pebble\");\n"
+        "    set_ids(({ \"pebble\" }));\n"
+        "}\n");
+    harness.writeFile("/player.c",
+        "void create() { enable_commands(); }\n"
+        "string query_name() { return \"tester\"; }\n"
+        "void shout_hello() { say(\"tester says: hello\\n\"); }\n");
+    harness.writeFile("/probe.c",
+        "int is_living(object ob) { return living(ob); }\n");
+
+    auto roomA = harness.objects.loadObject("/room_a");
+    auto roomB = harness.objects.loadObject("/room_b");
+    auto npc = harness.objects.cloneObject("/watchman");
+    auto pebble = harness.objects.cloneObject("/pebble");
+    auto player = harness.objects.cloneObject("/player");
+    auto look = harness.objects.cloneObject("/look");
+    auto probe = harness.objects.cloneObject("/probe");
+    assert(roomA && roomB && npc && pebble && player && look && probe);
+
+    aemlpc::Value liv = harness.vm.callFunction(probe, "is_living",
+        {aemlpc::Value(npc)});
+    assert(std::holds_alternative<int64_t>(liv.data));
+    assert(std::get<int64_t>(liv.data) == 1);
+    liv = harness.vm.callFunction(probe, "is_living", {aemlpc::Value(pebble)});
+    assert(std::holds_alternative<int64_t>(liv.data));
+    assert(std::get<int64_t>(liv.data) == 0);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, roomA);
+    harness.vm.moveObject(npc, roomA);
+    harness.vm.moveObject(pebble, roomA);
+    harness.vm.pushCommandGiver(player);
+    readAvailable(fds[1]);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string(""))});
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("a watchman") != std::string::npos);
+
+    harness.vm.callFunction(player, "shout_hello", {});
+    aemlpc::Value heard = harness.vm.callFunction(npc, "query_last_heard", {});
+    assert(std::holds_alternative<std::string>(heard.data));
+    assert(std::get<std::string>(heard.data).find("hello") != std::string::npos);
+
+    harness.vm.callFunction(npc, "heart_beat", {});
+    assert(npc->environment().lock() == roomB);
+
+    harness.vm.popCommandGiver();
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testInheritNpcIsLivingVisibleAndWandersOnce OK\n";
+}
+
+static void testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt() {
+    std::string wandSrc = readMudlibFile("/clone/wand_of_creation.c");
+    assert(!wandSrc.empty());
+
+    ObjectVarHarness harness;
+    harness.writeFile("/wand_of_creation.c", wandSrc);
+    harness.writeFile("/room.c", "void create() {}\n");
+    harness.writeFile("/player.c",
+        "void create() { enable_commands(); }\n"
+        "void become_wizard() { enable_wizard(); }\n");
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/npc.c", readMudlibFile("/inherit/npc.c"));
+    ::mkdir((harness.tempDir + "/data").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/data/created").c_str(), 0755);
+    harness.writeFile("/probe.c",
+        "mixed check(string name, object where) { return present(name, where); }\n"
+        "int is_living(object ob) { return living(ob); }\n");
+
+    auto room = harness.objects.cloneObject("/room");
+    auto player = harness.objects.cloneObject("/player");
+    auto wand = harness.objects.cloneObject("/wand_of_creation");
+    auto probe = harness.objects.cloneObject("/probe");
+    assert(room && player && wand && probe);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    harness.vm.callFunction(player, "become_wizard", {});
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, room);
+    harness.vm.moveObject(wand, room);
+    harness.vm.moveObject(wand, player);
+    readAvailable(fds[1]);
+
+    assert(harness.vm.dispatchCommand(player, "npc watchman"));
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("NPC created and placed here: watchman") != std::string::npos);
+
+    aemlpc::Value presentResult = harness.vm.callFunction(probe, "check",
+        {aemlpc::Value(std::string("watchman")), aemlpc::Value(room)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(presentResult.data));
+    auto watchman = std::get<std::shared_ptr<aemlpc::LpcObject>>(presentResult.data);
+    assert(watchman && !watchman->isDestructed());
+    aemlpc::Value liv = harness.vm.callFunction(probe, "is_living",
+        {aemlpc::Value(watchman)});
+    assert(std::holds_alternative<int64_t>(liv.data));
+    assert(std::get<int64_t>(liv.data) == 1);
+
+    assert(harness.vm.dispatchCommand(player, "purge watchman"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Cannot purge living objects.") != std::string::npos);
+    assert(!watchman->isDestructed());
+
+    assert(harness.vm.dispatchCommand(player, "create gizmo"));
+    out = readAvailable(fds[1]);
+    assert(out.find("Created and placed here: gizmo") != std::string::npos);
+    aemlpc::Value gizmoV = harness.vm.callFunction(probe, "check",
+        {aemlpc::Value(std::string("gizmo")), aemlpc::Value(room)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(gizmoV.data));
+    auto gizmo = std::get<std::shared_ptr<aemlpc::LpcObject>>(gizmoV.data);
+    liv = harness.vm.callFunction(probe, "is_living", {aemlpc::Value(gizmo)});
+    assert(std::holds_alternative<int64_t>(liv.data));
+    assert(std::get<int64_t>(liv.data) == 0);
+
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt OK\n";
 }
 
 static void testWandOfCreationEditRoomAndExit() {
@@ -25002,9 +25260,119 @@ static void testWandOfCreationEditRoomAndExit() {
     }
     assert(foundNorth);
 
+    auto hall = harness.objects.loadObject("/data/created/hall");
+    assert(hall);
+    aemlpc::Value hallShort = harness.vm.callFunction(hall, "short", {});
+    assert(std::holds_alternative<std::string>(hallShort.data));
+    assert(std::get<std::string>(hallShort.data) == "hall");
+    aemlpc::Value hallLight = harness.vm.callFunction(hall, "query_light", {});
+    assert(std::holds_alternative<int64_t>(hallLight.data));
+    assert(std::get<int64_t>(hallLight.data) == 1);
+
     aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testWandOfCreationEditRoomAndExit OK\n";
+}
+
+static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
+    ObjectVarHarness harness;
+    harness.writeFile("/command.h", "#define COMMAND_PREFIX \"/command/\"\n");
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/command").c_str(), 0755);
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/room.c", readMudlibFile("/inherit/room.c"));
+    harness.writeFile("/inherit/npc.c", readMudlibFile("/inherit/npc.c"));
+    harness.writeFile("/command/look.c", readMudlibFile("/command/look.c"));
+    harness.writeFile("/command/examine.c", readMudlibFile("/command/examine.c"));
+    harness.writeFile("/hall.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() {\n"
+        "    set_short(\"a hall\");\n"
+        "    set_long(\"A stone hall.\\n\");\n"
+        "    set_light(1);\n"
+        "    set_exits(([\"east\": \"/other\"]));\n"
+        "    add_item(\"hearth\", \"A cold hearth.\\n\");\n"
+        "}\n");
+    harness.writeFile("/other.c",
+        "inherit \"/inherit/room\";\n"
+        "void create() { set_exits(([\"west\": \"/hall\"])); }\n");
+    harness.writeFile("/pebble.c",
+        "inherit \"/inherit/item\";\n"
+        "void create() {\n"
+        "    set_short(\"a pebble\");\n"
+        "    set_long(\"A small pebble.\\n\");\n"
+        "    set_ids(({ \"pebble\" }));\n"
+        "}\n");
+    harness.writeFile("/guard.c",
+        "inherit \"/inherit/npc\";\n"
+        "void create() {\n"
+        "    npc::create();\n"
+        "    set_name(\"guard\");\n"
+        "    set_short(\"a guard\");\n"
+        "    set_ids(({ \"guard\" }));\n"
+        "}\n");
+    harness.writeFile("/player.c", "void create() { enable_commands(); }\n");
+    harness.writeFile("/blank.c", "inherit \"/inherit/room\";\n");
+
+    auto hall = harness.objects.loadObject("/hall");
+    auto pebble = harness.objects.cloneObject("/pebble");
+    auto guard = harness.objects.cloneObject("/guard");
+    auto player = harness.objects.cloneObject("/player");
+    auto look = harness.objects.cloneObject("/command/look");
+    auto examine = harness.objects.cloneObject("/command/examine");
+    auto blank = harness.objects.cloneObject("/blank");
+    assert(hall && pebble && guard && player && look && examine && blank);
+
+    aemlpc::Value light = harness.vm.callFunction(hall, "query_light", {});
+    assert(std::holds_alternative<int64_t>(light.data));
+    assert(std::get<int64_t>(light.data) == 1);
+    aemlpc::Value exitsDesc = harness.vm.callFunction(hall, "exits_desc", {});
+    assert(std::holds_alternative<std::string>(exitsDesc.data));
+    assert(std::get<std::string>(exitsDesc.data) == "east");
+    aemlpc::Value blankLight = harness.vm.callFunction(blank, "query_light", {});
+    assert(std::holds_alternative<int64_t>(blankLight.data));
+    assert(std::get<int64_t>(blankLight.data) == 0);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, hall);
+    harness.vm.moveObject(pebble, hall);
+    harness.vm.moveObject(guard, hall);
+    harness.vm.pushCommandGiver(player);
+    readAvailable(fds[1]);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string(""))});
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("A stone hall.") != std::string::npos);
+    assert(out.find("Exits: east.") != std::string::npos);
+    assert(out.find("Contents:") != std::string::npos);
+    assert(out.find("a pebble") != std::string::npos);
+    assert(out.find("a guard") != std::string::npos);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("hearth"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("A cold hearth.") != std::string::npos);
+
+    harness.vm.callFunction(examine, "main", {aemlpc::Value(std::string("hearth"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("A cold hearth.") != std::string::npos);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("pebble"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("A small pebble.") != std::string::npos);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("nope"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You do not see that here.") != std::string::npos);
+
+    harness.vm.popCommandGiver();
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testRoomLookShowsLongExitsContentsAndSceneryExamine OK\n";
 }
 
 // ROADMAP row 0.15: ObjectManager::compile()'s programCache_ used to
@@ -31153,7 +31521,11 @@ int main() {
     testWandOfCreationCreateWritesCompilesAndPlacesARealNewObject();
     testInheritItemAddsWeightAndValueOverInheritObject();
     testLookCommandShowsRoomThenPresentObject();
+    testTakeDropAndGetAliasHonourPreventGet();
+    testInheritNpcIsLivingVisibleAndWandersOnce();
+    testWandNpcVerbPlacesALivingNpcAndPurgeRefusesIt();
     testWandOfCreationEditRoomAndExit();
+    testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();
     testLoadObjectReusesCachedProgramWithoutRecompilingWhenSourceIsUnchanged();

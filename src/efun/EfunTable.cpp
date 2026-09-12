@@ -11735,7 +11735,14 @@ void registerCoreEfuns() {
         };
         auto sendTo = [&](const std::shared_ptr<LpcObject>& ob) {
             if (!ob || isAvoided(ob)) return;
-            if (Connection* conn = InteractiveRegistry::find(ob)) deliverToConnection(vm, conn, text);
+            if (Connection* conn = InteractiveRegistry::find(ob)) {
+                deliverToConnection(vm, conn, text);
+                return;
+            }
+            // Non-interactive livings get catch_tell, same as tell_object.
+            if (ob->commandsEnabled()) {
+                vm.callFunction(ob, "catch_tell", {Value(text)});
+            }
         };
 
         auto origin = resolveCommandGiver(vm);

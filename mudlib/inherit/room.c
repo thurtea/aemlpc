@@ -18,6 +18,53 @@
 // BASE's own unrelated living/inventory conventions.
 
 private mapping room_exits;
+private string room_short;
+private string room_long;
+private int room_light;
+private mapping room_items;
+
+void set_short(string s) {
+    room_short = s;
+}
+
+void set_long(string s) {
+    room_long = s;
+}
+
+string short() {
+    return room_short;
+}
+
+string long() {
+    return room_long;
+}
+
+string query_short() {
+    return room_short;
+}
+
+string query_long() {
+    return room_long;
+}
+
+void set_light(int n) {
+    room_light = n;
+}
+
+int query_light() {
+    return room_light;
+}
+
+void add_item(string id, string desc) {
+    if (!room_items) {
+        room_items = ([]);
+    }
+    room_items[id] = desc;
+}
+
+mapping query_items() {
+    return room_items;
+}
 
 void set_exits(mapping m) {
     room_exits = m;

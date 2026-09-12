@@ -23,7 +23,7 @@ long()
         "A squat stone room with a cold hearth and a dusty worktable. "
         "A wand of creation rests on the table. A stair leads north to "
         "the watch room. An opening in the east wall leads to the "
-        "sunken court. Exits: " + exits_desc() + ".\n"
+        "sunken court.\n"
         "Type 'help' for the full list of runnable commands.\n";
 }
 
@@ -41,7 +41,7 @@ init()
     object wand;
 
     player = this_player();
-    if (!player) {
+    if (!player || !interactive(player)) {
         return;
     }
 

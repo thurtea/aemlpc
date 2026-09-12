@@ -1,7 +1,7 @@
 // mudlib:  library
 // file:    /clone/wand_of_creation.c
 // purpose: the wand of creation. A held, wizard-gated in-game builder.
-//          clone/purge/create/edit/room/exit. Real efuns only.
+//          clone/purge/create/edit/room/exit/npc. Real efuns only.
 
 // "->" call_other never falls back to the move_object() efun, so a
 // placed object must define its own move(); this file and the create
@@ -30,7 +30,8 @@ string long() {
         "wielder clone existing objects, purge unwanted ones, edit and\n"
         "build new ones, and link rooms together. Usable only while held.\n"
         "Commands: clone <path>, purge <id>, create <name>,\n"
-        "          edit <id> <text>, room <name>, exit <dir> <path>\n";
+        "          edit <id> <text>, room <name>, exit <dir> <path>,\n"
+        "          npc <name>\n";
 }
 
 static int held() {
@@ -59,6 +60,7 @@ void init() {
     add_action("cmd_edit", "edit");
     add_action("cmd_room", "room");
     add_action("cmd_exit", "exit");
+    add_action("cmd_npc", "npc");
 }
 
 // clone <path>: living things go to the room, everything else prefers
@@ -200,6 +202,10 @@ int cmd_edit(string str) {
         write("Not here: " + id + "\n");
         return 1;
     }
+    if (living(ob)) {
+        write("Cannot edit living objects.\n");
+        return 1;
+    }
     if (sscanf(file_name(ob), "/data/created/%s", leaf) != 1) {
         write("Only created objects can be edited.\n");
         return 1;
@@ -243,9 +249,10 @@ int cmd_room(string str) {
         "inherit \"/inherit/room\";\n"
         "void create() {\n"
         "    set_exits(([]));\n"
-        "}\n"
-        "string short() { return \"" + str + "\"; }\n"
-        "string long() { return \"" + str + ".\\n\"; }\n";
+        "    set_short(\"" + str + "\");\n"
+        "    set_long(\"" + str + ".\\n\");\n"
+        "    set_light(1);\n"
+        "}\n";
     write_file(path + ".c", body, 1);
     if (find_object(path)) {
         destruct(find_object(path));
@@ -284,5 +291,54 @@ int cmd_exit(string str) {
     room->set_exits(m);
     room->init();
     write("Exit " + dir + " now leads to " + dest + ".\n");
+    return 1;
+}
+
+int cmd_npc(string str) {
+    string fname, path, body;
+    object ob, room;
+
+    if (!may_use()) {
+        return 1;
+    }
+    if (!str || !sizeof(str)) {
+        write("Create which NPC? (usage: npc <name>)\n");
+        return 1;
+    }
+    fname = replace_string(str, " ", "_");
+    path = "/data/created/" + fname;
+
+    if (file_size(path + ".c") != -1) rm(path + ".c");
+    if (find_object(path)) destruct(find_object(path));
+
+    body = "// made by the wand of creation\n"
+        "inherit \"/inherit/npc\";\n"
+        "void create() {\n"
+        "    npc::create();\n"
+        "    set_name(\"" + str + "\");\n"
+        "    set_short(\"" + str + "\");\n"
+        "    set_long(\"" + str + ", a newly made NPC.\\n\");\n"
+        "    set_ids(({ \"" + str + "\" }));\n"
+        "}\n";
+    write_file(path + ".c", body, 1);
+
+    ob = load_object(path);
+    if (!ob) {
+        write("NPC compile failed: " + path + ".c\n");
+        return 1;
+    }
+    ob = clone_object(path);
+    if (!ob) {
+        write("NPC clone failed: " + path + ".c\n");
+        return 1;
+    }
+
+    room = environment(this_player());
+    if (room && !catch(ob->move(room))) {
+        write("NPC created and placed here: " + str + "\n");
+    } else {
+        write("NPC created but could not be placed; destructing it.\n");
+        destruct(ob);
+    }
     return 1;
 }

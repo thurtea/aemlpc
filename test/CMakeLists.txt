@@ -19,3 +19,15 @@ target_link_libraries(aemlpc_tests
         core config compiler vm object efun apply dialect net proto scheduler persist
 )
 add_test(NAME aemlpc_tests COMMAND aemlpc_tests)
+
+add_executable(object_manager_tests
+    test_object_manager.cpp
+)
+target_include_directories(object_manager_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(object_manager_tests
+    PRIVATE
+        "-Wl,--start-group"
+        core config compiler vm object efun apply dialect net proto scheduler persist
+        "-Wl,--end-group"
+)
+add_test(NAME object_manager_tests COMMAND object_manager_tests)

@@ -90,9 +90,9 @@ touched. Never stall TLS or the wand for a cleanup pass.
 Each source directory carries an `instruct.md` that owns the detailed task
 list for that subsystem. This file is the master sequencing reference.
 
-### Track G breakdown (scoped 2026-09-06, not started)
+### Track G breakdown (scoped 2026-09-06; G1-G3 done 2026-09-12)
 
-Scoping pass only. No world-kit code is written yet. This turns the
+G1, G2, and G3 landed 2026-09-12. G4+ not started. This turns the
 prose "world kit next" direction (item / room / NPC inheritables, domain
 folders, `save_object` persistence, then Rifts content) into ordered
 sub-items with a checkable definition of done each, matching the rigor
@@ -117,7 +117,7 @@ Library (`./build/amlp etc/driver.cfg`) has been driven through the
 new behavior live, the same gate every landed row in this project has
 had.
 
-- **G1. Item inheritable + `get` / `drop`.** `mudlib/inherit/item.c`
+- **G1. Item inheritable + `get` / `drop`.** [x] 2026-09-12. `mudlib/inherit/item.c`
   inherits `/inherit/object` and adds the state a placed, portable item
   needs: `set_weight` / `query_weight`, `set_value` / `query_value`, a
   takeable flag with `set_prevent_get` / `query_prevent_get`. New
@@ -131,7 +131,7 @@ had.
   and assert each of those paths; the existing `/inherit/object`
   behaviour and its tests are unchanged.
 
-- **G2. NPC inheritable.** `mudlib/inherit/npc.c` inherits
+- **G2. NPC inheritable.** [x] 2026-09-12. `mudlib/inherit/npc.c` inherits
   `/inherit/object`, is recognised by the driver `living` apply (sets
   the living flag, enables `heart_beat`), and carries the minimum an
   NPC needs to exist in a room: `set_name` / `query_name`, a short
@@ -146,7 +146,7 @@ had.
   (`purge` already refuses living objects); regression tests assert the
   living flag, the room-contents listing, and one wander step.
 
-- **G3. Room inheritable upgrade.** Grow `mudlib/inherit/room.c` from
+- **G3. Room inheritable upgrade.** [x] 2026-09-12. Grow `mudlib/inherit/room.c` from
   "exits only" to a world-kit room: `set_short` / `set_long` held on the
   inheritable itself (rooms today hand-roll `short()` / `long()`),
   `set_light` / `query_light`, a room-item registry (`add_item` /

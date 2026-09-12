@@ -29,7 +29,7 @@ long()
     return
         "A watch room above the gatehouse. Old Mabb is here, with a "
         "bedroll, a cookfire, and a pile of gear. A rope-and-plank "
-        "bridge leads east to the granary loft. Exits: " + exits_desc() + ".\n";
+        "bridge leads east to the granary loft.\n";
 }
 
 int
@@ -41,7 +41,7 @@ id(string arg)
 void
 init()
 {
-    if (this_player()) {
+    if (this_player() && interactive(this_player())) {
         write(long());
     }
     room::init();

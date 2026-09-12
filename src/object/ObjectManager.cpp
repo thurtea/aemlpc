@@ -39,6 +39,19 @@ struct PreprocessResult {
     std::string errorOutput;
 };
 
+std::string shellQuote(const std::string& s) {
+    std::string out = "'";
+    for (char c : s) {
+        if (c == '\'') {
+            out += "'\\''";
+        } else {
+            out += c;
+        }
+    }
+    out += "'";
+    return out;
+}
+
 // option_defs.c predefined-macro table, passed as -D flags because this
 // driver shells out to real cpp. Empty value = #ifdef feature flag.
 struct PredefinedMacro { const char* name; const char* value; };
@@ -107,8 +120,6 @@ constexpr PredefinedMacro kFluffosPredefinedMacros[] = {
 // MUD_NAME/__PORT__ come from Config, not this table.
 constexpr PredefinedMacro kFluffosRuntimePredefinedMacros[] = {
     {"MUDOS", ""},
-    // No spaces: popen() below is one unquoted shell command, so a
-    // space would word-split into extra nonexistent input filenames.
     {"__VERSION__", "\\\"2.9-ds2.08\\\""},
     {"__ARCH__", "\\\"Linux\\\""},
     {"__COMPILER__", "\\\"g++\\\""},
@@ -147,7 +158,7 @@ std::string buildPredefinedMacroFlags(const Config& config, const std::string& c
         flags << " -D" << macro.name << "=" << macro.value;
     }
     flags << " -D__PORT__=" << config.port();
-    flags << " -DMUD_NAME=\\\"" << config.mudName() << "\\\"";
+    flags << " " << shellQuote(std::string("-DMUD_NAME=\"") + config.mudName() + "\"");
 
     // lex.c start_new_file(): __FILE__ is the LPC path with ".c",
     // __DIR__ is that truncated after the last '/'. Forced -D so gcc's
@@ -542,12 +553,12 @@ PreprocessResult runPreprocessor(const std::string& sourcePath, const std::vecto
     // rewritten to a CWD-relative (mudlibRoot-prepended) path.
     // cc -E accepts -x c on both GNU and Apple clang. Apple's /usr/bin/cpp
     // treats the language argument as an input filename.
-    std::string cmd = "cc -E -I '.' -I '" + originalSourceDir + "'";
+    std::string cmd = "cc -E -I " + shellQuote(".") + " -I " + shellQuote(originalSourceDir);
     for (const auto& dir : includeDirs) {
-        cmd += " -I '" + dir + "'";
+        cmd += " -I " + shellQuote(dir);
     }
     cmd += buildPredefinedMacroFlags(config, compiledFilename) +
-           " -x c '" + sourcePath + "' 2>'" + errPath + "'";
+           " -x c " + shellQuote(sourcePath) + " 2>" + shellQuote(errPath);
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) {

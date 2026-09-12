@@ -1,5 +1,34 @@
 # STATUS
 
+**2026-09-12: Track G G3 finished. `/inherit/room`: `set_short` /
+`set_long`, `set_light` / `query_light`, `add_item` / `query_items`.
+Wand `room` writes those setters. `look` prints Exits and Contents;
+examine resolves scenery. Static rooms keep hand-rolled short/long.
+Test: long, exits, Contents (G1 item + G2 NPC), scenery examine.
+Suite green (926, 0 fail). Live-verified: four static rooms boot and
+navigate; rod room long, examine hearth, Contents lists a dropped item
+and an NPC, `exits_desc` still works. git add only. G4+ not started.**
+
+**2026-09-12: Track G G2 finished. `/inherit/npc`: living via
+`enable_commands()`, `set_name` / `query_name`, `set_move_zone` (array
+of room paths), `heart_beat` wander along in-zone exits, `catch_tell` /
+`receive_message`. Wand `npc <name>` writes `/data/created/<name>.c`.
+`look` lists room contents by short. Tiny driver change: `say()` calls
+`catch_tell` on non-interactive livings. Gatehouse wand hand-out and
+room entry text are interactive-only so NPCs do not take the wand.
+Tests: living flag, look listing, one wander step, item not living,
+purge refuses. Suite green (925, 0 fail). Live-verified: npc, look,
+living, purge, say, wander into a rod room. git add only. G3+ not started.**
+
+**2026-09-12: Track G G1 finished. `set_prevent_get` / `query_prevent_get`
+on `/inherit/item` (default 0). Player verb is `take`; `get` is a thin
+alias of the same handler; `drop` stays `drop`. Help/motd use take.
+Tests: accessors, take-then-drop, get alias, prevent_get refusal.
+Suite green (923, 0 fail). Live-verified: wand `create`, take, drop,
+get alias, `set_prevent_get(1)` refuses. git add only. G2+ not started.**
+
+**2026-09-11: scope clarified for the research phase. aemlpc is being pursued as a modern C++20 LPC mud driver that can replace MudOS, FluffOS, or LDMud for real mudlibs. DGD is comparison only and is not a replacement target. The current foundation is promising, but we need more boots against real mudlibs and more driver references before claiming the compatibility baseline is sufficient. Research notes now live in `research.md`.**
+
 **2026-09-10: aemlpc is the canonical live C++20 LPC driver tree. The names amlp and crysis are historical only. Copied from the crysis backup into `/home/thurtea/aemlpc` (headers under `include/aemlpc/`). `https://github.com/thurtea/aemlpc` is the live remote. Namespace, include prefix, and binary name are still `amlp`; rename is later work. No build or test run this turn.**
 
 **2026-09-07: two cleanups. (1) Removed invented Long Burn / Stonewick backstory from the mudlib. MOTD, rooms, and Old Mabb are plain functional text; no replacement lore. (2) CURSOR.md rule 2 now bans double hyphen as an em-dash stand-in; punctuation `--` across the tree rewritten as real grammar. Flags, decrement, and end-of-options left alone. Historical STATUS entries that named the 2026-08-23 reflavor stay as record. Build clean, suite green (922, 0 fail). git add only.**

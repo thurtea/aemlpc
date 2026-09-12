@@ -32,6 +32,7 @@
 #define BASE            "/inherit/base"
 #define STD_OBJECT      "/inherit/object"
 #define STD_ITEM        "/inherit/item"
+#define STD_NPC         "/inherit/npc"
 #define OVERRIDES_FILE  "/single/simul_efun"
 
 // 2x2 from START_LOC: watch room north, sunken court east, granary loft from either.

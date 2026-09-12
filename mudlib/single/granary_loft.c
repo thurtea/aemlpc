@@ -20,8 +20,7 @@ string
 long()
 {
     return
-        "A granary loft. The room smells of spoiled grain. Exits: "
-        + exits_desc() + ".\n";
+        "A granary loft. The room smells of spoiled grain.\n";
 }
 
 int
@@ -33,7 +32,7 @@ id(string arg)
 void
 init()
 {
-    if (this_player()) {
+    if (this_player() && interactive(this_player())) {
         write(long());
     }
     room::init();
