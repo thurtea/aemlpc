@@ -50,7 +50,7 @@ public:
     // object's variables(). Returns false only on failing to open path
     // for writing; throws LpcRuntimeError (matching serializeValue()'s
     // own established convention) for a value this format cannot
-    // represent, e.g. a width > 1 mapping or an unbound_lambda().
+    // represent, e.g. an unbound_lambda().
     bool dumpState(const std::string& path) const;
 
     // Restores from a file previously written by dumpState(). Returns

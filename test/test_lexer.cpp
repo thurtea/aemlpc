@@ -12655,41 +12655,28 @@ static void testRestoreObjectRestoresANulledObjectSlotAsRealIntegerZero() {
     std::cout << "testRestoreObjectRestoresANulledObjectSlotAsRealIntegerZero OK\n";
 }
 
-// ROADMAP.md row 1.9's own "Save/restore silent-truncation finding"
-// addendum (2026-08-21): a bounded stopgap, not full width-aware
-// serialization (still its own, separately-scoped, larger item on that
-// same row). save_object() on a width > 1 mapping (real LDMud
-// N-column mapping) now throws a clear, specific error instead of
-// silently writing only column 0 (see serializeValue()'s own Mapping
-// branch, EfunTable.cpp). The width-1 case above
-// (testSaveObjectRestoreObjectRoundTripsNestedMappingsAndArrays) already
-// covers, and continues to pass unchanged after this fix, proving zero
-// behavior change for the common (width-1) case; this test isolates the
-// new width > 1 error path specifically.
-static void testSaveObjectThrowsClearErrorForWidthGreaterThanOneMappingInsteadOfSilentlyTruncating() {
+// Width > 1 mappings save extra columns after ';' and restore them.
+static void testSaveObjectWidthGreaterThanOneMappingRoundTripsBothColumns() {
     ObjectVarHarness harness("dialect: ldmud\n");
     harness.writeFile("/save_width_probe.c",
         "mapping m;\n"
-        // Real LDMud width-2 mapping literal (the rune-wall.c shape,
-        // ROADMAP.md row 1.9's own real corpus citation): each key has
-        // two values, separated by ";".
         "void create() { m = ([\"weakness\": \"fire\"; 1]); }\n"
-        "int save() { return save_object(\"/probe_wide.o\"); }\n");
+        "void clear() { m = 0; }\n"
+        "int save() { return save_object(\"/probe_wide.o\"); }\n"
+        "int load() { return restore_object(\"/probe_wide.o\"); }\n"
+        "mixed col0() { return m[\"weakness\"]; }\n"
+        "mixed col1() { return m[\"weakness\", 1]; }\n");
     auto obj = harness.objects.cloneObject("/save_width_probe");
     assert(obj != nullptr);
 
-    bool threw = false;
-    try {
-        harness.vm.callFunction(obj, "save", {});
-    } catch (const aemlpc::LpcRuntimeError& e) {
-        threw = true;
-        std::string msg = e.what();
-        assert(msg.find("save_object") != std::string::npos);
-        assert(msg.find("width") != std::string::npos);
-    }
-    assert(threw);
+    aemlpc::Value saveResult = harness.vm.callFunction(obj, "save", {});
+    assert(std::get<int64_t>(saveResult.data) == 1);
+    harness.vm.callFunction(obj, "clear", {});
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "load", {}).data) == 1);
+    assert(std::get<std::string>(harness.vm.callFunction(obj, "col0", {}).data) == "fire");
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 1);
 
-    std::cout << "testSaveObjectThrowsClearErrorForWidthGreaterThanOneMappingInsteadOfSilentlyTruncating OK\n";
+    std::cout << "testSaveObjectWidthGreaterThanOneMappingRoundTripsBothColumns OK\n";
 }
 
 static void testSaveObjectRestoreObjectStillRoundTripsAWidthOneMappingAfterTheWidthCheck() {
@@ -12965,6 +12952,55 @@ static void testRestoreStateRejectsAFileWithoutTheMagicHeader() {
     assert(serializer.restoreState(path) == false);
 
     std::cout << "testRestoreStateRejectsAFileWithoutTheMagicHeader OK\n";
+}
+
+static void testDumpStateRestoreStateRoundTripsWidthGreaterThanOneMapping() {
+    const std::string roomSrc = "void init() {}\n";
+    const std::string wideSrc =
+        "mapping m;\n"
+        "void create() { m = ([\"weakness\": \"fire\"; 1]); }\n"
+        "void go(object dest) { move_object(dest); }\n"
+        "mixed col0() { return m[\"weakness\"]; }\n"
+        "mixed col1() { return m[\"weakness\", 1]; }\n";
+
+    ObjectVarHarness harness1("dialect: ldmud\n");
+    harness1.writeFile("/ds_wide_room.c", roomSrc);
+    harness1.writeFile("/ds_wide.c", wideSrc);
+    auto room = harness1.objects.cloneObject("/ds_wide_room");
+    auto obj = harness1.objects.cloneObject("/ds_wide");
+    assert(room != nullptr && obj != nullptr);
+    harness1.vm.callFunction(obj, "go", {aemlpc::Value(room)});
+
+    std::string dumpPath = harness1.tempDir + "/wide.dump";
+    aemlpc::StateSerializer dumper(harness1.objects);
+    assert(dumper.dumpState(dumpPath));
+
+    std::ifstream dumped(dumpPath);
+    std::ostringstream raw;
+    raw << dumped.rdbuf();
+    assert(raw.str().find("AMLPSTATE1\n") == 0);
+
+    ObjectVarHarness harness2("dialect: ldmud\n");
+    harness2.writeFile("/ds_wide_room.c", roomSrc);
+    harness2.writeFile("/ds_wide.c", wideSrc);
+    aemlpc::StateSerializer restorer(harness2.objects);
+    assert(restorer.restoreState(dumpPath));
+
+    std::shared_ptr<aemlpc::LpcObject> restoredRoom, restored;
+    for (auto& live : aemlpc::LiveObjectRegistry::all()) {
+        if (live == room || live == obj) continue;
+        if (live->filename() == "/ds_wide_room") restoredRoom = live;
+        else if (live->filename() == "/ds_wide") restored = live;
+    }
+    assert(restoredRoom != nullptr && restored != nullptr);
+
+    assert(std::get<std::string>(harness2.vm.callFunction(restored, "col0", {}).data) == "fire");
+    assert(std::get<int64_t>(harness2.vm.callFunction(restored, "col1", {}).data) == 1);
+
+    room->inventory().clear();
+    restoredRoom->inventory().clear();
+
+    std::cout << "testDumpStateRestoreStateRoundTripsWidthGreaterThanOneMapping OK\n";
 }
 
 // Confirms the efun wiring (dump_state()/restore_state(), EfunTable.cpp)
@@ -31499,13 +31535,14 @@ int main() {
     testUnguardedClosureRoundTripsThroughSecurityAndMasterShape();
     testSaveObjectRestoreObjectRoundTripsNestedMappingsAndArrays();
     testRestoreObjectRestoresANulledObjectSlotAsRealIntegerZero();
-    testSaveObjectThrowsClearErrorForWidthGreaterThanOneMappingInsteadOfSilentlyTruncating();
+    testSaveObjectWidthGreaterThanOneMappingRoundTripsBothColumns();
     testSaveObjectRestoreObjectStillRoundTripsAWidthOneMappingAfterTheWidthCheck();
     testRestoreObjectParsesRealFluffosOnDiskFormatScalarsAndNesting();
     testRestoreObjectSkipsRealFormatCommentHeaderLineAndParsesEmptyContainers();
     testRestoreObjectRealFormatStringEscapesAndEmbeddedNewline();
     testDumpStateRestoreStatePreservesObjectGraphReferenceIdentity();
     testRestoreStateRejectsAFileWithoutTheMagicHeader();
+    testDumpStateRestoreStateRoundTripsWidthGreaterThanOneMapping();
     testDumpStateAndRestoreStateEfunsRoundTripAnObjectVariable();
     testDumpStateWorldSnapshotAndSaveObjectCharacterFileCoexistWithoutConflict();
     testEvaluateOfEfunBoundClosureSetsCurrentObjectToClosureOwnerNotCaller();

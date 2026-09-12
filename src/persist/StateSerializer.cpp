@@ -45,8 +45,7 @@ void serializeClosure(std::ostream& out, const Closure& c, const IdOfObject& idO
     // save_object() already established for a width > 1 mapping.
     if (c.unboundUntilBound || !std::holds_alternative<std::monostate>(c.lambdaBody.data)) {
         throw LpcRuntimeError(
-            "dump_state: cannot dump an unbound_lambda()/quoted-code closure. "
-            "see ROADMAP.md row 2.1's own note on this exact gap");
+            "dump_state: cannot dump an unbound_lambda()/quoted-code closure");
     }
     auto owner = c.owner.lock();
     int64_t ownerId = -1;
@@ -81,23 +80,24 @@ void serializeWorldValue(std::ostream& out, const Value& v, const IdOfObject& id
             for (const auto& item : (*av)->items) serializeWorldValue(out, item, idOfObject);
         }
     } else if (auto* mv = std::get_if<std::shared_ptr<Mapping>>(&v.data)) {
-        // Same bounded stopgap row 1.9's own addendum put in
-        // save_object()'s serializeValue(): fail loudly rather than
-        // silently writing column 0 only. See that function's own
-        // comment (EfunTable.cpp) for the full derivation.
-        if (*mv && (*mv)->width > 1) {
-            throw LpcRuntimeError(
-                "dump_state: cannot dump a mapping with width > 1 (real LDMud "
-                "N-column mapping). This format only serializes column 0 "
-                "today, matching save_object()'s own established error for "
-                "this exact gap, see ROADMAP.md row 1.9");
-        }
         size_t count = *mv ? (*mv)->entries.size() : 0;
-        out << 'M' << count << ':';
+        int width = (*mv && (*mv)->width > 1) ? (*mv)->width : 1;
+        // Width 1 stays `M<count>:` so existing dumps load. Width > 1
+        // is `M<count>w<width>:` plus every column, same columns save_object writes.
+        out << 'M' << count;
+        if (width > 1) out << 'w' << width;
+        out << ':';
         if (*mv) {
-            for (const auto& entry : (*mv)->entries) {
-                serializeWorldValue(out, entry.first, idOfObject);
-                serializeWorldValue(out, entry.second, idOfObject);
+            for (size_t i = 0; i < (*mv)->entries.size(); ++i) {
+                serializeWorldValue(out, (*mv)->entries[i].first, idOfObject);
+                serializeWorldValue(out, (*mv)->entries[i].second, idOfObject);
+                for (int c = 1; c < width; ++c) {
+                    if (i < (*mv)->extraColumns.size()) {
+                        serializeWorldValue(out, (*mv)->getColumn(i, c), idOfObject);
+                    } else {
+                        serializeWorldValue(out, Value(int64_t{0}), idOfObject);
+                    }
+                }
             }
         }
     } else if (auto* ov = std::get_if<std::shared_ptr<LpcObject>>(&v.data)) {
@@ -201,15 +201,40 @@ Value deserializeWorldValue(const std::string& s, size_t& pos, const ObjectOfId&
             return Value(arr);
         }
         case 'M': {
-            size_t colon = s.find(':', pos);
-            size_t count = static_cast<size_t>(std::stoull(s.substr(pos, colon - pos)));
-            pos = colon + 1;
+            size_t sep = s.find_first_of(":w", pos);
+            if (sep == std::string::npos) {
+                throw LpcRuntimeError("restore_state: corrupt statedump data (truncated mapping)");
+            }
+            size_t count = static_cast<size_t>(std::stoull(s.substr(pos, sep - pos)));
+            int width = 1;
+            pos = sep;
+            if (pos < s.size() && s[pos] == 'w') {
+                ++pos;
+                size_t colon = s.find(':', pos);
+                if (colon == std::string::npos) {
+                    throw LpcRuntimeError("restore_state: corrupt statedump data (truncated mapping width)");
+                }
+                width = static_cast<int>(std::stoll(s.substr(pos, colon - pos)));
+                pos = colon + 1;
+                if (width < 1) width = 1;
+            } else {
+                ++pos;
+            }
             auto map = std::make_shared<Mapping>();
+            map->width = width;
             map->entries.reserve(count);
             for (size_t i = 0; i < count; ++i) {
                 Value key = deserializeWorldValue(s, pos, objectOfId);
                 Value val = deserializeWorldValue(s, pos, objectOfId);
                 map->entries.emplace_back(std::move(key), std::move(val));
+                if (width > 1) {
+                    std::vector<Value> extra(static_cast<size_t>(width - 1), Value(int64_t{0}));
+                    for (int c = 1; c < width; ++c) {
+                        extra[static_cast<size_t>(c - 1)] =
+                            deserializeWorldValue(s, pos, objectOfId);
+                    }
+                    map->extraColumns.push_back(std::move(extra));
+                }
             }
             return Value(map);
         }

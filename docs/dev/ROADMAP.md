@@ -37,8 +37,10 @@ Next work is driver work in `src/` (compiler, VM, object, efun, net, gc,
 scheduler, security, persist). Mudlib changes only to prove driver
 behavior or keep the minimum boot path alive.
 
-Known gaps: `save_object` still throws on width>1 mappings; object and
-closure slots write `0`. Identity rename (`amlp` to `aemlpc`) is closed.
+Identity rename (`amlp` to `aemlpc`) is closed. `save_object` writes
+width>1 mappings as `key:v0;v1` and writes nothing for object, closure,
+and buffer (restore is 0). `dump_state` now dumps those extra columns
+too (`M<count>w<width>:`; width-1 dumps stay `M<count>:`).
 
 ## Status record
 

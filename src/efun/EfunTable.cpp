@@ -496,15 +496,36 @@ Value parseRealSaveValue(const std::string& s, size_t& pos) {
         if (pos < s.size() && s[pos] == '[') {
             ++pos;
             auto map = std::make_shared<Mapping>();
+            std::vector<std::vector<Value>> pendingExtras;
+            int maxWidth = 1;
             while (pos < s.size() && s[pos] != ']') {
                 Value key = parseRealSaveValue(s, pos);
                 if (pos < s.size() && s[pos] == ':') ++pos;
                 Value val = parseRealSaveValue(s, pos);
+                std::vector<Value> extra;
+                while (pos < s.size() && s[pos] == ';') {
+                    ++pos;
+                    extra.push_back(parseRealSaveValue(s, pos));
+                }
                 map->entries.emplace_back(std::move(key), std::move(val));
+                pendingExtras.push_back(std::move(extra));
+                int w = 1 + static_cast<int>(pendingExtras.back().size());
+                if (w > maxWidth) maxWidth = w;
                 if (pos < s.size() && s[pos] == ',') ++pos;
             }
             if (pos < s.size()) ++pos; // ']'
             if (pos < s.size() && s[pos] == ')') ++pos;
+            map->width = maxWidth;
+            if (maxWidth > 1) {
+                map->extraColumns.resize(map->entries.size());
+                for (size_t i = 0; i < map->entries.size(); ++i) {
+                    map->extraColumns[i].assign(static_cast<size_t>(maxWidth - 1),
+                                                Value(int64_t{0}));
+                    for (size_t c = 0; c < pendingExtras[i].size(); ++c) {
+                        map->extraColumns[i][c] = std::move(pendingExtras[i][c]);
+                    }
+                }
+            }
             return Value(map);
         }
         throw LpcRuntimeError("restore_object: class-typed save data is not supported");
@@ -530,14 +551,8 @@ Value parseRealSaveValue(const std::string& s, size_t& pos) {
 // parseRealSaveValue()'s own array/mapping readers already tolerate
 // this leftover trailing comma. Floats use plain "%f" (six decimal
 // places, no exponent), the same convention this driver's own %O
-// sprintf specifier already uses for T_REAL. Real save_svalue()'s own
-// switch has no case at all for an object reference or a function
-// pointer (not even a default). Confirmed by reading it directly, this
-// is a genuine gap in real FluffOS itself, not a deliberately handled
-// shape. So this driver throws a clear error for either rather than
-// silently emitting nothing (which would produce truncated, unparsable
-// output), matching this codebase's own established convention for
-// shapes real FluffOS itself does not support saving.
+// sprintf specifier already uses for T_REAL. Object, closure, and
+// buffer match save_svalue's missing cases: write nothing.
 void writeRealSaveValue(std::string& out, const Value& v) {
     if (std::holds_alternative<std::monostate>(v.data)) {
         out += '0';
@@ -572,19 +587,27 @@ void writeRealSaveValue(std::string& out, const Value& v) {
     } else if (auto* mv = std::get_if<std::shared_ptr<Mapping>>(&v.data)) {
         out += "([";
         if (*mv) {
-            for (const auto& entry : (*mv)->entries) {
-                writeRealSaveValue(out, entry.first);
+            for (size_t i = 0; i < (*mv)->entries.size(); ++i) {
+                writeRealSaveValue(out, (*mv)->entries[i].first);
                 out += ':';
-                writeRealSaveValue(out, entry.second);
+                writeRealSaveValue(out, (*mv)->entries[i].second);
+                // Extra columns use ';' like this driver's LDMud mapping
+                // literal (FluffOS save_svalue is width-1; ds2.07 object.c:231).
+                for (int c = 1; c < (*mv)->width; ++c) {
+                    out += ';';
+                    if (i < (*mv)->extraColumns.size()) {
+                        writeRealSaveValue(out, (*mv)->getColumn(i, c));
+                    } else {
+                        out += '0';
+                    }
+                }
                 out += ',';
             }
         }
         out += "])";
     } else {
-        // object / closure / buffer: real save_svalue() has no case.
-        // Write 0 so a nested array/mapping slot stays parsable
-        // (attackers[i] after restore is integer 0).
-        out += '0';
+        // No T_OBJECT / T_FUNCTION / T_BUFFER case in save_svalue
+        // (ds2.07 object.c:138-252). Write nothing; restore default is 0.
     }
 }
 
@@ -8964,13 +8987,8 @@ void registerCoreEfuns() {
     // references and closures, which real save_object() cannot
     // serialize either (an object reference saved to disk cannot
     // survive a reboot, and neither real FluffOS nor this driver
-    // attempts it). A width > 1 mapping (real LDMud N-column mapping)
-    // also throws rather than saving, a bounded stopgap added
-    // 2026-08-21 (ROADMAP.md row 1.9's own addendum) once neither this
-    // format nor the real FluffOS one below had any way to represent
-    // one. See serializeValue()'s own Mapping branch for the full
-    // reasoning; full width-aware serialization remains its own,
-    // separately-scoped, larger item, not attempted here.
+    // attempts it). Width > 1 mappings write extra columns after ';'
+    // so restore_object() can rebuild them (FluffOS itself is width-1).
     // __SAVE_EXTENSION__ (".o") is appended
     // by the *caller* in this mudlib's own code (e.g. account_d.c's
     // account_path()+__SAVE_EXTENSION__), so these two efuns use the
@@ -9009,22 +9027,8 @@ void registerCoreEfuns() {
         const auto& names = obj->program().objectVarNames;
         auto& vars = obj->variables();
         for (size_t i = 0; i < names.size() && i < vars.size(); ++i) {
-            if (auto* mv = std::get_if<std::shared_ptr<Mapping>>(&vars[i].data)) {
-                if (*mv && (*mv)->width > 1) {
-                    throw LpcRuntimeError(
-                        "save_object: cannot save a mapping with width > 1 (real "
-                        "LDMud N-column mapping). This driver's save_object()/"
-                        "restore_object() only serialize column 0 today, so saving "
-                        "one would silently discard every other column instead of "
-                        "raising this error; see ROADMAP.md row 1.9's own note");
-                }
-            }
             std::string encoded;
-            try {
-                writeRealSaveValue(encoded, vars[i]);
-            } catch (const LpcRuntimeError&) {
-                encoded = "0";
-            }
+            writeRealSaveValue(encoded, vars[i]);
             f << names[i] << ' ' << encoded << '\n';
         }
         return Value(int64_t{1});

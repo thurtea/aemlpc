@@ -172,6 +172,73 @@ void testSaveObjectWritesFluffosTextAndSecondProcessRestores() {
     std::cout << "testSaveObjectWritesFluffosTextAndSecondProcessRestores OK\n";
 }
 
+void testSaveObjectWidthGreaterThanOneWritesAndRestoresExtraColumns() {
+    NetHarness harness("dialect: ldmud\n");
+    harness.writeFile("/save_wide.c",
+        "mapping m;\n"
+        "void create() { m = ([\"weakness\": \"fire\"; 1]); }\n"
+        "void clear() { m = 0; }\n"
+        "int save() { return save_object(\"/wide.o\"); }\n"
+        "int load() { return restore_object(\"/wide.o\"); }\n"
+        "mixed col0() { return m[\"weakness\"]; }\n"
+        "mixed col1() { return m[\"weakness\", 1]; }\n");
+    auto obj = harness.objects.cloneObject("/save_wide");
+    assert(obj);
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "save", {}).data) == 1);
+
+    std::ifstream in(harness.tempDir + "/wide.o");
+    std::ostringstream raw;
+    raw << in.rdbuf();
+    std::string text = raw.str();
+    assert(text.find("weakness") != std::string::npos);
+    assert(text.find(';') != std::string::npos);
+    assert(text.find("fire") != std::string::npos);
+
+    harness.vm.callFunction(obj, "clear", {});
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "load", {}).data) == 1);
+    assert(std::get<std::string>(harness.vm.callFunction(obj, "col0", {}).data) == "fire");
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "col1", {}).data) == 1);
+    std::cout << "testSaveObjectWidthGreaterThanOneWritesAndRestoresExtraColumns OK\n";
+}
+
+void testSaveObjectObjectAndClosureSlotsWriteEmptyAndRestoreZero() {
+    NetHarness harness;
+    harness.writeFile("/save_unsavable.c",
+        "object ob;\n"
+        "function fn;\n"
+        "void create() { ob = this_object(); fn = (: create :); }\n"
+        "void clear() { ob = 1; fn = 1; }\n"
+        "int save() { return save_object(\"/unsavable.o\"); }\n"
+        "int load() { return restore_object(\"/unsavable.o\"); }\n"
+        "int ob_zero() { return ob == 0; }\n"
+        "int fn_zero() { return fn == 0; }\n");
+    auto obj = harness.objects.cloneObject("/save_unsavable");
+    assert(obj);
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "save", {}).data) == 1);
+
+    std::ifstream in(harness.tempDir + "/unsavable.o");
+    std::string line;
+    bool sawOb = false;
+    bool sawFn = false;
+    while (std::getline(in, line)) {
+        if (line.rfind("ob ", 0) == 0) {
+            sawOb = true;
+            assert(line == "ob " || line == "ob");
+        }
+        if (line.rfind("fn ", 0) == 0) {
+            sawFn = true;
+            assert(line == "fn " || line == "fn");
+        }
+    }
+    assert(sawOb && sawFn);
+
+    harness.vm.callFunction(obj, "clear", {});
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "load", {}).data) == 1);
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "ob_zero", {}).data) == 1);
+    assert(std::get<int64_t>(harness.vm.callFunction(obj, "fn_zero", {}).data) == 1);
+    std::cout << "testSaveObjectObjectAndClosureSlotsWriteEmptyAndRestoreZero OK\n";
+}
+
 void testWebSocketHandshakeAndTextFrame() {
     int fds[2];
     assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
@@ -357,6 +424,8 @@ void runNetTests() {
     testListenConfigParsesMultipleKindsAndTls();
     testSysNetworkPortsReadsTheListenTable();
     testSaveObjectWritesFluffosTextAndSecondProcessRestores();
+    testSaveObjectWidthGreaterThanOneWritesAndRestoresExtraColumns();
+    testSaveObjectObjectAndClosureSlotsWriteEmptyAndRestoreZero();
     testWebSocketHandshakeAndTextFrame();
     testTlsSocketpairRoundTrip();
     testEncodingAndGmcpEfunsOnASocketpair();
