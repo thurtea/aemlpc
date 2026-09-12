@@ -17,7 +17,7 @@ ctest --test-dir build --output-on-failure
 ctest --test-dir build -R "lexer" --output-on-failure
 
 # Run directly (more verbose)
-./build/test/amlp_tests --gtest_filter="*sscanf*"
+./build/test/aemlpc_tests --gtest_filter="*sscanf*"
 ```
 
 ## Phase 0 requirement
@@ -52,12 +52,12 @@ New test files to create (one per subsystem):
 Each test file follows this pattern:
 ```cpp
 #include <gtest/gtest.h>
-#include "amlp/config/Config.hpp"
-#include "amlp/object/ObjectManager.hpp"
-#include "amlp/vm/VM.hpp"
-#include "amlp/scheduler/Scheduler.hpp"
-#include "amlp/net/Server.hpp"
-#include "amlp/efun/EfunTable.hpp"
+#include "aemlpc/config/Config.hpp"
+#include "aemlpc/object/ObjectManager.hpp"
+#include "aemlpc/vm/VM.hpp"
+#include "aemlpc/scheduler/Scheduler.hpp"
+#include "aemlpc/net/Server.hpp"
+#include "aemlpc/efun/EfunTable.hpp"
 
 class FeatureTest : public ::testing::Test {
 protected:

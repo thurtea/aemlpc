@@ -12,8 +12,8 @@
 
 ## Files to read before touching this directory
 
-- `include/amlp/net/Server.hpp`
-- `include/amlp/net/Connection.hpp`
+- `include/aemlpc/net/Server.hpp`
+- `include/aemlpc/net/Connection.hpp`
 - Reference: `fluffos-2.9-ds2.08/comm.c` - the reference networking layer
 - Reference: `fluffos-2.9-ds2.08/comm.h` - `interactive_t` struct fields
 

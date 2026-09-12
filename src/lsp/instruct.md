@@ -4,7 +4,7 @@
 
 Built-in LSP server for LPC: autocomplete, go-to-definition, hover, and
 inline diagnostics in VS Code / neovim / any LSP-capable editor. No existing
-LPC driver has this. It makes AMLP the first LPC runtime with a
+LPC driver has this. It makes aemlpc the first LPC runtime with a
 first-class developer tooling story.
 
 This is a **Phase 2e directory**. Create it only after Phase 1 is complete
@@ -13,7 +13,7 @@ This is a **Phase 2e directory**. Create it only after Phase 1 is complete
 ## Activation
 
 ```bash
-build/amlp --lsp etc/driver.cfg
+build/aemlpc --lsp etc/driver.cfg
 ```
 
 In LSP mode the driver does NOT start the game server. Instead it:
@@ -26,7 +26,7 @@ alongside the game server for live introspection of a running mud.
 
 ## Files to create
 
-### `include/amlp/lsp/LspServer.hpp`
+### `include/aemlpc/lsp/LspServer.hpp`
 
 ```cpp
 class LspServer {
@@ -55,7 +55,7 @@ private:
 };
 ```
 
-### `include/amlp/lsp/SymbolIndex.hpp`
+### `include/aemlpc/lsp/SymbolIndex.hpp`
 
 ```cpp
 // Per-file symbol table built during compilation.
@@ -122,12 +122,12 @@ on stdin/stdout or a `Connection`-like TCP fd.
 ## CMakeLists.txt
 
 ```cmake
-option(AMLP_ENABLE_LSP "Build LSP server" ON)
-if(AMLP_ENABLE_LSP)
+option(AEMLPC_ENABLE_LSP "Build LSP server" ON)
+if(AEMLPC_ENABLE_LSP)
     add_library(lsp STATIC LspServer.cpp SymbolIndex.cpp)
     target_include_directories(lsp PUBLIC ${CMAKE_SOURCE_DIR}/include)
     target_link_libraries(lsp PUBLIC compiler vm object efun config)
-    target_link_libraries(amlp PRIVATE lsp)
+    target_link_libraries(aemlpc PRIVATE lsp)
 endif()
 ```
 

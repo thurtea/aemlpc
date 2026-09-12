@@ -22,13 +22,13 @@ LDMud has a more elaborate trust model with root/backbone UIDs and per-object
 effective-uid tracking. DGD has path-based read/write permission callbacks on
 the driver object.
 
-AMLP's goal: **one security model that covers all three dialects**, with
+aemlpc's goal: **one security model that covers all three dialects**, with
 the dialect's boot API mapping its own permission callbacks to the shared
 enforcement layer.
 
 ## Files to create
 
-### `include/amlp/security/SecurityManager.hpp`
+### `include/aemlpc/security/SecurityManager.hpp`
 
 ```cpp
 class SecurityManager {
@@ -104,7 +104,7 @@ master object's `privs_file()` return value.
 add_library(security STATIC SecurityManager.cpp)
 target_include_directories(security PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(security PUBLIC object apply config dialect)
-target_link_libraries(amlp PRIVATE security)
+target_link_libraries(aemlpc PRIVATE security)
 ```
 
 ## Testing
@@ -122,6 +122,6 @@ target_link_libraries(amlp PRIVATE security)
   never silently succeeds.
 - The master object itself is exempt from all security checks (it is the
   authority, not a subject of the authority system).
-- Security must be a compile-time option (`AMLP_ENABLE_SECURITY`) that
+- Security must be a compile-time option (`AEMLPC_ENABLE_SECURITY`) that
   defaults to OFF during development and ON for production builds, so the
   existing test suite can run without a correctly configured master object.

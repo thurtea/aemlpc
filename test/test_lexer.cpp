@@ -2419,7 +2419,7 @@ struct ObjectVarHarness {
         : objects(config), vm(objects, config) {
         objects.setVM(&vm);
 
-        char dirTemplate[] = "/tmp/amlp_objvar_test_XXXXXX";
+        char dirTemplate[] = "/tmp/aemlpc_objvar_test_XXXXXX";
         char* created = mkdtemp(dirTemplate);
         assert(created != nullptr);
         tempDir = created;
@@ -4743,14 +4743,14 @@ static void testCheckValidPathRejectsParentDirectoryTraversalFluffos() {
     assert(harness.objects.loadMasterObject());
 
     harness.writeFile("/traverse_caller.c",
-        "int probe() { return write_file(\"/../amlp_row32_escaped.txt\", \"pwned\"); }\n");
+        "int probe() { return write_file(\"/../aemlpc_row32_escaped.txt\", \"pwned\"); }\n");
     auto caller = harness.objects.cloneObject("/traverse_caller");
     assert(caller != nullptr);
 
     // The naive pre-gate resolution real disk I/O would have used:
     // mudlibRoot's own parent directory.
     std::string outsidePath =
-        harness.tempDir.substr(0, harness.tempDir.find_last_of('/')) + "/amlp_row32_escaped.txt";
+        harness.tempDir.substr(0, harness.tempDir.find_last_of('/')) + "/aemlpc_row32_escaped.txt";
     std::remove(outsidePath.c_str()); // in case a prior failed run left it behind
 
     aemlpc::Value result = harness.vm.callFunction(caller, "probe", {});
@@ -5326,7 +5326,7 @@ static void testIncludeDirConfigSupportsColonSeparatedListLikeRealMudosCfg() {
     // two *separate* directories, each holding one of the two headers
     // needed, are both actually searched. Not just that some include
     // path works at all.
-    char dirTemplate[] = "/tmp/amlp_incdir_test_XXXXXX";
+    char dirTemplate[] = "/tmp/aemlpc_incdir_test_XXXXXX";
     char* created = mkdtemp(dirTemplate);
     assert(created != nullptr);
     std::string tempDir = created;
@@ -5411,7 +5411,7 @@ static void testFileDunderPredefineResolvesToRealLpcPathNotHostFilesystemPath() 
     aemlpc::Value result = harness.vm.callFunction(obj, "probe", {});
     assert(std::holds_alternative<std::string>(result.data));
     // Not an absolute host path (no leading tempDir, no leftover
-    // /tmp/amlp_src_XXXXXX staging path). Exactly the real LPC
+    // /tmp/aemlpc_src_XXXXXX staging path). Exactly the real LPC
     // in-mudlib path, "/" + filename + ".c".
     assert(std::get<std::string>(result.data) == "/filedunder_probe.c");
     std::cout << "testFileDunderPredefineResolvesToRealLpcPathNotHostFilesystemPath OK\n";
@@ -5421,7 +5421,7 @@ static void testDirDunderPredefineTruncatesAfterLastSlashWithMultipleSegments() 
     // A nested directory (not just "/") to actually exercise the
     // truncate-after-last-slash logic, matching the real shape
     // ("/single/tests/efuns/") rather than the degenerate root case.
-    char dirTemplate[] = "/tmp/amlp_dirdunder_test_XXXXXX";
+    char dirTemplate[] = "/tmp/aemlpc_dirdunder_test_XXXXXX";
     char* created = mkdtemp(dirTemplate);
     assert(created != nullptr);
     std::string tempDir = created;
@@ -18826,7 +18826,7 @@ static void testGetConfigReturnsMudNameForIndexZeroAndThrowsForNegative() {
     ObjectVarHarness harness;
     std::vector<aemlpc::Value> zeroArgs{ aemlpc::Value(int64_t{0}) };
     aemlpc::Value name = aemlpc::EfunTable::instance().call("get_config", harness.vm, zeroArgs);
-    assert(std::get<std::string>(name.data) == "AMLP");
+    assert(std::get<std::string>(name.data) == "AEMLPC");
 
     std::vector<aemlpc::Value> negArgs{ aemlpc::Value(int64_t{-1}) };
     bool threw = false;

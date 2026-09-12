@@ -72,7 +72,7 @@ calls `writeBarrier()`.
 
 ## Files to create
 
-### `include/amlp/gc/GcHeap.hpp`
+### `include/aemlpc/gc/GcHeap.hpp`
 
 ```cpp
 class GcHeap {

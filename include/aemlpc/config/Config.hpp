@@ -107,7 +107,7 @@ private:
     int maxStringLength_ = 200000;
     std::string includeDir_ = "secure/include";
     std::string simulEfunFile_ = "";
-    std::string mudName_ = "AMLP";
+    std::string mudName_ = "AEMLPC";
     std::string globalIncludeFile_ = "";
     std::string dialect_ = "fluffos";
     bool autoTrustBackbone_ = false;

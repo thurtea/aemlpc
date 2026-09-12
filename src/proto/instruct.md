@@ -22,7 +22,7 @@ built in `src/net` Phase 0.8.
 
 ## Files to create
 
-### `include/amlp/proto/GmcpHandler.hpp`
+### `include/aemlpc/proto/GmcpHandler.hpp`
 
 ```cpp
 class GmcpHandler {
@@ -43,7 +43,7 @@ public:
 GMCP messages have the form `"Package.Name"` + optional JSON body.
 Example: `"Char.Vitals" {"hp": 100, "maxhp": 100}`.
 
-### `include/amlp/proto/MsdpHandler.hpp`
+### `include/aemlpc/proto/MsdpHandler.hpp`
 
 MSDP uses TELNET variables (IAC SB MSDP MSDP_VAR name MSDP_VAL value IAC SE).
 
@@ -59,7 +59,7 @@ public:
 };
 ```
 
-### `include/amlp/proto/MsspHandler.hpp`
+### `include/aemlpc/proto/MsspHandler.hpp`
 
 MSSP is server-to-client only (for crawlers). Sends static server info once
 on connection: server name, uptime, player count, etc.
@@ -73,7 +73,7 @@ public:
 };
 ```
 
-### `include/amlp/proto/MttsHandler.hpp`
+### `include/aemlpc/proto/MttsHandler.hpp`
 
 Parses the MTTS terminal type string to extract client capability flags:
 - `MTTS_ANSI` (bit 0)
@@ -88,7 +88,7 @@ Parses the MTTS terminal type string to extract client capability flags:
 - `MTTS_MNES` (bit 9)
 - `MTTS_MSLP` (bit 10)
 
-### `include/amlp/proto/MxpHandler.hpp`
+### `include/aemlpc/proto/MxpHandler.hpp`
 
 MXP sends tagged text (`<B>`, `<A href="...">`, `<send>`, etc.) that MXP-
 capable clients render as rich UI. Non-MXP clients must receive plain text.
@@ -146,7 +146,7 @@ add_library(proto STATIC
 )
 target_include_directories(proto PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(proto PUBLIC net config)
-target_link_libraries(amlp PRIVATE proto)
+target_link_libraries(aemlpc PRIVATE proto)
 ```
 
 ## Testing

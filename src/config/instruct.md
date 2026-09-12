@@ -8,7 +8,7 @@
 
 ## Files to read before touching this directory
 
-- `include/amlp/config/Config.hpp` - current key set
+- `include/aemlpc/config/Config.hpp` - current key set
 - `etc/driver.cfg` - the live config file
 
 ## Current config keys
@@ -22,7 +22,7 @@
 | `max_eval_cost` | `10000000` | Per-command eval ceiling |
 | `include_dir` | `secure/include` | Default `#include` search path |
 | `simul_efun_file` | *(empty)* | Simul_efun object path |
-| `mud_name` | `AMLP` | Predefined `MUD_NAME` macro |
+| `mud_name` | `aemlpc` | Predefined `MUD_NAME` macro |
 
 ## Phase 0 tasks
 

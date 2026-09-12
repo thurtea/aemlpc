@@ -11,12 +11,12 @@ Create it only after Phase 0 is complete and the test suite is green.
 
 ## Files to create
 
-### `include/amlp/dialect/LpcDialect.hpp`
+### `include/aemlpc/dialect/LpcDialect.hpp`
 
 ```cpp
 #pragma once
 #include <string>
-namespace amlp {
+namespace aemlpc {
 
 enum class LpcDialect {
     FluffOS,   // MudOS/FluffOS (: :) LPC - current default
@@ -27,10 +27,10 @@ enum class LpcDialect {
 const char* dialectName(LpcDialect d);  // "fluffos" / "ldmud" / "dgd"
 LpcDialect dialectFromString(const std::string& s); // throws on unknown
 
-} // namespace amlp
+} // namespace aemlpc
 ```
 
-### `include/amlp/dialect/BootApi.hpp`
+### `include/aemlpc/dialect/BootApi.hpp`
 
 Abstract interface - see `src/apply/instruct.md` Phase 1.4 for the full
 interface definition. Place the abstract base here; concrete implementations

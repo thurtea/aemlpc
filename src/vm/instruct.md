@@ -10,9 +10,9 @@
 
 ## Files to read before touching this directory
 
-- `include/amlp/vm/Value.hpp` - the full `ValueVariant` definition
-- `include/amlp/vm/Bytecode.hpp` - every OpCode and CompiledProgram
-- `include/amlp/vm/VM.hpp` - public VM API
+- `include/aemlpc/vm/Value.hpp` - the full `ValueVariant` definition
+- `include/aemlpc/vm/Bytecode.hpp` - every OpCode and CompiledProgram
+- `include/aemlpc/vm/VM.hpp` - public VM API
 - `ROADMAP.md` Phase 0 and Phase 1 rows
 - Reference: `fluffos-2.9-ds2.08/interpret.c` - the reference VM (the inline
   comments throughout `VM.cpp` cite specific line/function names from it)

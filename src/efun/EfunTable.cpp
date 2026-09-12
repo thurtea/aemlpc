@@ -6831,7 +6831,7 @@ void registerCoreEfuns() {
     // uid_/euid_ state they read and write is assigned at boot
     // (master->uid = get_root_uid()) and per load/clone
     // (give_uid_to_object()) by ObjectManager, see
-    // include/amlp/security/UidModel.hpp. Heavily used: about 529
+    // include/aemlpc/security/UidModel.hpp. Heavily used: about 529
     // seteuid(), 441 getuid(), 354 geteuid(), 49 export_uid() call-site
     // lines across the vendored corpora, overwhelmingly the "void
     // create() { seteuid(getuid()); }" idiom that today throws
@@ -8544,7 +8544,7 @@ void registerCoreEfuns() {
     // destructs it. LiveObjectRegistry deliberately holds only weak_ptr
     // (its own header comment: needed so ordinary C++ RAII, not a
     // manual sweep, frees an object once nothing else references it),
-    // so the instant an AMLP object would satisfy real "ref==1" here,
+    // so the instant an aemlpc object would satisfy real "ref==1" here,
     // its one remaining strong reference is the assignment/local-store
     // that is about to overwrite or drop it. The object is freed by
     // that same statement, before any later get_garbage() call could
@@ -9263,7 +9263,7 @@ void registerCoreEfuns() {
     // returns a real, plain 0, bonus NOT added in that case either,
     // confirmed directly from the real guard's own scope rather than
     // assumed symmetric with the positive case. Unlike this driver's
-    // own roll_weapon_damage_dice() neighbor above (an AMLP-invented,
+    // own roll_weapon_damage_dice() neighbor above (an aemlpc-invented,
     // damage-specific helper that floors its own result at 1), real
     // roll_MdN() has no such floor. A real, deliberate difference,
     // not an oversight, since the two are unrelated real functions that

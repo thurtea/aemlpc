@@ -386,7 +386,7 @@ std::string rewriteEfunDefined(const std::string& source,
 
 // Mask LDMud "#'name" closure literals so system cpp does not treat
 // them as unknown directives. Unmasked after cpp returns.
-const std::string kHashQuoteMarker = "__AMLP_HASHQUOTE_MARKER__";
+const std::string kHashQuoteMarker = "__AEMLPC_HASHQUOTE_MARKER__";
 
 std::string maskHashQuote(const std::string& source) {
     std::string result;
@@ -482,7 +482,7 @@ StagedSource stageSourceForPreprocessing(const std::string& originalPath,
                                           activeIncludes, macroDefs, 0);
     rewritten = rewriteEfunDefined(rewritten, efunExists);
 
-    char tmpPathTemplate[] = "/tmp/amlp_src_XXXXXX";
+    char tmpPathTemplate[] = "/tmp/aemlpc_src_XXXXXX";
     int fd = mkstemp(tmpPathTemplate);
     if (fd == -1) {
         result.errorMessage = "failed to create temp file for staged source";
@@ -539,7 +539,7 @@ PreprocessResult runPreprocessor(const std::string& sourcePath, const std::vecto
                                   const std::string& compiledFilename) {
     PreprocessResult result;
 
-    char errPathTemplate[] = "/tmp/amlp_cpp_stderr_XXXXXX";
+    char errPathTemplate[] = "/tmp/aemlpc_cpp_stderr_XXXXXX";
     int errFd = mkstemp(errPathTemplate);
     if (errFd == -1) {
         result.errorOutput = "failed to create temp file for cpp stderr output";

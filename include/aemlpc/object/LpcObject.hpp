@@ -198,7 +198,7 @@ public:
     // PACKAGE_UIDS). Interned-string sharing (real add_uid()'s AVL tree)
     // is not reproduced: every efun reads only the name, so a plain
     // owned string is observationally identical. See
-    // include/amlp/security/UidModel.hpp for the full model.
+    // include/aemlpc/security/UidModel.hpp for the full model.
     const std::optional<std::string>& uid() const { return uid_; }
     void setUid(std::optional<std::string> uid) { uid_ = std::move(uid); }
     const std::optional<std::string>& euid() const { return euid_; }

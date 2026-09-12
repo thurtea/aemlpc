@@ -16,9 +16,9 @@ in one pass.
 
 ## Files to read before touching this directory
 
-- `include/amlp/compiler/Ast.hpp` - full AST node catalogue
-- `include/amlp/compiler/Lexer.hpp`
-- `include/amlp/vm/Bytecode.hpp` - the opcodes CodeGen emits
+- `include/aemlpc/compiler/Ast.hpp` - full AST node catalogue
+- `include/aemlpc/compiler/Lexer.hpp`
+- `include/aemlpc/vm/Bytecode.hpp` - the opcodes CodeGen emits
 - `ROADMAP.md` Phase 0 and Phase 1 rows that touch `src/compiler`
 - `temp/reference/fluffos-2.9-ds2.08/grammar.y` - the reference grammar
 - `temp/reference/fluffos-2.9-ds2.08/lex.c` - the reference lexer

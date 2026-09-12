@@ -10,8 +10,8 @@
 
 ## Files to read before touching this directory
 
-- `include/amlp/object/LpcObject.hpp` - full LpcObject API
-- `include/amlp/object/ObjectManager.hpp`
+- `include/aemlpc/object/LpcObject.hpp` - full LpcObject API
+- `include/aemlpc/object/ObjectManager.hpp`
 - Reference: `fluffos-2.9-ds2.08/object.h` - `object_t` fields
 - Reference: `fluffos-2.9-ds2.08/simulate.c` - `load_object`, `clone_object`,
   `destruct_object`, `load_virtual_object`

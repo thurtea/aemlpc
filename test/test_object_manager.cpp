@@ -16,7 +16,7 @@ struct ObjectHarness {
 
     ObjectHarness()
         : objects(config) {
-        char dirTemplate[] = "/tmp/amlp_object_test_XXXXXX";
+        char dirTemplate[] = "/tmp/aemlpc_object_test_XXXXXX";
         char* created = mkdtemp(dirTemplate);
         assert(created != nullptr);
         tempDir = created;

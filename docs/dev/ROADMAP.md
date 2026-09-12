@@ -37,9 +37,8 @@ Next work is driver work in `src/` (compiler, VM, object, efun, net, gc,
 scheduler, security, persist). Mudlib changes only to prove driver
 behavior or keep the minimum boot path alive.
 
-Known gaps: namespace, includes, and binary are still partly `amlp`;
-`save_object` still throws on width>1 mappings; object and closure slots
-write `0`.
+Known gaps: `save_object` still throws on width>1 mappings; object and
+closure slots write `0`. Identity rename (`amlp` to `aemlpc`) is closed.
 
 ## Status record
 

@@ -12,7 +12,7 @@ on a specific object by name. Examples: `connect()`, `logon()`,
 
 ## Files to read before touching this directory
 
-- `include/amlp/apply/ApplyTable.hpp`
+- `include/aemlpc/apply/ApplyTable.hpp`
 - Reference: `fluffos-2.9-ds2.08/applies.h` - the real apply name constants
 - Reference: `fluffos-2.9-ds2.08/simulate.c` `safe_apply()` and `apply()`
 
@@ -34,7 +34,7 @@ name sets.
 **What to build:**
 
 1. **`BootApi` abstract base class** (new file
-   `include/amlp/apply/BootApi.hpp`):
+   `include/aemlpc/apply/BootApi.hpp`):
    ```cpp
    class BootApi {
    public:

@@ -3,7 +3,7 @@
 ## Purpose
 
 Compile hot LPC bytecode functions to native machine code via LLVM IR.
-AMLP is the first LPC driver to offer LLVM-quality codegen as a
+aemlpc is the first LPC driver to offer LLVM-quality codegen as a
 built-in first-class feature.
 
 This is a **Phase 2c directory**. Create it only after Phase 1 is complete
@@ -18,7 +18,7 @@ and the interpreter passes all three dialect test suites.
 
 ## Files to create
 
-### `include/amlp/jit/JitCompiler.hpp`
+### `include/aemlpc/jit/JitCompiler.hpp`
 
 ```cpp
 class JitCompiler {
@@ -60,9 +60,9 @@ Translates a `FunctionEntry`'s bytecode to `llvm::Function`.
 %Value = type { i8, [24 x i8] }   ; tag byte + 24-byte payload
 ```
 IR helper functions emitted as inlineable intrinsics:
-`amlp_tag(Value*)`, `amlp_as_int(Value*)`,
-`amlp_as_double(Value*)`, `amlp_box_int(i64)`,
-`amlp_box_double(double)`.
+`aemlpc_tag(Value*)`, `aemlpc_as_int(Value*)`,
+`aemlpc_as_double(Value*)`, `aemlpc_box_int(i64)`,
+`aemlpc_box_double(double)`.
 
 ### `src/jit/JitCompiler.cpp`
 
@@ -90,17 +90,17 @@ created at boot when `Config::jitThreshold() > 0`.
 ## CMakeLists.txt
 
 ```cmake
-option(AMLP_ENABLE_JIT "Enable LLVM JIT backend" OFF)
-if(AMLP_ENABLE_JIT)
+option(AEMLPC_ENABLE_JIT "Enable LLVM JIT backend" OFF)
+if(AEMLPC_ENABLE_JIT)
     find_package(LLVM REQUIRED CONFIG)
     llvm_map_components_to_libnames(llvm_libs support core orcjit native)
 
     add_library(jit STATIC JitCompiler.cpp BytecodeToIr.cpp)
     target_include_directories(jit PUBLIC ${CMAKE_SOURCE_DIR}/include ${LLVM_INCLUDE_DIRS})
-    target_compile_definitions(jit PRIVATE ${LLVM_DEFINITIONS} AMLP_JIT_ENABLED)
+    target_compile_definitions(jit PRIVATE ${LLVM_DEFINITIONS} AEMLPC_JIT_ENABLED)
     target_link_libraries(jit PUBLIC vm ${llvm_libs})
 
-    target_link_libraries(amlp PRIVATE jit)
+    target_link_libraries(aemlpc PRIVATE jit)
 endif()
 ```
 

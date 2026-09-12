@@ -11,7 +11,7 @@ and heart_beat as of 2026-08-07. All confirmed live.
 
 ## Files to read before touching this directory
 
-- `include/amlp/scheduler/Scheduler.hpp` - full API
+- `include/aemlpc/scheduler/Scheduler.hpp` - full API
 - Reference: `fluffos-2.9-ds2.08/call_out.c` - real call_out implementation
 - Reference: `fluffos-2.9-ds2.08/backend.c` - `call_heart_beat()`, heartbeat
   interval, `kHeartbeatCycle` constant

@@ -53,7 +53,7 @@ ctest --test-dir build --output-on-failure
 same commands. A full clean rebuild is `make clean && make build`, or
 `rm -rf build` then the three commands above.
 
-Expected: the suite reports `all tests passed`, 922 checks, 0 failures.
+Expected: the suite reports `all tests passed`, 929 checks, 0 failures.
 
 ## 3. Run the driver
 
@@ -78,7 +78,7 @@ On boot you should see:
 The two skip lines are correct until you generate dev certs (step 5).
 
 `aemlpc <config-path> [max-iterations]`: the config path is required.
-`max-iterations` (or `AMLP_MAX_ITERATIONS`) bounds scheduler poll
+`max-iterations` (or `AEMLPC_MAX_ITERATIONS`) bounds scheduler poll
 iterations before the process exits on its own, for scripted runs; the
 default, 0, means run until `SIGINT` / `SIGTERM`.
 

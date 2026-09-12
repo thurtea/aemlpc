@@ -8,8 +8,8 @@
 
 ## Files to read before touching this directory
 
-- `include/amlp/core/Errors.hpp`
-- `include/amlp/vm/Value.hpp` - `LpcThrownValue` definition
+- `include/aemlpc/core/Errors.hpp`
+- `include/aemlpc/vm/Value.hpp` - `LpcThrownValue` definition
 
 ## Current state
 

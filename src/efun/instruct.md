@@ -22,8 +22,8 @@ STATUS.md's own 2026-08-22 entry for the first batch done this way.
 
 ## Files to read before touching this directory
 
-- `include/amlp/efun/EfunTable.hpp`
-- `include/amlp/vm/Value.hpp` - every efun signature is `Value(VM&, vector<Value>&)`
+- `include/aemlpc/efun/EfunTable.hpp`
+- `include/aemlpc/vm/Value.hpp` - every efun signature is `Value(VM&, vector<Value>&)`
 - `ROADMAP.md` - efun tasks are spread across Phase 0, 1, 2, and 3
 - Reference: `fluffos-2.9-ds2.08/func_spec.c` - the canonical efun list (~180
   core names)

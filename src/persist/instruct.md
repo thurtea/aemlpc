@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Persistent world state - AMLP exceeds DGD by supporting *both*
+Persistent world state - aemlpc exceeds DGD by supporting *both*
 world-level snapshots and per-object `save_object()`/`restore_object()`
-simultaneously. DGD forces you to choose one; AMLP supports both.
+simultaneously. DGD forces you to choose one; aemlpc supports both.
 
 This is a **Phase 2a directory**. Create it only after Phase 1 is complete.
 
 ## Files to create
 
-### `include/amlp/persist/StateSerializer.hpp`
+### `include/aemlpc/persist/StateSerializer.hpp`
 
 ```cpp
 class StateSerializer {
@@ -33,7 +33,7 @@ public:
 **Format:** CBOR (RFC 7049) via `nlohmann/json::to_cbor` / `from_cbor`.
 Self-describing, compact, no external schema required.
 
-### `include/amlp/persist/SwapManager.hpp`
+### `include/aemlpc/persist/SwapManager.hpp`
 
 ```cpp
 class SwapManager {
@@ -55,7 +55,7 @@ Integration: `ObjectManager` calls `swapOut()` after an idle timeout
 (`Config::swapIdleTimeout()`, default 300 s) and `swapIn()` before returning
 the object from `lookupLoadedObject()`.
 
-### `include/amlp/persist/HotbootManager.hpp`
+### `include/aemlpc/persist/HotbootManager.hpp`
 
 ```cpp
 class HotbootManager {

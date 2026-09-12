@@ -25,7 +25,7 @@ namespace aemlpc {
 // Header-only and deliberately independent of Scheduler's own concrete
 // class (only <coroutine> and Value.hpp). src/scheduler/CMakeLists.txt
 // links `scheduler` against `vm`, not the reverse, so nothing under
-// `include/amlp/vm/` may depend on Scheduler's own class without
+// `include/aemlpc/vm/` may depend on Scheduler's own class without
 // creating a real circular library dependency. See VM.hpp's own
 // resumeReadyAsyncTasks()/suspendFor() comments for how VM avoids ever
 // needing to include Scheduler.hpp for this row's own mechanism.

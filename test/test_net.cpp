@@ -50,7 +50,7 @@ struct NetHarness {
     explicit NetHarness(const std::string& extraConfigLines = "")
         : objects(config), vm(objects, config) {
         objects.setVM(&vm);
-        char dirTemplate[] = "/tmp/amlp_net_test_XXXXXX";
+        char dirTemplate[] = "/tmp/aemlpc_net_test_XXXXXX";
         char* created = mkdtemp(dirTemplate);
         assert(created != nullptr);
         tempDir = created;
@@ -234,7 +234,7 @@ bool writeSelfSignedCert(const std::string& dir, std::string& cert, std::string&
 }
 
 void testTlsSocketpairRoundTrip() {
-    char dirTemplate[] = "/tmp/amlp_tls_XXXXXX";
+    char dirTemplate[] = "/tmp/aemlpc_tls_XXXXXX";
     char* created = mkdtemp(dirTemplate);
     assert(created);
     std::string cert, key;

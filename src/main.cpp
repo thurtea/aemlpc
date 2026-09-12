@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     int maxIterations = 0;
     if (argc > 2) {
         maxIterations = std::atoi(argv[2]);
-    } else if (const char* envVal = std::getenv("AMLP_MAX_ITERATIONS")) {
+    } else if (const char* envVal = std::getenv("AEMLPC_MAX_ITERATIONS")) {
         maxIterations = std::atoi(envVal);
     }
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     vm.setScheduler(&scheduler);
     aemlpc::Server server(config, vm, objectManager, scheduler);
 
-    std::cout << "amlp booting...\n";
+    std::cout << "aemlpc booting...\n";
     std::cout << "  mudlib_root = " << config.mudlibRoot() << "\n";
     std::cout << "  master_file = " << config.masterFile() << "\n";
     std::cout << "  port        = " << config.port() << "\n";
@@ -111,6 +111,6 @@ int main(int argc, char** argv) {
 
     scheduler.run(server, maxIterations);
 
-    std::cout << "amlp shutting down.\n";
+    std::cout << "aemlpc shutting down.\n";
     return 0;
 }
