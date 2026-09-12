@@ -23,4 +23,5 @@ it; `exit` writes it too when a domain is set. Master create() loads
 /single/domain_d, which restores every domain that has a graph.o.
 
 domains/example/ is an empty stub so the tree is present at boot.
-It holds no content.
+It holds no content. domains/rifts/ is the first G6 Chi-Town
+'Burbs slice. See domains/rifts/README.

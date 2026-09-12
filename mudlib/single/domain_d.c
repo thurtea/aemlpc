@@ -69,6 +69,8 @@ int save_domain(string name) {
     string path, leaf;
     int i, j;
 
+    // Master create() loads us before UIDs exist; getuid() is 0 then.
+    seteuid("Root");
     if (!name || !sizeof(name)) {
         return 0;
     }
@@ -121,6 +123,7 @@ int restore_domain(string name) {
     mixed *rooms, *row, *scenery, *placed;
     int i, j;
 
+    seteuid("Root");
     rec = clone_object(DOMAIN_GRAPH);
     if (!rec) {
         return 0;
@@ -182,5 +185,6 @@ void restore_all_domains() {
 }
 
 void create() {
+    seteuid("Root");
     catch(restore_all_domains());
 }

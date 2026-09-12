@@ -24695,6 +24695,35 @@ void writeKitDomainTree(ObjectVarHarness& harness) {
         "    set_value(1);\n"
         "}\n");
 }
+
+void writeRiftsDomainTree(ObjectVarHarness& harness) {
+    writeWorldkitHeader(harness);
+    ::mkdir((harness.tempDir + "/single").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/inherit").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/rifts").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/rifts/rooms").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/rifts/items").c_str(), 0755);
+    ::mkdir((harness.tempDir + "/domains/rifts/npcs").c_str(), 0755);
+    harness.writeFile("/single/domain_d.c", readMudlibFile("/single/domain_d.c"));
+    harness.writeFile("/single/domain_graph.c", readMudlibFile("/single/domain_graph.c"));
+    harness.writeFile("/inherit/object.c", readMudlibFile("/inherit/object.c"));
+    harness.writeFile("/inherit/item.c", readMudlibFile("/inherit/item.c"));
+    harness.writeFile("/inherit/room.c", readMudlibFile("/inherit/room.c"));
+    harness.writeFile("/inherit/npc.c", readMudlibFile("/inherit/npc.c"));
+    harness.writeFile("/domains/rifts/rooms/lower_gate.c",
+        readMudlibFile("/domains/rifts/rooms/lower_gate.c"));
+    harness.writeFile("/domains/rifts/rooms/market_lane.c",
+        readMudlibFile("/domains/rifts/rooms/market_lane.c"));
+    harness.writeFile("/domains/rifts/rooms/watch_post.c",
+        readMudlibFile("/domains/rifts/rooms/watch_post.c"));
+    harness.writeFile("/domains/rifts/items/slag_bin.c",
+        readMudlibFile("/domains/rifts/items/slag_bin.c"));
+    harness.writeFile("/domains/rifts/items/ration_tin.c",
+        readMudlibFile("/domains/rifts/items/ration_tin.c"));
+    harness.writeFile("/domains/rifts/npcs/burbs_hawker.c",
+        readMudlibFile("/domains/rifts/npcs/burbs_hawker.c"));
+}
 }  // namespace
 
 static void testWandOfCreationHeldGuardBlocksAllCommandsWhenOnlyColocatedNotHeld() {
@@ -25489,6 +25518,90 @@ static void testDomainGraphSaveRestoresExitsSceneryAndPlacedObject() {
     assert(std::get<std::string>(statueLong.data) == "A stone statue, weathered.\n");
 
     std::cout << "testDomainGraphSaveRestoresExitsSceneryAndPlacedObject OK\n";
+}
+
+static void testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin() {
+    ObjectVarHarness first;
+    writeRiftsDomainTree(first);
+    first.writeFile("/builder.c",
+        "int setup() {\n"
+        "    object gate, market, watch, bin;\n"
+        "    gate = load_object(\"/domains/rifts/rooms/lower_gate\");\n"
+        "    market = load_object(\"/domains/rifts/rooms/market_lane\");\n"
+        "    watch = load_object(\"/domains/rifts/rooms/watch_post\");\n"
+        "    if (!gate || !market || !watch) return 0;\n"
+        "    gate->set_exits(([\"east\": \"/single/gatehouse\",\n"
+        "        \"west\": \"/domains/rifts/rooms/market_lane\",\n"
+        "        \"north\": \"/domains/rifts/rooms/watch_post\"]));\n"
+        "    market->set_exits(([\"east\": \"/domains/rifts/rooms/lower_gate\"]));\n"
+        "    watch->set_exits(([\"south\": \"/domains/rifts/rooms/lower_gate\"]));\n"
+        "    gate->add_item(\"poster\",\n"
+        "        \"A peeling poster: REPORT UNREGISTERED TALENT. Reward posted in credits.\\n\");\n"
+        "    market->add_item(\"stalls\",\n"
+        "        \"Tarp stalls selling soy cakes and busted e-clips.\\n\");\n"
+        "    bin = clone_object(\"/domains/rifts/items/slag_bin\");\n"
+        "    if (!bin) return 0;\n"
+        "    bin->move(market);\n"
+        "    return \"/single/domain_d\"->save_domain(\"rifts\");\n"
+        "}\n"
+        "int hawker_living() {\n"
+        "    object npc;\n"
+        "    npc = clone_object(\"/domains/rifts/npcs/burbs_hawker\");\n"
+        "    return npc && living(npc);\n"
+        "}\n");
+
+    auto builder = first.objects.cloneObject("/builder");
+    assert(builder);
+    aemlpc::Value saved = first.vm.callFunction(builder, "setup", {});
+    assert(std::holds_alternative<int64_t>(saved.data));
+    assert(std::get<int64_t>(saved.data) == 1);
+    aemlpc::Value hawkerLiv = first.vm.callFunction(builder, "hawker_living", {});
+    assert(std::holds_alternative<int64_t>(hawkerLiv.data));
+    assert(std::get<int64_t>(hawkerLiv.data) == 1);
+
+    std::ifstream graphIn(first.tempDir + "/domains/rifts/graph.o");
+    std::ostringstream graphBuf;
+    graphBuf << graphIn.rdbuf();
+    assert(!graphBuf.str().empty());
+
+    ObjectVarHarness second;
+    writeRiftsDomainTree(second);
+    second.writeFile("/domains/rifts/graph.o", graphBuf.str());
+    second.writeFile("/probe.c",
+        "string west() {\n"
+        "    return load_object(\"/domains/rifts/rooms/lower_gate\")"
+        "->query_exits()[\"west\"];\n"
+        "}\n"
+        "string poster() {\n"
+        "    return load_object(\"/domains/rifts/rooms/lower_gate\")"
+        "->query_items()[\"poster\"];\n"
+        "}\n"
+        "string bin_short() {\n"
+        "    object ob;\n"
+        "    ob = present(\"slag_bin\",\n"
+        "        load_object(\"/domains/rifts/rooms/market_lane\"));\n"
+        "    return ob ? ob->short() : \"\";\n"
+        "}\n");
+
+    auto daemon = second.objects.loadObject("/single/domain_d");
+    assert(daemon);
+    auto probe = second.objects.cloneObject("/probe");
+    assert(probe);
+
+    aemlpc::Value west = second.vm.callFunction(probe, "west", {});
+    assert(std::holds_alternative<std::string>(west.data));
+    assert(std::get<std::string>(west.data) == "/domains/rifts/rooms/market_lane");
+
+    aemlpc::Value poster = second.vm.callFunction(probe, "poster", {});
+    assert(std::holds_alternative<std::string>(poster.data));
+    assert(std::get<std::string>(poster.data).find("REPORT UNREGISTERED TALENT")
+        != std::string::npos);
+
+    aemlpc::Value binShort = second.vm.callFunction(probe, "bin_short", {});
+    assert(std::holds_alternative<std::string>(binShort.data));
+    assert(std::get<std::string>(binShort.data) == "a slag bin");
+
+    std::cout << "testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin OK\n";
 }
 
 static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
@@ -31744,6 +31857,7 @@ int main() {
     testWandOfCreationEditRoomAndExit();
     testWandDomainTargetsCreatePaths();
     testDomainGraphSaveRestoresExitsSceneryAndPlacedObject();
+    testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin();
     testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();

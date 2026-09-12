@@ -7,7 +7,8 @@ inherit ROOM_BASE;
 void
 create()
 {
-    set_exits((["north": ROOM_WATCH_ROOM, "east": ROOM_SUNKEN_COURT]));
+    set_exits((["north": ROOM_WATCH_ROOM, "east": ROOM_SUNKEN_COURT,
+        "west": RIFTS_LOWER_GATE]));
 }
 
 string
@@ -23,7 +24,7 @@ long()
         "A squat stone room with a cold hearth and a dusty worktable. "
         "A wand of creation rests on the table. A stair leads north to "
         "the watch room. An opening in the east wall leads to the "
-        "sunken court.\n"
+        "sunken court. A west gap opens toward the Chi-Town 'Burbs.\n"
         "Type 'help' for the full list of runnable commands.\n";
 }
 

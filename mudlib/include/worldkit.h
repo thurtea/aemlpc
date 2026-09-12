@@ -16,4 +16,6 @@
 #define DOMAIN_GRAPH "/single/domain_graph"
 #define DOMAIN_SAVE  "graph"
 
+#define RIFTS_LOWER_GATE "/domains/rifts/rooms/lower_gate"
+
 #endif
