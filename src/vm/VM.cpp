@@ -1884,23 +1884,56 @@ Value VM::run(const CompiledProgram& program, const FunctionEntry& fn,
                 break;
             }
 
-            case OpCode::BitOr:
+            case OpCode::BitOr: {
+                if (localStack.size() < 2) {
+                    throw LpcRuntimeError("BitOr: stack underflow");
+                }
+                Value rhs = localStack.back(); localStack.pop_back();
+                Value lhs = localStack.back(); localStack.pop_back();
+
+                if (std::holds_alternative<std::shared_ptr<Array>>(lhs.data) &&
+                    std::holds_alternative<std::shared_ptr<Array>>(rhs.data)) {
+                    auto leftArr = std::get<std::shared_ptr<Array>>(lhs.data);
+                    auto rightArr = std::get<std::shared_ptr<Array>>(rhs.data);
+                    auto result = std::make_shared<Array>();
+                    // FluffOS f_or -> union_array (ds2.07 eoperators.c:565,
+                    // array.c:1689): all of left, then each right not in left.
+                    if (leftArr) result->items = leftArr->items;
+                    if (rightArr) {
+                        for (const auto& item : rightArr->items) {
+                            bool found = false;
+                            if (leftArr) {
+                                for (const auto& other : leftArr->items) {
+                                    if (valuesEqual(item, other)) { found = true; break; }
+                                }
+                            }
+                            if (!found) result->items.push_back(item);
+                        }
+                    }
+                    localStack.emplace_back(Value(result));
+                } else if (std::holds_alternative<int64_t>(lhs.data) &&
+                           std::holds_alternative<int64_t>(rhs.data)) {
+                    int64_t result = std::get<int64_t>(lhs.data) | std::get<int64_t>(rhs.data);
+                    localStack.emplace_back(Value(result));
+                } else {
+                    throw LpcRuntimeError("BitOr: operands must both be ints or both be arrays");
+                }
+                ++ip;
+                break;
+            }
+
             case OpCode::BitXor: {
                 if (localStack.size() < 2) {
-                    throw LpcRuntimeError("BitOr/BitXor: stack underflow");
+                    throw LpcRuntimeError("BitXor: stack underflow");
                 }
                 Value rhs = localStack.back(); localStack.pop_back();
                 Value lhs = localStack.back(); localStack.pop_back();
 
                 if (!std::holds_alternative<int64_t>(lhs.data) ||
                     !std::holds_alternative<int64_t>(rhs.data)) {
-                    throw LpcRuntimeError(
-                        std::string(instr.op == OpCode::BitOr ? "BitOr" : "BitXor") +
-                        ": operands must both be ints (array union is not implemented this slice)");
+                    throw LpcRuntimeError("BitXor: operands must both be ints");
                 }
-                int64_t result = (instr.op == OpCode::BitOr)
-                    ? (std::get<int64_t>(lhs.data) | std::get<int64_t>(rhs.data))
-                    : (std::get<int64_t>(lhs.data) ^ std::get<int64_t>(rhs.data));
+                int64_t result = std::get<int64_t>(lhs.data) ^ std::get<int64_t>(rhs.data);
                 localStack.emplace_back(Value(result));
                 ++ip;
                 break;

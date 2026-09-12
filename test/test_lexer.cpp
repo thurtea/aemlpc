@@ -3786,6 +3786,63 @@ static void testBitOrAndBitXorVmExecutionOnInts() {
     std::cout << "testBitOrAndBitXorVmExecutionOnInts OK\n";
 }
 
+static void testBitOrVmExecutionOnArraysIsUnion() {
+    aemlpc::Value size = runProbe(
+        "mixed *left, *right;\n"
+        "left = ({ \"a\", \"b\", \"c\" });\n"
+        "right = ({ \"b\", \"c\", \"d\" });\n"
+        "return sizeof(left | right);\n");
+    assert(std::holds_alternative<int64_t>(size.data));
+    assert(std::get<int64_t>(size.data) == 4);
+
+    aemlpc::Value first = runProbe(
+        "mixed *u;\n"
+        "u = ({ \"a\", \"b\" }) | ({ \"b\", \"c\" });\n"
+        "return u[0];\n");
+    assert(std::holds_alternative<std::string>(first.data));
+    assert(std::get<std::string>(first.data) == "a");
+
+    aemlpc::Value last = runProbe(
+        "mixed *u;\n"
+        "u = ({ \"a\", \"b\" }) | ({ \"b\", \"c\" });\n"
+        "return u[2];\n");
+    assert(std::holds_alternative<std::string>(last.data));
+    assert(std::get<std::string>(last.data) == "c");
+
+    aemlpc::Value keepLeftDups = runProbe(
+        "return sizeof(({ \"a\", \"a\" }) | ({ \"a\", \"b\" }));\n");
+    assert(std::holds_alternative<int64_t>(keepLeftDups.data));
+    assert(std::get<int64_t>(keepLeftDups.data) == 3);
+
+    aemlpc::Value emptyLeft = runProbe(
+        "return sizeof(({ }) | ({ \"z\" }));\n");
+    assert(std::holds_alternative<int64_t>(emptyLeft.data));
+    assert(std::get<int64_t>(emptyLeft.data) == 1);
+
+    aemlpc::Value emptyRight = runProbe(
+        "return sizeof(({ \"z\" }) | ({ }));\n");
+    assert(std::holds_alternative<int64_t>(emptyRight.data));
+    assert(std::get<int64_t>(emptyRight.data) == 1);
+
+    aemlpc::Value orEq = runProbe(
+        "mixed *a;\n"
+        "a = ({ \"a\" });\n"
+        "a |= ({ \"a\", \"b\" });\n"
+        "return sizeof(a);\n");
+    assert(std::holds_alternative<int64_t>(orEq.data));
+    assert(std::get<int64_t>(orEq.data) == 2);
+
+    bool threw = false;
+    try {
+        runProbe("return 1 | ({ 1 });\n");
+    } catch (const aemlpc::LpcRuntimeError&) {
+        threw = true;
+    }
+    assert(threw);
+
+    std::cout << "testBitOrVmExecutionOnArraysIsUnion OK\n";
+}
+
 // "<<"/">>", real C-family bitwise left/right shift (Ast.hpp's
 // BinOp::Shl/Shr, Bytecode.hpp's OpCode::Shl/Shr). Real
 // fluffos-2.23-ds03/grammar.y.pre's own precedence table places these
@@ -31236,6 +31293,7 @@ int main() {
     testBitAndVmExecutionOnInts();
     testBitAndVmExecutionOnArraysIsIntersection();
     testBitOrAndBitXorVmExecutionOnInts();
+    testBitOrVmExecutionOnArraysIsUnion();
     testShiftOperatorsVmExecutionOnInts();
     testShiftOperatorPrecedenceBetweenRelationalAndAdditive();
     testCompoundShiftAssignmentVmExecutionOnInts();

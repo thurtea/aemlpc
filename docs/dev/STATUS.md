@@ -1,5 +1,12 @@
 # STATUS
 
+**2026-09-12: array `|` union.** BitOr on two arrays is now FluffOS
+`union_array` (all of left, then each right element not already in
+left). Cited `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07`
+`eoperators.c` `f_or` and `array.c` `union_array`;
+`temp/reference/fluffos-2.9-ds2.08` is not on disk. `^` stays ints
+only. Suite green (933, 0 fail).
+
 **2026-09-12: dump_state width>1.** Persist now writes extra mapping
 columns as `M<count>w<width>:`. Width-1 dumps stay `M<count>:`. Magic
 `AMLPSTATE1` unchanged. Suite green (932, 0 fail).
