@@ -1,5 +1,9 @@
 # STATUS
 
+**2026-09-13: G6 three-room loop.** `watch_post` is linked north of
+`lower_gate` with a floodlight scenery item. Market tin, hawker, and
+slag bin unchanged. Suite green (937 checks, 0 fail).
+
 **2026-09-13: G6 first rooms.** Two linked Chi-Town 'Burbs rooms under
 `mudlib/domains/rifts/` (lower gate and market lane), one scenery poster,
 one takeable ration tin, one hawker NPC. Non-portables persist via the

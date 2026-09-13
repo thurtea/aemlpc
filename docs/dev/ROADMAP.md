@@ -43,6 +43,8 @@ folders, wand verbs, domain graph save).
 - [x] G6 first rooms: two linked Chi-Town 'Burbs rooms under
   `mudlib/domains/rifts/` with one scenery item, one takeable item, and
   one NPC.
+- [x] G6 three-room loop: `watch_post` linked from `lower_gate`,
+  reachable both ways.
 
 Identity rename (`amlp` to `aemlpc`) is closed. `save_object` writes
 width>1 mappings as `key:v0;v1` and writes nothing for object, closure,

@@ -25697,6 +25697,14 @@ static void testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin() {
         "    ob = present(\"slag_bin\",\n"
         "        load_object(\"/domains/rifts/rooms/market_lane\"));\n"
         "    return ob ? ob->short() : \"\";\n"
+        "}\n"
+        "string north() {\n"
+        "    return load_object(\"/domains/rifts/rooms/lower_gate\")"
+        "->query_exits()[\"north\"];\n"
+        "}\n"
+        "string south() {\n"
+        "    return load_object(\"/domains/rifts/rooms/watch_post\")"
+        "->query_exits()[\"south\"];\n"
         "}\n");
 
     auto daemon = second.objects.loadObject("/single/domain_d");
@@ -25716,6 +25724,13 @@ static void testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin() {
     aemlpc::Value binShort = second.vm.callFunction(probe, "bin_short", {});
     assert(std::holds_alternative<std::string>(binShort.data));
     assert(std::get<std::string>(binShort.data) == "a slag bin");
+
+    aemlpc::Value north = second.vm.callFunction(probe, "north", {});
+    assert(std::holds_alternative<std::string>(north.data));
+    assert(std::get<std::string>(north.data) == "/domains/rifts/rooms/watch_post");
+    aemlpc::Value south = second.vm.callFunction(probe, "south", {});
+    assert(std::holds_alternative<std::string>(south.data));
+    assert(std::get<std::string>(south.data) == "/domains/rifts/rooms/lower_gate");
 
     std::cout << "testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin OK\n";
 }
@@ -25793,6 +25808,57 @@ static void testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc() {
     aemlpc::OutputContext::set(nullptr);
     ::close(fds[1]);
     std::cout << "testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc OK\n";
+}
+
+static void testRiftsWatchPostIsReachableBothWaysWithExaminableScenery() {
+    ObjectVarHarness harness;
+    writeRiftsDomainTree(harness);
+    harness.writeFile("/command.h", "#define COMMAND_PREFIX \"/command/\"\n");
+    ::mkdir((harness.tempDir + "/command").c_str(), 0755);
+    harness.writeFile("/command/look.c", readMudlibFile("/command/look.c"));
+    harness.writeFile("/player.c", "void create() { enable_commands(); }\n");
+    harness.writeFile("/probe.c",
+        "string north() {\n"
+        "    return load_object(\"/domains/rifts/rooms/lower_gate\")"
+        "->query_exits()[\"north\"];\n"
+        "}\n"
+        "string south() {\n"
+        "    return load_object(\"/domains/rifts/rooms/watch_post\")"
+        "->query_exits()[\"south\"];\n"
+        "}\n");
+
+    auto gate = harness.objects.loadObject("/domains/rifts/rooms/lower_gate");
+    auto watch = harness.objects.loadObject("/domains/rifts/rooms/watch_post");
+    auto player = harness.objects.cloneObject("/player");
+    auto look = harness.objects.cloneObject("/command/look");
+    auto probe = harness.objects.cloneObject("/probe");
+    assert(gate && watch && player && look && probe);
+
+    aemlpc::Value north = harness.vm.callFunction(probe, "north", {});
+    assert(std::holds_alternative<std::string>(north.data));
+    assert(std::get<std::string>(north.data) == "/domains/rifts/rooms/watch_post");
+    aemlpc::Value south = harness.vm.callFunction(probe, "south", {});
+    assert(std::holds_alternative<std::string>(south.data));
+    assert(std::get<std::string>(south.data) == "/domains/rifts/rooms/lower_gate");
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, watch);
+    harness.vm.pushCommandGiver(player);
+    readAvailable(fds[1]);
+
+    harness.vm.callFunction(look, "main",
+        {aemlpc::Value(std::string("floodlight"))});
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("dead floodlight") != std::string::npos);
+
+    harness.vm.popCommandGiver();
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testRiftsWatchPostIsReachableBothWaysWithExaminableScenery OK\n";
 }
 
 static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
@@ -32054,6 +32120,7 @@ int main() {
     testDomainGraphSaveRestoresExitsSceneryAndPlacedObject();
     testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin();
     testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc();
+    testRiftsWatchPostIsReachableBothWaysWithExaminableScenery();
     testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();
