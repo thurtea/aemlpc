@@ -1,5 +1,11 @@
 # STATUS
 
+**2026-09-13: sprintf `%'X'`.** Quoted pad strings now fill field width
+(FluffOS `add_pad`). Cited
+`temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/sprintf.c` line 926;
+canonical `temp/reference/fluffos-2.9-ds2.08` is absent. Suite green (941
+checks, 0 fail).
+
 **2026-09-13: sprintf `%@`.** Array-spread now applies the rest of the
 specifier to each element. Cited
 `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/sprintf.c` `INFO_ARRAY`;

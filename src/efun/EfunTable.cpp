@@ -3115,8 +3115,7 @@ void registerCoreEfuns() {
     // field width and "-"/"|"/"0" justification via the shared block),
     // "%i" (a plain alias of "%d"), and the "+"/" " pad-prefix flags on
     // "%d"/"%i" are implemented. Still scoped, not the full real modifier
-    // set: "#" (table mode), "'X'" (custom pad string), and the
-    // ":"/precision combination on "%f"
+    // set: "#" (table mode) and the ":"/precision combination on "%f"
     // are not implemented; throws rather than silently mishandling
     // anything else, matching this codebase's existing convention for
     // other partially-implemented efuns.
@@ -3175,10 +3174,21 @@ void registerCoreEfuns() {
                 if (f[k + 1] == '%') { ++k; continue; }
                 size_t m = k + 1;
                 bool eq = false;
-                while (m < f.size() &&
-                       (f[m] == '-' || f[m] == ':' || f[m] == '|' || f[m] == '=' ||
-                        f[m] == '@' || f[m] == '.' || f[m] == '*' ||
-                        (f[m] >= '0' && f[m] <= '9'))) {
+                while (m < f.size()) {
+                    if (f[m] == '\'') {
+                        ++m;
+                        while (m < f.size()) {
+                            if (f[m] == '\\' && m + 1 < f.size()) { m += 2; continue; }
+                            if (f[m] == '\'') { ++m; break; }
+                            ++m;
+                        }
+                        continue;
+                    }
+                    if (!(f[m] == '-' || f[m] == ':' || f[m] == '|' || f[m] == '=' ||
+                          f[m] == '@' || f[m] == '.' || f[m] == '*' ||
+                          (f[m] >= '0' && f[m] <= '9'))) {
+                        break;
+                    }
                     if (f[m] == '=') eq = true;
                     ++m;
                 }
@@ -3282,6 +3292,35 @@ void registerCoreEfuns() {
             // literal spaces in a format string are untouched).
             bool plusFlag = false;
             bool spaceFlag = false;
+            bool haveCustomPad = false;
+            std::string padStr;
+            // sprintf.c:926 "'X'" pad and add_pad:518. Last of this or a
+            // leading field-size 0 wins.
+            auto parsePadQuote = [&]() {
+                if (i + 1 >= fmt.size() || fmt[i + 1] != '\'') return;
+                ++i;
+                ++i;
+                size_t start = i;
+                while (i < fmt.size()) {
+                    if (fmt[i] == '\\') {
+                        if (i + 1 >= fmt.size()) {
+                            throw LpcRuntimeError("sprintf: unterminated pad string");
+                        }
+                        i += 2;
+                        continue;
+                    }
+                    if (fmt[i] == '\'') {
+                        padStr = fmt.substr(start, i - start);
+                        if (padStr.empty()) {
+                            throw LpcRuntimeError("sprintf: empty pad string");
+                        }
+                        haveCustomPad = true;
+                        return;
+                    }
+                    ++i;
+                }
+                throw LpcRuntimeError("sprintf: unterminated pad string");
+            };
             while (i + 1 < fmt.size() &&
                    (fmt[i + 1] == '-' || fmt[i + 1] == ':' || fmt[i + 1] == '|' ||
                     fmt[i + 1] == '=' || fmt[i + 1] == '@' ||
@@ -3295,6 +3334,7 @@ void registerCoreEfuns() {
                 else colonMode = true;
                 ++i;
             }
+            parsePadQuote();
             bool zeroPad = false;
             int fieldWidth = 0;
             bool haveWidth = false;
@@ -3302,6 +3342,7 @@ void registerCoreEfuns() {
             if (i + 1 < fmt.size() && fmt[i + 1] == '0' &&
                 i + 2 < fmt.size() && fmt[i + 2] == '*') {
                 zeroPad = true;
+                haveCustomPad = false;
                 ++i;
             }
             if (i + 1 < fmt.size() && fmt[i + 1] == '*') {
@@ -3320,6 +3361,7 @@ void registerCoreEfuns() {
             } else {
                 if (i + 1 < fmt.size() && fmt[i + 1] == '0') {
                     zeroPad = true;
+                    haveCustomPad = false;
                 }
                 while (i + 1 < fmt.size() && fmt[i + 1] >= '0' && fmt[i + 1] <= '9') {
                     haveWidth = true;
@@ -3327,7 +3369,8 @@ void registerCoreEfuns() {
                     ++i;
                 }
             }
-            // "."n. Precision, distinct from ":" (which ties precision
+            parsePadQuote();
+            // "."n. Precision, distinct from ":" (which ties precision)
             // to the field size). Only meaningful for %s (real sprintf.c:
             // "all other types ignore this"), parsed for every specifier
             // regardless so a stray "." on a non-%s call still consumes
@@ -3356,6 +3399,7 @@ void registerCoreEfuns() {
                     }
                 }
             }
+            parsePadQuote();
             // sprintf.c:881 INFO_ARRAY. `@` may sit after width too (`%3@d`).
             if (i + 1 < fmt.size() && fmt[i + 1] == '@') {
                 arrayMode = true;
@@ -3495,13 +3539,30 @@ void registerCoreEfuns() {
                 }
                 if (useWidth && static_cast<int>(piece.size()) < width) {
                     int padLen = width - static_cast<int>(piece.size());
-                    char padChar = (zeroPad && !leftJustify && !centreJustify) ? '0' : ' ';
+                    auto fillPad = [&](int n) -> std::string {
+                        if (haveCustomPad) {
+                            std::string out;
+                            out.reserve(static_cast<size_t>(n));
+                            size_t pi = 0;
+                            while (static_cast<int>(out.size()) < n) {
+                                if (pi >= padStr.size()) pi = 0;
+                                if (padStr[pi] == '\\' && pi + 1 < padStr.size()) {
+                                    out += padStr[++pi];
+                                    ++pi;
+                                } else {
+                                    out += padStr[pi++];
+                                }
+                            }
+                            return out;
+                        }
+                        char padChar = (zeroPad && !leftJustify && !centreJustify) ? '0' : ' ';
+                        return std::string(static_cast<size_t>(n), padChar);
+                    };
                     if (centreJustify) {
                         int lead = padLen / 2 + padLen % 2;
-                        piece = std::string(static_cast<size_t>(lead), padChar) + piece +
-                            std::string(static_cast<size_t>(padLen - lead), padChar);
+                        piece = fillPad(lead) + piece + fillPad(padLen - lead);
                     } else {
-                        std::string pad(static_cast<size_t>(padLen), padChar);
+                        std::string pad = fillPad(padLen);
                         piece = leftJustify ? (piece + pad) : (pad + piece);
                     }
                 }

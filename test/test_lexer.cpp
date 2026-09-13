@@ -18155,6 +18155,31 @@ static void testSprintfAtAppliesSpecifierToEachArrayElement() {
     std::cout << "testSprintfAtAppliesSpecifierToEachArrayElement OK\n";
 }
 
+// sprintf.c:926 "'X'" pad and add_pad:518. Repeats the quoted string to fill.
+static void testSprintfQuotedPadStringFillsFieldWidth() {
+    aemlpc::Value spaces = runProbe("return sprintf(\"%' '5s\", \"ab\");\n");
+    assert(std::holds_alternative<std::string>(spaces.data));
+    assert(std::get<std::string>(spaces.data) == "   ab");
+
+    aemlpc::Value zeros = runProbe("return sprintf(\"%'0'4s\", \"12\");\n");
+    assert(std::get<std::string>(zeros.data) == "0012");
+
+    aemlpc::Value star = runProbe("return sprintf(\"%' '*s\", 4, \"x\");\n");
+    assert(std::get<std::string>(star.data) == "   x");
+
+    aemlpc::Value cycle = runProbe("return sprintf(\"%'xy'5s\", \"z\");\n");
+    assert(std::get<std::string>(cycle.data) == "xyxyz");
+
+    bool threw = false;
+    try {
+        runProbe("return sprintf(\"%''5s\", \"a\");\n");
+    } catch (const aemlpc::LpcRuntimeError&) {
+        threw = true;
+    }
+    assert(threw);
+    std::cout << "testSprintfQuotedPadStringFillsFieldWidth OK\n";
+}
+
 // ---------------------------------------------------------------------
 // printf(string, ...): real efuns_main.c's own f_printf(). formats
 // through the exact same machinery as sprintf() (confirmed against
@@ -32009,6 +32034,7 @@ int main() {
     testSprintfZeroPaddedStarFieldWidthPadsWithZeros();
     testSprintfFloatSpecifierAndSignFlags();
     testSprintfAtAppliesSpecifierToEachArrayElement();
+    testSprintfQuotedPadStringFillsFieldWidth();
     testPrintfWritesSprintfFormattedResultToCurrentConnection();
     testPrintfThrowsOnNonStringFormatArgument();
     testFunctionExistsReturnsTruthyStringForALocallyDefinedFunction();
