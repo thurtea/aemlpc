@@ -17700,6 +17700,31 @@ static void testSprintfPercentCAcceptsAMissingMappingKeyAsNulByte() {
     std::cout << "testSprintfPercentCAcceptsAMissingMappingKeyAsNulByte OK\n";
 }
 
+// sprintf.c: T_NUMBER 0 becomes NULL_MSG ("0" in config.h). Non-zero ints still error.
+static void testSprintfPercentSTreatsIntegerZeroAsNullMsg() {
+    aemlpc::Value zero = runProbe("return sprintf(\"%s\", 0);\n");
+    assert(std::holds_alternative<std::string>(zero.data));
+    assert(std::get<std::string>(zero.data) == "0");
+
+    aemlpc::Value missing = runProbe(
+        "mapping m = ([]);\n"
+        "return sprintf(\"%s\", m[\"missing\"]);\n");
+    assert(std::holds_alternative<std::string>(missing.data));
+    assert(std::get<std::string>(missing.data) == "0");
+
+    aemlpc::Value padded = runProbe("return sprintf(\"[%3s]\", 0);\n");
+    assert(std::get<std::string>(padded.data) == "[  0]");
+
+    bool threw = false;
+    try {
+        runProbe("return sprintf(\"%s\", 1);\n");
+    } catch (const aemlpc::LpcRuntimeError&) {
+        threw = true;
+    }
+    assert(threw);
+    std::cout << "testSprintfPercentSTreatsIntegerZeroAsNullMsg OK\n";
+}
+
 // The exact real-world shape row 3.9's trace actually found: a nested
 // mapping lookup (query_exp()'s own "player_data[\"general\"][\"experience\"]")
 // where the *outer* key is present (a real, populated sub-mapping) but
@@ -18103,6 +18128,31 @@ static void testSprintfFloatSpecifierAndSignFlags() {
         runProbe("return sprintf(\"%d %d\", 1, 2);\n").data) == "1 2");
 
     std::cout << "testSprintfFloatSpecifierAndSignFlags OK\n";
+}
+
+// sprintf.c:881 INFO_ARRAY. Format each element with the rest of the specifier.
+static void testSprintfAtAppliesSpecifierToEachArrayElement() {
+    aemlpc::Value chars = runProbe("return sprintf(\"%@c\", ({65, 66}));\n");
+    assert(std::holds_alternative<std::string>(chars.data));
+    assert(std::get<std::string>(chars.data) == "AB");
+
+    aemlpc::Value joined = runProbe("return sprintf(\"%@s\", ({\"foo\", \"bar\"}));\n");
+    assert(std::get<std::string>(joined.data) == "foobar");
+
+    aemlpc::Value empty = runProbe("return sprintf(\"%@s\", ({}));\n");
+    assert(std::get<std::string>(empty.data) == "");
+
+    aemlpc::Value padded = runProbe("return sprintf(\"%@3d\", ({1, 2}));\n");
+    assert(std::get<std::string>(padded.data) == "  1  2");
+
+    bool threw = false;
+    try {
+        runProbe("return sprintf(\"%@s\", \"z\");\n");
+    } catch (const aemlpc::LpcRuntimeError&) {
+        threw = true;
+    }
+    assert(threw);
+    std::cout << "testSprintfAtAppliesSpecifierToEachArrayElement OK\n";
 }
 
 // ---------------------------------------------------------------------
@@ -31928,6 +31978,7 @@ int main() {
     testSprintfPercentDAcceptsAMissingMappingKeyAndPrintsZero();
     testSprintfPercentOAndPercentXAcceptAMissingMappingKeyAndPrintZero();
     testSprintfPercentCAcceptsAMissingMappingKeyAsNulByte();
+    testSprintfPercentSTreatsIntegerZeroAsNullMsg();
     testSprintfPercentDAcceptsANestedMissingMappingKeyLikeARealCharacterSheet();
     testSprintfLeftJustifiedFieldWidthPadsWithSpaces();
     testSprintfRightJustifiedFieldWidthPadsWithSpaces();
@@ -31957,6 +32008,7 @@ int main() {
     testSprintfStarPrecisionPullsPrecisionFromLeadingArgument();
     testSprintfZeroPaddedStarFieldWidthPadsWithZeros();
     testSprintfFloatSpecifierAndSignFlags();
+    testSprintfAtAppliesSpecifierToEachArrayElement();
     testPrintfWritesSprintfFormattedResultToCurrentConnection();
     testPrintfThrowsOnNonStringFormatArgument();
     testFunctionExistsReturnsTruthyStringForALocallyDefinedFunction();

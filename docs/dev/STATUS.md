@@ -1,5 +1,17 @@
 # STATUS
 
+**2026-09-13: sprintf `%@`.** Array-spread now applies the rest of the
+specifier to each element. Cited
+`temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/sprintf.c` `INFO_ARRAY`;
+canonical `temp/reference/fluffos-2.9-ds2.08` is absent. Suite green (940
+checks, 0 fail).
+
+**2026-09-13: sprintf `%s` zero.** Integer 0 and a missing mapping key now
+print `0` (FluffOS `NULL_MSG`). Cited
+`temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/sprintf.c` and `config.h`;
+canonical `temp/reference/fluffos-2.9-ds2.08` is absent. Suite green (939
+checks, 0 fail).
+
 **2026-09-13: sprintf `%X`.** Uppercase hex now matches C `%X`. Cited
 `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/sprintf.c` `INFO_T_C_HEX`;
 canonical `temp/reference/fluffos-2.9-ds2.08` is absent. Suite green (938 checks, 0 fail).

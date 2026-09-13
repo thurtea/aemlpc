@@ -3115,8 +3115,8 @@ void registerCoreEfuns() {
     // field width and "-"/"|"/"0" justification via the shared block),
     // "%i" (a plain alias of "%d"), and the "+"/" " pad-prefix flags on
     // "%d"/"%i" are implemented. Still scoped, not the full real modifier
-    // set: "#" (table mode), "@" (array-spread), "'X'" (custom pad
-    // string), and the ":"/precision combination on "%f"
+    // set: "#" (table mode), "'X'" (custom pad string), and the
+    // ":"/precision combination on "%f"
     // are not implemented; throws rather than silently mishandling
     // anything else, matching this codebase's existing convention for
     // other partially-implemented efuns.
@@ -3177,7 +3177,8 @@ void registerCoreEfuns() {
                 bool eq = false;
                 while (m < f.size() &&
                        (f[m] == '-' || f[m] == ':' || f[m] == '|' || f[m] == '=' ||
-                        f[m] == '.' || f[m] == '*' || (f[m] >= '0' && f[m] <= '9'))) {
+                        f[m] == '@' || f[m] == '.' || f[m] == '*' ||
+                        (f[m] >= '0' && f[m] <= '9'))) {
                     if (f[m] == '=') eq = true;
                     ++m;
                 }
@@ -3270,6 +3271,7 @@ void registerCoreEfuns() {
             bool centreJustify = false;
             bool colonMode = false;
             bool colMode = false;
+            bool arrayMode = false;
             // Pad-prefix flags, real sprintf.c INFO_PP_PLUS ('+') /
             // INFO_PP_SPACE (' '), parsed in the same modifier scan as
             // '-'/'|'/'='/':'. Real applies them only in the numeric
@@ -3282,10 +3284,12 @@ void registerCoreEfuns() {
             bool spaceFlag = false;
             while (i + 1 < fmt.size() &&
                    (fmt[i + 1] == '-' || fmt[i + 1] == ':' || fmt[i + 1] == '|' ||
-                    fmt[i + 1] == '=' || fmt[i + 1] == '+' || fmt[i + 1] == ' ')) {
+                    fmt[i + 1] == '=' || fmt[i + 1] == '@' ||
+                    fmt[i + 1] == '+' || fmt[i + 1] == ' ')) {
                 if (fmt[i + 1] == '-') leftJustify = true;
                 else if (fmt[i + 1] == '|') centreJustify = true;
                 else if (fmt[i + 1] == '=') colMode = true;
+                else if (fmt[i + 1] == '@') arrayMode = true;
                 else if (fmt[i + 1] == '+') plusFlag = true;
                 else if (fmt[i + 1] == ' ') spaceFlag = true;
                 else colonMode = true;
@@ -3352,108 +3356,172 @@ void registerCoreEfuns() {
                     }
                 }
             }
+            // sprintf.c:881 INFO_ARRAY. `@` may sit after width too (`%3@d`).
+            if (i + 1 < fmt.size() && fmt[i + 1] == '@') {
+                arrayMode = true;
+                ++i;
+            }
             char spec = fmt[++i];
             if (argIdx >= args.size()) {
                 throw LpcRuntimeError("sprintf: too few arguments for format string");
             }
             const Value& argVal = args[argIdx++];
-            std::string piece;
-            if (spec == 's') {
-                if (!std::holds_alternative<std::string>(argVal.data)) {
-                    throw LpcRuntimeError("sprintf: %s argument is not a string");
-                }
-                piece = std::get<std::string>(argVal.data);
-            } else if (spec == 'd' || spec == 'i') {
-                // real sprintf.c: "case 'd': case 'i': finfo |=
-                // INFO_T_INT;". 'i' is a plain alias of 'd'. Corpus:
-                // "%i"/"%3i" in FTP-daemon and status-report code across
-                // several corpora. The '+'/' ' pad-prefix flags build a
-                // real C "%+lld"/"% lld" here, matching real's own cheat
-                // string; "%+d" alone is about 8 corpus call-site lines
-                // (signed stat deltas).
-                int64_t n;
-                if (!sprintfNumericArg(argVal, n)) {
-                    throw LpcRuntimeError("sprintf: %d argument is not an int");
-                }
-                if (plusFlag || spaceFlag) {
-                    char sbuf[32];
-                    std::snprintf(sbuf, sizeof(sbuf), plusFlag ? "%+lld" : "% lld",
-                                  static_cast<long long>(n));
-                    piece = sbuf;
-                } else {
-                    piece = std::to_string(n);
-                }
-            } else if (spec == 'o' || spec == 'x' || spec == 'X') {
-                // sprintf.c INFO_T_OCT / INFO_T_HEX / INFO_T_C_HEX: octal,
-                // lowercase hex, uppercase hex. No 0/0x prefix.
-                int64_t n;
-                if (!sprintfNumericArg(argVal, n)) {
-                    throw LpcRuntimeError(std::string("sprintf: %") + spec + " argument is not an int");
-                }
-                char buf[32];
-                const char* conv = spec == 'o' ? "%llo" : (spec == 'X' ? "%llX" : "%llx");
-                std::snprintf(buf, sizeof(buf), conv, static_cast<long long>(n));
-                piece = buf;
-            } else if (spec == 'c') {
-                // sprintf.c's own INFO_T_CHAR handling (fluffos-2.9-ds2.08/
-                // sprintf.c line 1165 assigns 'c' into a real C
-                // sprintf(..., "%c", ...) cheat-buffer format, and line
-                // 1180 requires carg->type == T_NUMBER for it, an int
-                // argument, not a string). Confirmed live needed by
-                // daemon/terminal.c's own ANSI(p)/ESC(p) macros:
-                // sprintf("%c["+(p)+"m", 27), which builds a raw ESC
-                // (ASCII 27) byte ahead of an ANSI escape sequence.
-                int64_t n;
-                if (!sprintfNumericArg(argVal, n)) {
-                    throw LpcRuntimeError("sprintf: %c argument is not an int");
-                }
-                piece = std::string(1, static_cast<char>(n));
-                haveWidth = false; // real sprintf.c: field width is not meaningful for %c
-            } else if (spec == 'O') {
-                // Real sprintf.c: accepts any value kind (no type check
-                // the way %s/%d/%c/%o/%x each require one). svalue_to_
-                // string() itself has a case for every real svalue type.
-                piece = valueToDebugString(argVal, 0);
-            } else if (spec == 'f') {
-                // real sprintf.c INFO_T_FLOAT (line 911 sets it, line
-                // 1162/1203 formats it): a C "%[+ ][.pres]f" cheat string
-                // run on carg->u.real, then add_justified() applies the
-                // field width afterward (so width is handled by the
-                // shared field-width block below, not baked in here).
-                // The argument must be a float: real errors "Incorrect
-                // argument type to %f" for anything else (sprintf.c:1180,
-                // cheat ends in 'f' && carg->type != T_REAL), so an int
-                // is NOT silently coerced. A precision of 0, whether from
-                // a bare "%f" or an explicit "%.0f", means C's default 6
-                // places: real only appends ".pres" when "if (pres)" is
-                // true, i.e. pres is nonzero. Corpus: about 20 files,
-                // "%.2f"/"%9.2f"/"%3.1f"/"%+4.2f" for weights, money, and
-                // percentages, e.g. a weight-to-string simul_efun's
-                // sprintf("%.2f lbs", w).
-                const double* dv = std::get_if<double>(&argVal.data);
-                if (!dv) {
-                    throw LpcRuntimeError("sprintf: %f argument is not a float");
-                }
-                std::string cfmt = "%";
-                if (plusFlag) cfmt += '+';
-                else if (spaceFlag) cfmt += ' ';
-                if (havePrecision && precision > 0) {
-                    int p = precision > 128 ? 128 : precision;
-                    cfmt += '.';
-                    cfmt += std::to_string(p);
-                }
-                cfmt += 'f';
-                int need = std::snprintf(nullptr, 0, cfmt.c_str(), *dv);
-                if (need < 0) {
-                    throw LpcRuntimeError("sprintf: %f formatting failed");
-                }
-                piece.resize(static_cast<size_t>(need));
-                std::snprintf(&piece[0], static_cast<size_t>(need) + 1, cfmt.c_str(), *dv);
-            } else {
+            if (arrayMode && (colMode || spec == '#')) {
                 throw LpcRuntimeError(
-                    std::string("sprintf: unsupported format specifier '%") + spec +
-                    "' (only %s, %d, %i, %f, %c, %o, %x, %X, and %O are implemented)");
+                    "sprintf: '@' combined with '=' or '#' is not implemented");
             }
+
+            auto renderSpec = [&](const Value& v) -> std::string {
+                std::string piece;
+                if (spec == 's') {
+                    if (auto* s = std::get_if<std::string>(&v.data)) {
+                        piece = *s;
+                    } else {
+                        // sprintf.c: T_NUMBER 0 (incl. missing keys) is NULL_MSG, "0" in config.h.
+                        int64_t n = 0;
+                        if (sprintfNumericArg(v, n) && n == 0) {
+                            piece = "0";
+                        } else {
+                            throw LpcRuntimeError("sprintf: %s argument is not a string");
+                        }
+                    }
+                } else if (spec == 'd' || spec == 'i') {
+                    // real sprintf.c: "case 'd': case 'i': finfo |=
+                    // INFO_T_INT;". 'i' is a plain alias of 'd'. Corpus:
+                    // "%i"/"%3i" in FTP-daemon and status-report code across
+                    // several corpora. The '+'/' ' pad-prefix flags build a
+                    // real C "%+lld"/"% lld" here, matching real's own cheat
+                    // string; "%+d" alone is about 8 corpus call-site lines
+                    // (signed stat deltas).
+                    int64_t n;
+                    if (!sprintfNumericArg(v, n)) {
+                        throw LpcRuntimeError("sprintf: %d argument is not an int");
+                    }
+                    if (plusFlag || spaceFlag) {
+                        char sbuf[32];
+                        std::snprintf(sbuf, sizeof(sbuf), plusFlag ? "%+lld" : "% lld",
+                                      static_cast<long long>(n));
+                        piece = sbuf;
+                    } else {
+                        piece = std::to_string(n);
+                    }
+                } else if (spec == 'o' || spec == 'x' || spec == 'X') {
+                    // sprintf.c INFO_T_OCT / INFO_T_HEX / INFO_T_C_HEX: octal,
+                    // lowercase hex, uppercase hex. No 0/0x prefix.
+                    int64_t n;
+                    if (!sprintfNumericArg(v, n)) {
+                        throw LpcRuntimeError(std::string("sprintf: %") + spec + " argument is not an int");
+                    }
+                    char buf[32];
+                    const char* conv = spec == 'o' ? "%llo" : (spec == 'X' ? "%llX" : "%llx");
+                    std::snprintf(buf, sizeof(buf), conv, static_cast<long long>(n));
+                    piece = buf;
+                } else if (spec == 'c') {
+                    // sprintf.c's own INFO_T_CHAR handling (fluffos-2.9-ds2.08/
+                    // sprintf.c line 1165 assigns 'c' into a real C
+                    // sprintf(..., "%c", ...) cheat-buffer format, and line
+                    // 1180 requires carg->type == T_NUMBER for it, an int
+                    // argument, not a string). Confirmed live needed by
+                    // daemon/terminal.c's own ANSI(p)/ESC(p) macros:
+                    // sprintf("%c["+(p)+"m", 27), which builds a raw ESC
+                    // (ASCII 27) byte ahead of an ANSI escape sequence.
+                    int64_t n;
+                    if (!sprintfNumericArg(v, n)) {
+                        throw LpcRuntimeError("sprintf: %c argument is not an int");
+                    }
+                    piece = std::string(1, static_cast<char>(n));
+                } else if (spec == 'O') {
+                    // Real sprintf.c: accepts any value kind (no type check
+                    // the way %s/%d/%c/%o/%x each require one). svalue_to_
+                    // string() itself has a case for every real svalue type.
+                    piece = valueToDebugString(v, 0);
+                } else if (spec == 'f') {
+                    // real sprintf.c INFO_T_FLOAT (line 911 sets it, line
+                    // 1162/1203 formats it): a C "%[+ ][.pres]f" cheat string
+                    // run on carg->u.real, then add_justified() applies the
+                    // field width afterward (so width is handled by the
+                    // shared field-width block below, not baked in here).
+                    // The argument must be a float: real errors "Incorrect
+                    // argument type to %f" for anything else (sprintf.c:1180,
+                    // cheat ends in 'f' && carg->type != T_REAL), so an int
+                    // is NOT silently coerced. A precision of 0, whether from
+                    // a bare "%f" or an explicit "%.0f", means C's default 6
+                    // places: real only appends ".pres" when "if (pres)" is
+                    // true, i.e. pres is nonzero. Corpus: about 20 files,
+                    // "%.2f"/"%9.2f"/"%3.1f"/"%+4.2f" for weights, money, and
+                    // percentages, e.g. a weight-to-string simul_efun's
+                    // sprintf("%.2f lbs", w).
+                    const double* dv = std::get_if<double>(&v.data);
+                    if (!dv) {
+                        throw LpcRuntimeError("sprintf: %f argument is not a float");
+                    }
+                    std::string cfmt = "%";
+                    if (plusFlag) cfmt += '+';
+                    else if (spaceFlag) cfmt += ' ';
+                    if (havePrecision && precision > 0) {
+                        int p = precision > 128 ? 128 : precision;
+                        cfmt += '.';
+                        cfmt += std::to_string(p);
+                    }
+                    cfmt += 'f';
+                    int need = std::snprintf(nullptr, 0, cfmt.c_str(), *dv);
+                    if (need < 0) {
+                        throw LpcRuntimeError("sprintf: %f formatting failed");
+                    }
+                    piece.resize(static_cast<size_t>(need));
+                    std::snprintf(&piece[0], static_cast<size_t>(need) + 1, cfmt.c_str(), *dv);
+                } else {
+                    throw LpcRuntimeError(
+                        std::string("sprintf: unsupported format specifier '%") + spec +
+                        "' (only %s, %d, %i, %f, %c, %o, %x, %X, and %O are implemented)");
+                }
+                return piece;
+            };
+
+            auto applyLayout = [&](std::string piece) -> std::string {
+                bool useWidth = haveWidth && spec != 'c';
+                int width = fieldWidth;
+                if (colonMode && (spec == 's' || spec == 'O') && useWidth &&
+                    static_cast<int>(piece.size()) > width) {
+                    piece = piece.substr(0, static_cast<size_t>(width));
+                }
+                if (havePrecision && (spec == 's' || spec == 'O')) {
+                    if (static_cast<int>(piece.size()) > precision) {
+                        piece = piece.substr(0, static_cast<size_t>(precision));
+                    }
+                    if (useWidth && precision > width) {
+                        width = precision;
+                    }
+                }
+                if (useWidth && static_cast<int>(piece.size()) < width) {
+                    int padLen = width - static_cast<int>(piece.size());
+                    char padChar = (zeroPad && !leftJustify && !centreJustify) ? '0' : ' ';
+                    if (centreJustify) {
+                        int lead = padLen / 2 + padLen % 2;
+                        piece = std::string(static_cast<size_t>(lead), padChar) + piece +
+                            std::string(static_cast<size_t>(padLen - lead), padChar);
+                    } else {
+                        std::string pad(static_cast<size_t>(padLen), padChar);
+                        piece = leftJustify ? (piece + pad) : (pad + piece);
+                    }
+                }
+                return piece;
+            };
+
+            if (arrayMode) {
+                auto* arr = std::get_if<std::shared_ptr<Array>>(&argVal.data);
+                if (!arr) {
+                    throw LpcRuntimeError("sprintf: '@' expected an array");
+                }
+                if (*arr) {
+                    for (const auto& elem : (*arr)->items) {
+                        result += applyLayout(renderSpec(elem));
+                    }
+                }
+                continue;
+            }
+
+            std::string piece = renderSpec(argVal);
 
             // "%=" column / word-wrap mode. Only meaningful for a
             // string-ish type ('s'/'O'); for a numeric type real
@@ -3522,47 +3590,7 @@ void registerCoreEfuns() {
                 continue;
             }
 
-            // ":" sets precision == field size, truncating a %s
-            // argument longer than the field ("all other types ignore
-            // this". Real sprintf.c; %d/%c are never truncated here).
-            // %O is included here too: real sprintf.c converts INFO_T_LPC
-            // into INFO_T_STRING immediately after building the dump
-            // string (see valueToDebugString()'s own top comment), so
-            // from this point on %O is genuinely indistinguishable from
-            // %s to the field-width/precision/justify code below.
-            if (colonMode && (spec == 's' || spec == 'O') && haveWidth &&
-                static_cast<int>(piece.size()) > fieldWidth) {
-                piece = piece.substr(0, static_cast<size_t>(fieldWidth));
-            }
-            // "."n. Independent precision. Truncates on its own, and
-            // (real sprintf.c's own doc: "if precision is greater than
-            // field size, then field size = precision") widens an
-            // already-explicit field width to match, but does not
-            // conjure a field width out of nothing when none was given.
-            if (havePrecision && (spec == 's' || spec == 'O')) {
-                if (static_cast<int>(piece.size()) > precision) {
-                    piece = piece.substr(0, static_cast<size_t>(precision));
-                }
-                if (haveWidth && precision > fieldWidth) {
-                    fieldWidth = precision;
-                }
-            }
-            if (haveWidth && static_cast<int>(piece.size()) < fieldWidth) {
-                int padLen = fieldWidth - static_cast<int>(piece.size());
-                char padChar = (zeroPad && !leftJustify && !centreJustify) ? '0' : ' ';
-                if (centreJustify) {
-                    // real sprintf.c's own add_justified(): the leading
-                    // half gets the extra character when padLen is odd
-                    // ("i = fs / 2 + fs % 2"), not the trailing half.
-                    int lead = padLen / 2 + padLen % 2;
-                    piece = std::string(static_cast<size_t>(lead), padChar) + piece +
-                        std::string(static_cast<size_t>(padLen - lead), padChar);
-                } else {
-                    std::string pad(static_cast<size_t>(padLen), padChar);
-                    piece = leftJustify ? (piece + pad) : (pad + piece);
-                }
-            }
-            result += piece;
+            result += applyLayout(piece);
         }
         return Value(result);
     };
