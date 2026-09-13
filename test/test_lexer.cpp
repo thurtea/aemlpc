@@ -17830,6 +17830,22 @@ static void testSprintfPercentXEmitsLowercaseHex() {
     std::cout << "testSprintfPercentXEmitsLowercaseHex OK\n";
 }
 
+static void testSprintfPercentUpperXEmitsUppercaseHex() {
+    aemlpc::Value result = runProbe("return sprintf(\"%X\", 255);\n");
+    assert(std::holds_alternative<std::string>(result.data));
+    assert(std::get<std::string>(result.data) == "FF");
+    result = runProbe("return sprintf(\"[%04X]\", 255);\n");
+    assert(std::get<std::string>(result.data) == "[00FF]");
+    bool threw = false;
+    try {
+        runProbe("return sprintf(\"%X\", \"z\");\n");
+    } catch (const aemlpc::LpcRuntimeError&) {
+        threw = true;
+    }
+    assert(threw);
+    std::cout << "testSprintfPercentUpperXEmitsUppercaseHex OK\n";
+}
+
 static void testSprintfPercentXThrowsOnNonIntArgument() {
     bool threw = false;
     try {
@@ -31925,6 +31941,7 @@ int main() {
     testSprintfColonFieldWidthTruncatesALongerString();
     testSprintfBuildingAndThenUsingADynamicColonFormatString();
     testSprintfPercentXEmitsLowercaseHex();
+    testSprintfPercentUpperXEmitsUppercaseHex();
     testSprintfPercentXThrowsOnNonIntArgument();
     testSprintfPercentOEmitsOctal();
     testSprintfPercentODumpsIntFloatAndString();

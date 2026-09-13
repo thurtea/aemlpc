@@ -3116,7 +3116,7 @@ void registerCoreEfuns() {
     // "%i" (a plain alias of "%d"), and the "+"/" " pad-prefix flags on
     // "%d"/"%i" are implemented. Still scoped, not the full real modifier
     // set: "#" (table mode), "@" (array-spread), "'X'" (custom pad
-    // string), the ":"/precision combination on "%f", and capital "%X"
+    // string), and the ":"/precision combination on "%f"
     // are not implemented; throws rather than silently mishandling
     // anything else, matching this codebase's existing convention for
     // other partially-implemented efuns.
@@ -3383,19 +3383,16 @@ void registerCoreEfuns() {
                 } else {
                     piece = std::to_string(n);
                 }
-            } else if (spec == 'o' || spec == 'x') {
-                // sprintf.c's own INFO_T_OCT/INFO_T_HEX: the integer arg
-                // printed in octal/hex, plain C conversion, no leading
-                // "0"/"0x" prefix added (real sprintf.c does not add one
-                // either. Confirmed by its own doc comment describing
-                // these as the plain "printed in octal"/"printed in hex").
+            } else if (spec == 'o' || spec == 'x' || spec == 'X') {
+                // sprintf.c INFO_T_OCT / INFO_T_HEX / INFO_T_C_HEX: octal,
+                // lowercase hex, uppercase hex. No 0/0x prefix.
                 int64_t n;
                 if (!sprintfNumericArg(argVal, n)) {
                     throw LpcRuntimeError(std::string("sprintf: %") + spec + " argument is not an int");
                 }
                 char buf[32];
-                std::snprintf(buf, sizeof(buf), spec == 'o' ? "%llo" : "%llx",
-                              static_cast<long long>(n));
+                const char* conv = spec == 'o' ? "%llo" : (spec == 'X' ? "%llX" : "%llx");
+                std::snprintf(buf, sizeof(buf), conv, static_cast<long long>(n));
                 piece = buf;
             } else if (spec == 'c') {
                 // sprintf.c's own INFO_T_CHAR handling (fluffos-2.9-ds2.08/
@@ -3455,7 +3452,7 @@ void registerCoreEfuns() {
             } else {
                 throw LpcRuntimeError(
                     std::string("sprintf: unsupported format specifier '%") + spec +
-                    "' (only %s, %d, %i, %f, %c, %o, %x, and %O are implemented)");
+                    "' (only %s, %d, %i, %f, %c, %o, %x, %X, and %O are implemented)");
             }
 
             // "%=" column / word-wrap mode. Only meaningful for a
