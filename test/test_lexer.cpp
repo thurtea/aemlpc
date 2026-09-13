@@ -18005,18 +18005,20 @@ static void testSprintfStarPrecisionPullsPrecisionFromLeadingArgument() {
     std::cout << "testSprintfStarPrecisionPullsPrecisionFromLeadingArgument OK\n";
 }
 
-static void testSprintfZeroPaddedStarFieldWidthThrows() {
-    // Deliberately not implemented (see this efun's own comment).
-    // Confirms it fails loudly rather than silently misparsing the '*'
-    // as a stray, unsupported type specifier.
+static void testSprintfZeroPaddedStarFieldWidthPadsWithZeros() {
+    aemlpc::Value result = runProbe("return sprintf(\"%0*d\", 5, 7);\n");
+    assert(std::holds_alternative<std::string>(result.data));
+    assert(std::get<std::string>(result.data) == "00007");
+    result = runProbe("return sprintf(\"[%0*d]\", 3, 7);\n");
+    assert(std::get<std::string>(result.data) == "[007]");
     bool threw = false;
     try {
-        runProbe("return sprintf(\"%0*d\", 5, 7);\n");
+        runProbe("return sprintf(\"%0*d\", \"z\", 7);\n");
     } catch (const aemlpc::LpcRuntimeError&) {
         threw = true;
     }
     assert(threw);
-    std::cout << "testSprintfZeroPaddedStarFieldWidthThrows OK\n";
+    std::cout << "testSprintfZeroPaddedStarFieldWidthPadsWithZeros OK\n";
 }
 
 // sprintf "%f" (float), "%i" (alias of "%d"), and the "+"/" " pad-prefix
@@ -31936,7 +31938,7 @@ int main() {
     testSprintfDotPrecisionWidensFieldWhenGreaterThanExplicitWidth();
     testSprintfStarFieldWidthPullsWidthFromLeadingArgument();
     testSprintfStarPrecisionPullsPrecisionFromLeadingArgument();
-    testSprintfZeroPaddedStarFieldWidthThrows();
+    testSprintfZeroPaddedStarFieldWidthPadsWithZeros();
     testSprintfFloatSpecifierAndSignFlags();
     testPrintfWritesSprintfFormattedResultToCurrentConnection();
     testPrintfThrowsOnNonStringFormatArgument();

@@ -3084,11 +3084,8 @@ void registerCoreEfuns() {
     // consumed *before* the value argument itself, so "%*d" is called
     // as sprintf("%*d", width, value)), and the "%o"/"%x" integer
     // specifiers (plain C octal/hex via snprintf, matching sprintf.c's
-    // INFO_T_OCT/INFO_T_HEX doing the equivalent in C). "%0*d" (a
-    // zero-padded dynamic width) is explicitly not implemented. rare
-    // enough combination that it is not worth the added parsing
-    // ambiguity with the plain "*" case, throws its own clear error
-    // rather than being silently misparsed as a stray "%*" specifier.
+    // INFO_T_OCT/INFO_T_HEX doing the equivalent in C). "%0*d" is the
+    // same star width with zero pad (sprintf.c field-size `0` then `*`).
     // "|" (centre-justify) added this slice, confirmed real-reachable:
     // secure/SimulEfun/misc.c's own dump_socket_status()
     // ("%2d  %|9s  %|8s  %-21s  %-21s\n"). Grounded directly in
@@ -3297,6 +3294,12 @@ void registerCoreEfuns() {
             bool zeroPad = false;
             int fieldWidth = 0;
             bool haveWidth = false;
+            // "%0*" is zero pad plus star width (sprintf.c:839, `0` then `*`).
+            if (i + 1 < fmt.size() && fmt[i + 1] == '0' &&
+                i + 2 < fmt.size() && fmt[i + 2] == '*') {
+                zeroPad = true;
+                ++i;
+            }
             if (i + 1 < fmt.size() && fmt[i + 1] == '*') {
                 // Dynamic field width: pulls the size from the next
                 // argument instead of a literal digit sequence, consumed
@@ -3312,16 +3315,6 @@ void registerCoreEfuns() {
                 ++i;
             } else {
                 if (i + 1 < fmt.size() && fmt[i + 1] == '0') {
-                    if (i + 2 < fmt.size() && fmt[i + 2] == '*') {
-                        // "%0*d". Zero-padded dynamic width. Real
-                        // sprintf.c supports this combination; this driver
-                        // does not, deliberately (see this efun's own top
-                        // comment). Throws its own clear error instead of
-                        // falling through and misparsing the '*' as a
-                        // stray, unsupported type specifier.
-                        throw LpcRuntimeError(
-                            "sprintf: zero-padded dynamic field width ('%0*') is not implemented");
-                    }
                     zeroPad = true;
                 }
                 while (i + 1 < fmt.size() && fmt[i + 1] >= '0' && fmt[i + 1] <= '9') {

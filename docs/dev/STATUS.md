@@ -1,5 +1,10 @@
 # STATUS
 
+**2026-09-13: sprintf `%0*`.** Zero-padded dynamic field width now pads
+like `%0Nd`. Cited `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07`
+`sprintf.c` (field-size `0` then `*`); canonical
+`temp/reference/fluffos-2.9-ds2.08` is absent. Suite green (937 checks, 0 fail).
+
 **2026-09-13: G6 three-room loop.** `watch_post` is linked north of
 `lower_gate` with a floodlight scenery item. Market tin, hawker, and
 slag bin unchanged. Suite green (937 checks, 0 fail).
