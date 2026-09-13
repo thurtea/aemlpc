@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <optional>
+#include <pcre2.h>
 #include <utility>
 
 namespace aemlpc {
@@ -305,13 +306,8 @@ FunctionLookupResult findParentFunction(const CompiledProgram& program, const st
 }
 
 // Ports FluffOS's inter_sscanf() (interpret.c) for: literal text, "%%",
-// "%s", "%d", "%x", "%f", the "%*" skip modifier (matches but does not
-// consume an output slot), and "%s" directly adjacent to another
-// specifier with no literal text between them (real inter_sscanf's own
-// per-specifier lookahead, ported below in adjacentSscanfBoundary()).
-// "%(regexp)" is deliberately still not implemented. This mudlib's
-// sscanf() calls never use it (confirmed by grep). And throws rather
-// than silently mishandling it if some other file ever does.
+// "%s", "%d", "%x", "%f", "%(regexp)", the "%*" skip modifier, and "%s"
+// directly adjacent to another specifier with no literal text between them.
 struct SscanfOutcome {
     int64_t matchCount = 0;
     std::vector<Value> assigned; // one entry per *consumed* (non-skip) slot, in order
@@ -330,7 +326,72 @@ struct SscanfOutcome {
 // part in finding the boundary, only in whether that next specifier's own
 // value later gets assigned, which is handled by the normal top-of-loop
 // specifier logic once control returns there).
-size_t adjacentSscanfBoundary(char spec, const std::string& in0, size_t ip) {
+struct SscanfRegex {
+    std::string pattern;
+    size_t nextFormatOffset;
+};
+
+SscanfRegex parseSscanfRegex(const std::string& format, size_t patternOffset) {
+    size_t cursor = patternOffset;
+    int depth = 1;
+    while (cursor < format.size()) {
+        if (format[cursor] == '\\' && cursor + 1 < format.size()) {
+            cursor += 2;
+            continue;
+        }
+        if (format[cursor] == '(') {
+            ++depth;
+        } else if (format[cursor] == ')' && --depth == 0) {
+            return SscanfRegex{format.substr(patternOffset, cursor - patternOffset), cursor + 1};
+        }
+        ++cursor;
+    }
+    throw LpcRuntimeError("sscanf: bad regexp format");
+}
+
+std::optional<std::pair<size_t, size_t>> sscanfRegexMatch(
+    const std::string& pattern, const std::string& subject, size_t offset, bool anchored) {
+    int errorCode = 0;
+    PCRE2_SIZE errorOffset = 0;
+    pcre2_code* code = pcre2_compile(
+        reinterpret_cast<PCRE2_SPTR>(pattern.data()),
+        static_cast<PCRE2_SIZE>(pattern.size()), 0, &errorCode, &errorOffset, nullptr);
+    if (!code) {
+        PCRE2_UCHAR message[256];
+        pcre2_get_error_message(errorCode, message, sizeof(message) / sizeof(PCRE2_UCHAR));
+        throw LpcRuntimeError("sscanf: bad regexp format: " +
+                              std::string(reinterpret_cast<char*>(message)));
+    }
+
+    pcre2_match_data* matchData = pcre2_match_data_create_from_pattern(code, nullptr);
+    int result = pcre2_match(
+        code, reinterpret_cast<PCRE2_SPTR>(subject.data()),
+        static_cast<PCRE2_SIZE>(subject.size()), static_cast<PCRE2_SIZE>(offset),
+        anchored ? PCRE2_ANCHORED : 0, matchData, nullptr);
+    if (result == PCRE2_ERROR_NOMATCH) {
+        pcre2_match_data_free(matchData);
+        pcre2_code_free(code);
+        return std::nullopt;
+    }
+    if (result < 0) {
+        pcre2_match_data_free(matchData);
+        pcre2_code_free(code);
+        throw LpcRuntimeError("sscanf: regexp match error");
+    }
+
+    PCRE2_SIZE* offsets = pcre2_get_ovector_pointer(matchData);
+    std::pair<size_t, size_t> match{
+        static_cast<size_t>(offsets[0]), static_cast<size_t>(offsets[1])};
+    pcre2_match_data_free(matchData);
+    pcre2_code_free(code);
+    return match;
+}
+
+size_t adjacentSscanfBoundary(
+    const std::string& format, size_t formatOffset, const std::string& in0, size_t ip) {
+    size_t nextOffset = formatOffset + 1;
+    if (nextOffset < format.size() && format[nextOffset] == '*') ++nextOffset;
+    char spec = nextOffset < format.size() ? format[nextOffset] : '\0';
     const size_t inLen = in0.size();
     size_t pos = ip;
     switch (spec) {
@@ -372,7 +433,11 @@ size_t adjacentSscanfBoundary(char spec, const std::string& in0, size_t ip) {
             // format string in sscanf()".
             throw LpcRuntimeError("sscanf: illegal to have two adjacent %s specifiers");
         case '(':
-            throw NotImplementedError("sscanf: \"%s\" adjacent to \"%(regexp)\"");
+            {
+                SscanfRegex regex = parseSscanfRegex(format, nextOffset + 1);
+                auto match = sscanfRegexMatch(regex.pattern, in0, ip, false);
+                return match ? match->first : inLen;
+            }
         default:
             throw NotImplementedError(
                 std::string("sscanf: \"%s\" adjacent to unsupported format specifier '%") +
@@ -458,10 +523,26 @@ SscanfOutcome runSscanf(const std::string& in0, const std::string& fmt0, size_t 
             continue;
         }
 
+        if (spec == '(') {
+            SscanfRegex regex = parseSscanfRegex(fmt0, fp);
+            auto match = sscanfRegexMatch(regex.pattern, in0, ip, true);
+            if (!match) return out;
+            fp = regex.nextFormatOffset;
+            ip = match->second;
+            if (!skip) {
+                if (out.assigned.size() >= maxAssigns) {
+                    throw LpcRuntimeError("sscanf: too few output arguments for format string");
+                }
+                out.assigned.emplace_back(Value(in0.substr(match->first, match->second - match->first)));
+            }
+            ++out.matchCount;
+            continue;
+        }
+
         if (spec != 's') {
             throw NotImplementedError(
                 std::string("sscanf: format specifier '%") + spec +
-                "' (only %s, %d, %x, %f, %% are supported)");
+                "' (only %s, %d, %x, %f, %%, %(regexp) are supported)");
         }
 
         // %s. If the format is now exhausted, the rest of in_string is the
@@ -493,10 +574,7 @@ SscanfOutcome runSscanf(const std::string& in0, const std::string& fmt0, size_t 
             // identical to real inter_sscanf() parsing both together
             // inline, without duplicating every specifier's own parsing
             // logic a second time here.
-            size_t lookFp = fp + 1;
-            if (lookFp < fmtLen && fmt0[lookFp] == '*') ++lookFp;
-            char nextSpec = (lookFp < fmtLen) ? fmt0[lookFp] : '\0';
-            size_t boundary = adjacentSscanfBoundary(nextSpec, in0, ip);
+            size_t boundary = adjacentSscanfBoundary(fmt0, fp, in0, ip);
 
             if (!skip) {
                 if (out.assigned.size() >= maxAssigns) {

@@ -3040,6 +3040,29 @@ static void testSscanfVmMatchesFloatSpecifier() {
     std::cout << "testSscanfVmMatchesFloatSpecifier OK\n";
 }
 
+static void testSscanfVmMatchesRegexpSpecifier() {
+    aemlpc::Value result = runProbe(
+        "string word;\n"
+        "int number;\n"
+        "int count;\n"
+        "count = sscanf(\"abc123\", \"%([a-z]+)%d\", word, number);\n"
+        "return count == 2 && number == 123 && word == \"abc\";\n");
+    assert(std::holds_alternative<int64_t>(result.data));
+    assert(std::get<int64_t>(result.data) == 1);
+    std::cout << "testSscanfVmMatchesRegexpSpecifier OK\n";
+}
+
+static void testSscanfVmAdjacentSThenRegexpSpecifier() {
+    aemlpc::Value result = runProbe(
+        "string prefix, digits;\n"
+        "int n;\n"
+        "n = sscanf(\"name:123\", \"%s%([0-9]+)\", prefix, digits);\n"
+        "return n == 2 && prefix == \"name:\" && digits == \"123\";\n");
+    assert(std::holds_alternative<int64_t>(result.data));
+    assert(std::get<int64_t>(result.data) == 1);
+    std::cout << "testSscanfVmAdjacentSThenRegexpSpecifier OK\n";
+}
+
 static void testSscanfVmAdjacentSThenDWithNoLiteralBetween() {
     // "%s%d" with no literal separator: %s must scan ahead to find where
     // the digits start, matching real inter_sscanf()'s own lookahead
@@ -31264,6 +31287,8 @@ int main() {
     testSscanfVmMatchesHexSpecifier();
     testSscanfVmHexSpecifierAcceptsLeading0xPrefix();
     testSscanfVmMatchesFloatSpecifier();
+    testSscanfVmMatchesRegexpSpecifier();
+    testSscanfVmAdjacentSThenRegexpSpecifier();
     testSscanfVmAdjacentSThenDWithNoLiteralBetween();
     testSscanfVmAdjacentSThenXWithNoLiteralBetween();
     testSscanfVmAdjacentSThenLiteralPercentWithNoLiteralBetween();

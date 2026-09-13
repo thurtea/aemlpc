@@ -1,5 +1,11 @@
 # STATUS
 
+**2026-09-13: `sscanf` regexp format.** `%(regexp)` now matches and
+assigns an anchored PCRE2 match, including `%s%(regexp)` lookahead.
+Cited `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/interpret.c`
+`inter_sscanf`; canonical `temp/reference/fluffos-2.9-ds2.08` is absent.
+Suite green (935 checks, 0 fail).
+
 **2026-09-12: array `|` union.** BitOr on two arrays is now FluffOS
 `union_array` (all of left, then each right element not already in
 left). Cited `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07`
