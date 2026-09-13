@@ -25720,6 +25720,81 @@ static void testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin() {
     std::cout << "testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin OK\n";
 }
 
+static void testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc() {
+    ObjectVarHarness harness;
+    writeRiftsDomainTree(harness);
+    harness.writeFile("/command.h", "#define COMMAND_PREFIX \"/command/\"\n");
+    ::mkdir((harness.tempDir + "/command").c_str(), 0755);
+    harness.writeFile("/command/look.c", readMudlibFile("/command/look.c"));
+    harness.writeFile("/command/take.c", readMudlibFile("/command/take.c"));
+    harness.writeFile("/player.c", "void create() { enable_commands(); }\n");
+    harness.writeFile("/probe.c",
+        "string west() {\n"
+        "    return load_object(\"/domains/rifts/rooms/lower_gate\")"
+        "->query_exits()[\"west\"];\n"
+        "}\n"
+        "string east() {\n"
+        "    return load_object(\"/domains/rifts/rooms/market_lane\")"
+        "->query_exits()[\"east\"];\n"
+        "}\n"
+        "int hawker_ok(object room) {\n"
+        "    object npc;\n"
+        "    npc = present(\"hawker\", room);\n"
+        "    return npc && living(npc);\n"
+        "}\n"
+        "object tin_in(object where) { return present(\"tin\", where); }\n");
+
+    auto gate = harness.objects.loadObject("/domains/rifts/rooms/lower_gate");
+    auto market = harness.objects.loadObject("/domains/rifts/rooms/market_lane");
+    auto player = harness.objects.cloneObject("/player");
+    auto look = harness.objects.cloneObject("/command/look");
+    auto take = harness.objects.cloneObject("/command/take");
+    auto probe = harness.objects.cloneObject("/probe");
+    assert(gate && market && player && look && take && probe);
+
+    aemlpc::Value west = harness.vm.callFunction(probe, "west", {});
+    assert(std::holds_alternative<std::string>(west.data));
+    assert(std::get<std::string>(west.data) == "/domains/rifts/rooms/market_lane");
+    aemlpc::Value east = harness.vm.callFunction(probe, "east", {});
+    assert(std::holds_alternative<std::string>(east.data));
+    assert(std::get<std::string>(east.data) == "/domains/rifts/rooms/lower_gate");
+
+    aemlpc::Value hawkerOk = harness.vm.callFunction(probe, "hawker_ok",
+        {aemlpc::Value(market)});
+    assert(std::holds_alternative<int64_t>(hawkerOk.data));
+    assert(std::get<int64_t>(hawkerOk.data) == 1);
+
+    int fds[2];
+    assert(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    aemlpc::Connection conn(fds[0]);
+    conn.attach(player);
+    aemlpc::OutputContext::set(&conn);
+    harness.vm.moveObject(player, gate);
+    harness.vm.pushCommandGiver(player);
+    readAvailable(fds[1]);
+
+    harness.vm.callFunction(look, "main", {aemlpc::Value(std::string("poster"))});
+    std::string out = readAvailable(fds[1]);
+    assert(out.find("REPORT UNREGISTERED TALENT") != std::string::npos);
+
+    harness.vm.moveObject(player, market);
+    aemlpc::Value tinHere = harness.vm.callFunction(probe, "tin_in",
+        {aemlpc::Value(market)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(tinHere.data));
+
+    harness.vm.callFunction(take, "main", {aemlpc::Value(std::string("tin"))});
+    out = readAvailable(fds[1]);
+    assert(out.find("You take a ration tin.") != std::string::npos);
+    aemlpc::Value tinHeld = harness.vm.callFunction(probe, "tin_in",
+        {aemlpc::Value(player)});
+    assert(std::holds_alternative<std::shared_ptr<aemlpc::LpcObject>>(tinHeld.data));
+
+    harness.vm.popCommandGiver();
+    aemlpc::OutputContext::set(nullptr);
+    ::close(fds[1]);
+    std::cout << "testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc OK\n";
+}
+
 static void testRoomLookShowsLongExitsContentsAndSceneryExamine() {
     ObjectVarHarness harness;
     harness.writeFile("/command.h", "#define COMMAND_PREFIX \"/command/\"\n");
@@ -31978,6 +32053,7 @@ int main() {
     testWandDomainTargetsCreatePaths();
     testDomainGraphSaveRestoresExitsSceneryAndPlacedObject();
     testRiftsDomainGraphSaveRestoresExitsSceneryAndPlacedBin();
+    testRiftsFirstRoomsLoadLinkedSceneryTakeableItemAndLivingNpc();
     testRoomLookShowsLongExitsContentsAndSceneryExamine();
     testLoadObjectRecompilesWhenSourceIsDestructedAndRewrittenWithDifferentContent();
     testCloneObjectRecompilesWhenSourceChangesEvenWithoutAnIntermediateLoadObjectCall();

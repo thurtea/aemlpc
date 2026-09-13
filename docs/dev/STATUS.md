@@ -1,5 +1,10 @@
 # STATUS
 
+**2026-09-13: G6 first rooms.** Two linked Chi-Town 'Burbs rooms under
+`mudlib/domains/rifts/` (lower gate and market lane), one scenery poster,
+one takeable ration tin, one hawker NPC. Non-portables persist via the
+G5 graph. G1-G5 kit unchanged. Suite green (936 checks, 0 fail).
+
 **2026-09-13: `sscanf` regexp format.** `%(regexp)` now matches and
 assigns an anchored PCRE2 match, including `%s%(regexp)` lookahead.
 Cited `temp/external/lpuni_fluffos_v1/fluffos-2.9-ds2.07/interpret.c`
